@@ -7,7 +7,7 @@ interface Props {
 }
 
 export function ChangePasswordPage({ onDone }: Props) {
-  const { currentUser, setUsers, setCurrentUser } = useApp();
+  const { currentUser, setCurrentUser, updateUser } = useApp();
   const [newPass, setNewPass] = useState("");
   const [confirmPass, setConfirmPass] = useState("");
   const [showNew, setShowNew] = useState(false);
@@ -23,21 +23,21 @@ export function ChangePasswordPage({ onDone }: Props) {
     { label: "Contains a special character", ok: /[^A-Za-z0-9]/.test(newPass) },
   ];
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!currentUser) { setError("No user is currently signed in."); return; }
     if (newPass.length < 8) { setError("Password must be at least 8 characters."); return; }
     if (newPass !== confirmPass) { setError("Passwords do not match."); return; }
 
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === currentUser?.id
-          ? { ...u, password: newPass, mustChangePassword: false }
-          : u
-      )
-    );
-    setCurrentUser((prev) => prev ? { ...prev, password: newPass, mustChangePassword: false } : prev);
-    onDone();
+    try {
+      await updateUser(currentUser.id, { password: newPass, mustChangePassword: false });
+      setCurrentUser((prev) => prev ? { ...prev, password: newPass, mustChangePassword: false } : prev);
+      onDone();
+    } catch (err) {
+      console.error(err);
+      setError("Could not save the new password. Please try again.");
+    }
   }
 
   return (
