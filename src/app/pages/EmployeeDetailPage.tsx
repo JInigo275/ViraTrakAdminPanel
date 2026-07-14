@@ -1,0 +1,263 @@
+import { ArrowLeft, Wind, EyeOff, Navigation, User } from "lucide-react";
+import { useIsMobile } from "../hooks/useIsMobile";
+import { useTheme } from "../context/ThemeContext";
+import { useApp } from "../context/AppContext";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend,
+} from "recharts";
+
+const driverData: Record<string, {
+  alerts: { icon: typeof Wind; iconColor: string; iconBg: string; type: string; date: string; time: string; severity: string }[];
+  blink: { time: string; rate: number }[];
+  perclos: { time: string; value: number }[];
+  ear: { time: string; value: number }[];
+  mar: { time: string; value: number }[];
+  headPose: { axis: string; value: number }[];
+  posture: { metric: string; score: number }[];
+}> = {
+  "EMP-001": {
+    alerts: [
+      { icon: Wind,       iconColor: "#F59E0B", iconBg: "#FFF7ED", type: "Yawning",      date: "2026-06-16", time: "10:23:14", severity: "High"     },
+      { icon: User,       iconColor: "#8B5CF6", iconBg: "#F5F3FF", type: "Body Posture", date: "2026-06-15", time: "08:20:05", severity: "Low"      },
+      { icon: Wind,       iconColor: "#F59E0B", iconBg: "#FFF7ED", type: "Yawning",      date: "2026-06-14", time: "11:05:22", severity: "Moderate" },
+    ],
+    blink:   [{ time: "08:00", rate: 17 },{ time: "09:00", rate: 14 },{ time: "10:00", rate: 10 },{ time: "11:00", rate: 8  },{ time: "12:00", rate: 13 },{ time: "13:00", rate: 7  }],
+    perclos: [{ time: "08:00", value: 3  },{ time: "09:00", value: 5  },{ time: "10:00", value: 9  },{ time: "11:00", value: 16 },{ time: "12:00", value: 8  },{ time: "13:00", value: 20 }],
+    ear:     [{ time: "08:00", value: 0.31 },{ time: "09:00", value: 0.28 },{ time: "10:00", value: 0.22 },{ time: "11:00", value: 0.16 },{ time: "12:00", value: 0.25 },{ time: "13:00", value: 0.13 }],
+    mar:     [{ time: "08:00", value: 0.2 },{ time: "09:00", value: 0.4 },{ time: "10:00", value: 0.7 },{ time: "11:00", value: 1.0 },{ time: "12:00", value: 0.5 },{ time: "13:00", value: 1.2 }],
+    headPose:[{ axis: "Pitch", value: 14 },{ axis: "Yaw", value: 10 },{ axis: "Roll", value: 6 }],
+    posture: [{ metric: "Back", score: 72 },{ metric: "Neck", score: 60 },{ metric: "Shoulders", score: 78 },{ metric: "Arms", score: 85 },{ metric: "Lean", score: 55 }],
+  },
+  "EMP-002": {
+    alerts: [
+      { icon: EyeOff,     iconColor: "#EF4444", iconBg: "#FEF2F2", type: "Eyes Closed",  date: "2026-06-16", time: "10:18:07", severity: "High"     },
+      { icon: Navigation, iconColor: "#1D6AE5", iconBg: "#EBF2FF", type: "Blink Rate",   date: "2026-06-14", time: "14:05:33", severity: "Moderate" },
+    ],
+    blink:   [{ time: "08:00", rate: 20 },{ time: "09:00", rate: 18 },{ time: "10:00", rate: 15 },{ time: "11:00", rate: 13 },{ time: "12:00", rate: 17 },{ time: "13:00", rate: 12 }],
+    perclos: [{ time: "08:00", value: 2  },{ time: "09:00", value: 3  },{ time: "10:00", value: 6  },{ time: "11:00", value: 9  },{ time: "12:00", value: 5  },{ time: "13:00", value: 12 }],
+    ear:     [{ time: "08:00", value: 0.35 },{ time: "09:00", value: 0.33 },{ time: "10:00", value: 0.28 },{ time: "11:00", value: 0.24 },{ time: "12:00", value: 0.30 },{ time: "13:00", value: 0.20 }],
+    mar:     [{ time: "08:00", value: 0.1 },{ time: "09:00", value: 0.2 },{ time: "10:00", value: 0.4 },{ time: "11:00", value: 0.6 },{ time: "12:00", value: 0.3 },{ time: "13:00", value: 0.5 }],
+    headPose:[{ axis: "Pitch", value: 6 },{ axis: "Yaw", value: 4 },{ axis: "Roll", value: 3 }],
+    posture: [{ metric: "Back", score: 90 },{ metric: "Neck", score: 88 },{ metric: "Shoulders", score: 92 },{ metric: "Arms", score: 95 },{ metric: "Lean", score: 85 }],
+  },
+};
+
+const defaultData = {
+  alerts: [],
+  blink:   [{ time: "08:00", rate: 15 },{ time: "09:00", rate: 13 },{ time: "10:00", rate: 12 },{ time: "11:00", rate: 10 },{ time: "12:00", rate: 14 },{ time: "13:00", rate: 11 }],
+  perclos: [{ time: "08:00", value: 4  },{ time: "09:00", value: 6  },{ time: "10:00", value: 8  },{ time: "11:00", value: 11 },{ time: "12:00", value: 7  },{ time: "13:00", value: 14 }],
+  ear:     [{ time: "08:00", value: 0.30 },{ time: "09:00", value: 0.27 },{ time: "10:00", value: 0.24 },{ time: "11:00", value: 0.19 },{ time: "12:00", value: 0.26 },{ time: "13:00", value: 0.17 }],
+  mar:     [{ time: "08:00", value: 0.2 },{ time: "09:00", value: 0.3 },{ time: "10:00", value: 0.6 },{ time: "11:00", value: 0.8 },{ time: "12:00", value: 0.4 },{ time: "13:00", value: 0.9 }],
+  headPose:[{ axis: "Pitch", value: 10 },{ axis: "Yaw", value: 8 },{ axis: "Roll", value: 5 }],
+  posture: [{ metric: "Back", score: 80 },{ metric: "Neck", score: 72 },{ metric: "Shoulders", score: 84 },{ metric: "Arms", score: 90 },{ metric: "Lean", score: 65 }],
+};
+
+const sevMap: Record<string, { bg: string; color: string }> = {
+  High:     { bg: "#FEF2F2", color: "#EF4444" },
+  Moderate: { bg: "#FFF7ED", color: "#F59E0B" },
+  Low:      { bg: "#ECFDF5", color: "#10B981" },
+};
+
+interface Props { empId: string; onBack: () => void; }
+
+export function EmployeeDetailPage({ empId, onBack }: Props) {
+  const { dark } = useTheme();
+  const isMobile = useIsMobile();
+  const { employees } = useApp();
+  const emp = employees.find((e) => e.id === empId);
+  const data = driverData[empId] ?? defaultData;
+
+  const bg = dark ? "#111827" : "#F4F5F7";
+  const cardBg = dark ? "#1F2937" : "#fff";
+  const textMain = dark ? "#F9FAFB" : "#111827";
+  const textSub = dark ? "#9CA3AF" : "#6B7280";
+  const borderColor = dark ? "#374151" : "#F3F4F6";
+  const shadow = dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)";
+  const gridColor = dark ? "#374151" : "#F3F4F6";
+  const tooltipStyle = { fontSize: 12, borderRadius: 8, border: `1px solid ${borderColor}`, background: cardBg, color: textMain };
+
+  if (!emp) return null;
+
+  const fullName = `${emp.firstName} ${emp.lastName}`;
+  const scoreColor = emp.safetyScore >= 85 ? "#10B981" : emp.safetyScore >= 70 ? "#F59E0B" : "#EF4444";
+
+  const latestBlink = data.blink[data.blink.length - 1]?.rate ?? 0;
+  const latestPerclos = data.perclos[data.perclos.length - 1]?.value ?? 0;
+  const latestEAR = data.ear[data.ear.length - 1]?.value ?? 0;
+  const latestMAR = data.mar[data.mar.length - 1]?.value ?? 0;
+
+  function Card({ title, subtitle, children, span }: { title: string; subtitle?: string; children: React.ReactNode; span?: string }) {
+    return (
+      <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden", gridColumn: span }}>
+        <div style={{ padding: "12px 18px", borderBottom: `1px solid ${borderColor}` }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: textMain }}>{title}</div>
+          {subtitle && <div style={{ fontSize: 12, color: textSub, marginTop: 1 }}>{subtitle}</div>}
+        </div>
+        <div style={{ padding: "16px 18px" }}>{children}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
+      {/* Back + header */}
+      <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", gap: 12, marginBottom: 20 }}>
+        <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: cardBg, border: `1px solid ${borderColor}`, borderRadius: 8, fontSize: 13, color: textSub, cursor: "pointer", fontFamily: "Inter, sans-serif", boxShadow: shadow }}>
+          <ArrowLeft size={14} /> Back
+        </button>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: textMain, textTransform: "uppercase", letterSpacing: "0.04em" }}>DRIVER ANALYTICS</h1>
+          <p style={{ fontSize: 13, color: textSub }}>Fatigue and behavior metrics for {fullName}</p>
+        </div>
+      </div>
+
+      {/* Profile card */}
+      <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, padding: "18px 22px", marginBottom: 20, display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", gap: 20 }}>
+        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 20, fontWeight: 700, flexShrink: 0 }}>
+          {(emp.firstName[0] ?? "") + (emp.lastName[0] ?? "")}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: textMain }}>{fullName}</div>
+          <div style={{ fontSize: 13, color: textSub, marginTop: 2 }}>{emp.id} · {emp.vehicle} · {emp.contact}</div>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: isMobile ? 8 : 16 }}>
+          {[
+            { label: "Safety Score",  value: String(emp.safetyScore), color: scoreColor },
+            { label: "Blink Rate",    value: `${latestBlink}/min`,    color: latestBlink < 15 ? "#EF4444" : "#10B981" },
+            { label: "PERCLOS",       value: `${latestPerclos}%`,     color: latestPerclos > 10 ? "#EF4444" : "#10B981" },
+            { label: "EAR",           value: String(latestEAR),       color: latestEAR < 0.2 ? "#EF4444" : "#10B981" },
+            { label: "MAR",           value: String(latestMAR),       color: latestMAR > 0.7 ? "#EF4444" : "#10B981" },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ textAlign: "center", padding: "8px 12px", background: dark ? "#374151" : "#F8F9FA", borderRadius: 10 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
+              <div style={{ fontSize: 10, color: textSub, marginTop: 4 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+        {/* Blink Rate */}
+        <Card title="Blink Rate" subtitle="Blinks/min — normal: 15–20 bpm">
+          <ResponsiveContainer width="100%" height={150}>
+            <LineChart data={data.blink}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="time" tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 25]} tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Line type="monotone" dataKey="rate" name="Blink Rate" stroke="#1D6AE5" strokeWidth={2.5} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* PERCLOS */}
+        <Card title="Eye Closure — PERCLOS" subtitle="% time eyes closed — threshold: 10%">
+          <ResponsiveContainer width="100%" height={150}>
+            <LineChart data={data.perclos}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="time" tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 25]} tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${v}%`, "PERCLOS"]} />
+              <Line type="monotone" dataKey="value" name="PERCLOS" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* EAR */}
+        <Card title="Micro Sleep — EAR" subtitle="Eye Aspect Ratio — alert below 0.2">
+          <ResponsiveContainer width="100%" height={150}>
+            <LineChart data={data.ear}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="time" tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 0.4]} tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Line type="monotone" dataKey="value" name="EAR" stroke="#EF4444" strokeWidth={2.5} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* MAR */}
+        <Card title="Yawn Detection — MAR" subtitle="Mouth Aspect Ratio — alert above 0.7">
+          <ResponsiveContainer width="100%" height={150}>
+            <LineChart data={data.mar}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="time" tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 1.5]} tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Line type="monotone" dataKey="value" name="MAR" stroke="#8B5CF6" strokeWidth={2.5} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* Head Pose */}
+        <Card title="Head Pose" subtitle="Pitch, Yaw, Roll deviation (degrees)">
+          <ResponsiveContainer width="100%" height={150}>
+            <BarChart data={data.headPose}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="axis" tick={{ fontSize: 11, fill: textSub }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="value" name="Degrees" fill="#1D6AE5" radius={[4,4,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* Body Posture */}
+        <Card title="Body Posture" subtitle="Postural scoring by body zone">
+          <ResponsiveContainer width="100%" height={150}>
+            <RadarChart data={data.posture} cx="50%" cy="50%" outerRadius={55}>
+              <PolarGrid stroke={gridColor} />
+              <PolarAngleAxis dataKey="metric" tick={{ fontSize: 10, fill: textSub }} />
+              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
+              <Radar name="Score" dataKey="score" stroke="#10B981" fill="#10B981" fillOpacity={0.25} />
+              <Tooltip contentStyle={tooltipStyle} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </Card>
+
+        {/* Alerts history */}
+        <Card title="Alert History" subtitle="All recorded events for this driver" span={isMobile ? undefined : "1 / -1"}>
+          {data.alerts.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "24px 0", fontSize: 13, color: textSub }}>No alerts recorded for this driver.</div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 380 }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
+                  {["Event Type", "Date", "Time", "Severity"].map((h) => (
+                    <th key={h} style={{ fontSize: 11, fontWeight: 600, color: textSub, textAlign: "left", padding: "8px 16px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data.alerts.map((a, i) => {
+                  const Icon = a.icon;
+                  const sev = sevMap[a.severity];
+                  return (
+                    <tr key={i} style={{ borderBottom: i < data.alerts.length - 1 ? `1px solid ${borderColor}` : "none" }}>
+                      <td style={{ padding: "10px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 26, height: 26, borderRadius: 6, background: a.iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <Icon size={12} color={a.iconColor} />
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: textMain }}>{a.type}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "10px 16px", fontSize: 13, color: textSub }}>{a.date}</td>
+                      <td style={{ padding: "10px 16px", fontSize: 13, color: textSub, fontFamily: "monospace" }}>{a.time}</td>
+                      <td style={{ padding: "10px 16px" }}>
+                        <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: sev.bg, color: sev.color }}>{a.severity}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            </div>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+}
