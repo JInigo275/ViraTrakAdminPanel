@@ -129,7 +129,18 @@ const AppContext = createContext<AppContextType>({} as AppContextType);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<AppUser[]>(seedUsers);
   const [drivers, setDrivers] = useState<Driver[]>(seedDrivers);
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
+    try {
+      const stay = localStorage.getItem("stayLoggedIn");
+      if (stay === "true") {
+        const raw = localStorage.getItem("currentUser");
+        if (raw) return JSON.parse(raw) as AppUser;
+      }
+    } catch (e) {
+      // ignore
+    }
+    return null;
+  });
   const [settings, setSettings] = useState<AppSettings>({ firstName: "Admin", lastName: "User" });
   const [dbReady, setDbReady] = useState(false);
 
@@ -142,6 +153,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .catch((e) => console.warn("Supabase load failed, using seed data:", e))
       .finally(() => setDbReady(true));
   }, []);
+
+  // Persist currentUser only when stayLoggedIn is true
+  useEffect(() => {
+    try {
+      const stay = localStorage.getItem("stayLoggedIn");
+      if (currentUser && stay === "true") {
+        localStorage.setItem("currentUser", JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem("currentUser");
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [currentUser]);
 
   // --- Users write-through ---
   async function addUser(u: AppUser, _password: string) {

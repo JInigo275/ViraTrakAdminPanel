@@ -47,6 +47,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
@@ -63,7 +64,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setTimeout(() => {
       const user = users.find((u) => u.email === email && u.password === password && u.status === "Active");
       if (user) {
-        setCurrentUser({ ...user, lastLogin: new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) });
+        const updated = { ...user, lastLogin: new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) };
+        try {
+          if (stayLoggedIn) localStorage.setItem("stayLoggedIn", "true"); else localStorage.removeItem("stayLoggedIn");
+        } catch (e) { }
+        setCurrentUser(updated);
         onLogin();
       } else {
         setError("Invalid email or password. Please try again.");
@@ -128,6 +133,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 <span style={{ fontSize: 13, color: "#EF4444" }}>{error}</span>
               </div>
             )}
+
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+              <input type="checkbox" checked={stayLoggedIn} onChange={(e) => setStayLoggedIn(e.target.checked)} style={{ width: 16, height: 16 }} />
+              <span>Stay logged in</span>
+            </label>
 
             <button type="submit" disabled={loading}
               style={{ width: "100%", padding: "13px", background: loading ? "#93C5FD" : "#1D6AE5", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4, transition: "background 0.15s" }}

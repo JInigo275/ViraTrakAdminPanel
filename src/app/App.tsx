@@ -24,6 +24,11 @@ function AppInner() {
   const { dark } = useTheme();
   const { currentUser, setCurrentUser } = useApp();
 
+  // Sync loggedIn state with persisted/current user
+  useEffect(() => {
+    setLoggedIn(!!currentUser);
+  }, [currentUser]);
+
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   useEffect(() => {
     function update() {
@@ -57,6 +62,7 @@ function AppInner() {
     setLoggedIn(false);
     setCurrentPage("dashboard");
     setDrawerOpen(false);
+    try { localStorage.removeItem("stayLoggedIn"); localStorage.removeItem("currentUser"); } catch (e) { }
   }
 
   function navigate(page: string) {

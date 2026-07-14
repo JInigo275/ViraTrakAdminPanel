@@ -1,7 +1,21 @@
-import { Hono } from "npm:hono";
-import { cors } from "npm:hono/cors";
-import { logger } from "npm:hono/logger";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { logger } from "hono/logger";
 import * as kv from "./kv_store.tsx";
+
+// Environment accessor that works in Deno and Node (for typecheckers that
+// don't know about the Deno global).
+function getEnv(key: string): string | undefined {
+  // Use globalThis to safely access Deno in environments where it's available
+  // (avoids TS error: Cannot find name 'Deno').
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const maybeDeno = (globalThis as any).Deno;
+  if (typeof maybeDeno !== "undefined" && maybeDeno?.env && typeof maybeDeno.env.get === "function") {
+    return maybeDeno.env.get(key) ?? undefined;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((globalThis as any).process?.env as any)?.[key];
+}
 
 const app = new Hono();
 
@@ -16,13 +30,14 @@ app.use("/*", cors({
 
 // Supabase REST helpers (no SDK needed — plain fetch)
 function sbUrl(path: string) {
-  return `${Deno.env.get("SUPABASE_URL")}/rest/v1${path}`;
+  const url = getEnv("SUPABASE_URL");
+  return `${url}/rest/v1${path}`;
 }
 function sbHeaders(extra: Record<string, string> = {}) {
   return {
     "Content-Type": "application/json",
-    "apikey": Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+    "apikey": getEnv("SUPABASE_SERVICE_ROLE_KEY")!,
+    "Authorization": `Bearer ${getEnv("SUPABASE_SERVICE_ROLE_KEY")}`,
     "Prefer": "return=representation",
     ...extra,
   };
@@ -148,4 +163,10 @@ app.delete(`${BASE}/system-logs/:id`, async (c) => {
   return c.json({ success: true });
 });
 
-Deno.serve(app.fetch);
+// Use globalThis to avoid referencing the undeclared Deno identifier in non-Deno
+// environments. If Deno is available, call its serve function.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const denoGlobal = (globalThis as any).Deno;
+if (denoGlobal && typeof denoGlobal.serve === "function") {
+  denoGlobal.serve(app.fetch);
+}
