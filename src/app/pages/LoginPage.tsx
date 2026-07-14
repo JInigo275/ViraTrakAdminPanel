@@ -1,5 +1,6 @@
 import { useState, useRef, ReactNode, useEffect } from "react";
-import { Shield, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
+import viraTrakLogo from "../../imports/ViraTrak_Logo.png";
 import { useApp } from "../context/AppContext";
 
 interface FloatingInputProps {
@@ -79,9 +80,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <div style={{ position: "absolute", bottom: -60, left: -60, width: 260, height: 260, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
-          <div style={{ width: 44, height: 44, background: "rgba(255,255,255,0.15)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Shield size={24} color="#fff" />
-          </div>
+          <img src={viraTrakLogo} alt="ViraTrak" style={{ width: 48, height: 48, objectFit: "contain", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.3))" }} />
           <div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>ViraTrak</div>
             <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", marginTop: 1 }}>Behavior Detection System</div>

@@ -44,12 +44,12 @@ export function StatCards() {
               <div style={{ width: 36, height: 36, borderRadius: 8, background: c.iconBg, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
                 <Icon size={18} color={c.iconColor} />
               </div>
-              <div style={{ fontSize: 12, color: dark ? "#9CA3AF" : "#9CA3AF", marginBottom: 3 }}>{c.title}</div>
-              <div style={{ fontSize: isMobile ? 24 : 32, fontWeight: 800, color: textMain, lineHeight: 1 }}>{c.value}</div>
-              <div style={{ fontSize: 12, color: c.labelColor, marginTop: 4 }}>{c.label}</div>
+              <div style={{ fontSize: 13, color: dark ? "#9CA3AF" : "#9CA3AF", marginBottom: 3 }}>{c.title}</div>
+              <div style={{ fontSize: isMobile ? 25 : 33, fontWeight: 800, color: textMain, lineHeight: 1 }}>{c.value}</div>
+              <div style={{ fontSize: 13, color: c.labelColor, marginTop: 4 }}>{c.label}</div>
             </div>
-            <div style={{ width: 72, height: 46, marginTop: 2, flexShrink: 0 }}>
-              <LineChart width={72} height={46} data={c.spark}>
+            <div style={{ width: 100, height: 64, marginTop: 2, flexShrink: 0 }}>
+              <LineChart width={100} height={64} data={c.spark}>
                 <Line type="monotone" dataKey="v" stroke={c.sparkColor} strokeWidth={2} dot={false} />
               </LineChart>
             </div>

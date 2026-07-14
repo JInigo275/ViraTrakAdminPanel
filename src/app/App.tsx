@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Menu, Shield } from "lucide-react";
+import { Menu } from "lucide-react";
+import viraTrakLogo from "../imports/ViraTrak_Logo.png";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Sidebar } from "./components/Sidebar";
@@ -9,15 +10,15 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { AlertsPage } from "./pages/AlertsPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { UsersPage } from "./pages/UsersPage";
-import { EmployeesPage } from "./pages/EmployeesPage";
-import { EmployeeDetailPage } from "./pages/EmployeeDetailPage";
+import { DriversPage } from "./pages/DriversPage";
+import { DriverDetailPage } from "./pages/DriverDetailPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
 function AppInner() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [currentPage, setCurrentPage] = useState("dashboard");
-  const [empDetailId, setEmpDetailId] = useState<string | null>(null);
+  const [driverDetailId, setDriverDetailId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { dark } = useTheme();
   const { currentUser, setCurrentUser } = useApp();
@@ -31,6 +32,13 @@ function AppInner() {
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    document.title = "ViraTrak";
+    let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+    if (!link) { link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+    link.href = viraTrakLogo;
   }, []);
 
   const isMobile = windowWidth < 768;
@@ -52,20 +60,20 @@ function AppInner() {
 
   function navigate(page: string) {
     setCurrentPage(page);
-    if (page !== "employees") setEmpDetailId(null);
+    if (page !== "employees") setDriverDetailId(null);
     setDrawerOpen(false);
   }
 
   const renderPage = () => {
-    if (currentPage === "employees" && empDetailId) {
-      return <EmployeeDetailPage empId={empDetailId} onBack={() => setEmpDetailId(null)} />;
+    if (currentPage === "employees" && driverDetailId) {
+      return <DriverDetailPage driverId={driverDetailId} onBack={() => setDriverDetailId(null)} />;
     }
     switch (currentPage) {
       case "dashboard":  return <DashboardPage onNavigate={navigate} isMobile={isMobile} />;
       case "alerts":     return <AlertsPage />;
       case "analytics":  return <AnalyticsPage />;
       case "users":      return <UsersPage />;
-      case "employees":  return <EmployeesPage onViewDetail={(id) => setEmpDetailId(id)} />;
+      case "employees":  return <DriversPage onViewDetail={(id) => setDriverDetailId(id)} />;
       case "logs":       return <SystemLogsPage />;
       case "settings":   return <SettingsPage />;
       default:           return <DashboardPage isMobile={isMobile} />;
@@ -94,9 +102,7 @@ function AppInner() {
             <Menu size={20} />
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 26, height: 26, background: "#1D6AE5", borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Shield size={14} color="#fff" />
-            </div>
+            <img src={viraTrakLogo} alt="ViraTrak" style={{ width: 28, height: 28, objectFit: "contain" }} />
             <span style={{ fontSize: 15, fontWeight: 700, color: dark ? "#F9FAFB" : "#111827" }}>ViraTrak</span>
           </div>
         </div>
@@ -137,7 +143,9 @@ function AppInner() {
         ::-webkit-scrollbar-thumb:hover { background: ${dark ? "#4B5563" : "#9CA3AF"}; }
         * { box-sizing: border-box; }
         h1, h2, h3, h4, p { margin: 0; }
-        button { font-family: Inter, sans-serif; }
+        button { font-family: Inter, sans-serif; -webkit-tap-highlight-color: transparent; }
+        button:focus { outline: none; }
+        button:focus-visible { outline: 2px solid #1D6AE5; outline-offset: 2px; }
         input { font-family: Inter, sans-serif; }
       `}</style>
     </div>

@@ -1,6 +1,8 @@
+import { LayoutDashboard } from "lucide-react";
 import { StatCards } from "../components/StatCards";
 import { RecentEvents } from "../components/RecentEvents";
 import { RightPanel } from "../components/RightPanel";
+import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 
 interface DashboardPageProps {
@@ -19,10 +21,7 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
 
       {/* Main scrollable content */}
       <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 20, display: "flex", flexDirection: "column", gap: 16, background: bg, transition: "background 0.2s" }}>
-        <div>
-          <h1 style={{ fontSize: isMobile ? 17 : 20, fontWeight: 700, color: dark ? "#F9FAFB" : "#111827", marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.04em" }}>DASHBOARD</h1>
-          <p style={{ fontSize: 13, color: dark ? "#6B7280" : "#9CA3AF" }}>Overview of driver behavior and system status</p>
-        </div>
+        <PageHeader icon={LayoutDashboard} iconColor="#1D6AE5" title="Dashboard" subtitle="Overview of driver behavior and system status" />
         <StatCards />
         <RecentEvents onViewAll={onNavigate ? () => onNavigate("alerts") : undefined} />
 

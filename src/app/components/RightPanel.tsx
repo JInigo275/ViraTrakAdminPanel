@@ -56,7 +56,7 @@ export function RightPanel() {
   const shadow      = dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)";
   const gridColor   = dark ? "#374151" : "#F3F4F6";
   const hoverBg     = dark ? "#374151" : "#F9FAFB";
-  const tooltipStyle = { fontSize: 12, borderRadius: 8, border: `1px solid ${borderColor}`, background: cardBg, color: textMain };
+  const tooltipStyle = { fontSize: 13, borderRadius: 8, border: `1px solid ${borderColor}`, background: cardBg, color: textMain };
   const trendData   = trendDataSets[trendRange];
 
   return (
@@ -65,19 +65,19 @@ export function RightPanel() {
       {/* Behavior Summary */}
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden", transition: "background 0.2s", flexShrink: 0 }}>
         <div style={{ padding: "12px 16px", borderBottom: `1px solid ${borderColor}` }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: textMain }}>Behavior Summary (Today)</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: textMain }}>Behavior Summary (Today)</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", padding: "14px 16px 8px", position: "relative" }}>
-          <div style={{ position: "relative", width: 220, height: 220 }}>
+          <div style={{ position: "relative", width: 220, height: 220, margin: "0 auto" }}>
             <PieChart width={220} height={220}>
               <Pie data={donutData} cx={110} cy={110} innerRadius={66} outerRadius={92} dataKey="value" strokeWidth={0} paddingAngle={3}>
                 {donutData.map((entry, idx) => <Cell key={`donut-cell-${idx}`} fill={entry.color} />)}
               </Pie>
             </PieChart>
-            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", textAlign: "center", pointerEvents: "none" }}>
-              <div style={{ fontSize: 32, fontWeight: 700, color: textMain, lineHeight: 1 }}>32</div>
-              <div style={{ fontSize: 12, color: textSub, marginTop: 4, lineHeight: 1.4 }}>Total<br/>Events</div>
+            <div style={{ position: "absolute", top: 110, left: 110, transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none" }}>
+              <div style={{ fontSize: 33, fontWeight: 700, color: textMain, lineHeight: 1 }}>32</div>
+              <div style={{ fontSize: 13, color: textSub, marginTop: 4, lineHeight: 1.4, textAlign: "center" }}>Total<br/>Events</div>
             </div>
           </div>
         </div>
@@ -86,9 +86,9 @@ export function RightPanel() {
           {donutData.map((d) => (
             <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ width: 9, height: 9, borderRadius: "50%", background: d.color, display: "inline-block", flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: textMain, flex: 1 }}>{d.name}</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: textMain }}>{Math.round(32 * d.value / 100)}</span>
-              <span style={{ fontSize: 11, color: textSub, width: 32, textAlign: "right" }}>{d.value}%</span>
+              <span style={{ fontSize: 13, color: textMain, flex: 1 }}>{d.name}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: textMain }}>{Math.round(32 * d.value / 100)}</span>
+              <span style={{ fontSize: 12, color: textSub, width: 32, textAlign: "right" }}>{d.value}%</span>
             </div>
           ))}
         </div>
@@ -97,12 +97,12 @@ export function RightPanel() {
       {/* Alerts Trend — fills remaining height */}
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden", transition: "background 0.2s", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: `1px solid ${borderColor}`, flexShrink: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: textMain }}>Alerts Trend</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: textMain }}>Alerts Trend</span>
 
           <div style={{ position: "relative" }} ref={trendRef}>
             <div
               onClick={() => setShowTrendPicker((v) => !v)}
-              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: textSub, border: `1px solid ${borderColor}`, borderRadius: 6, padding: "4px 8px", cursor: "pointer", userSelect: "none", background: showTrendPicker ? (dark ? "#374151" : "#F3F4F6") : "transparent", transition: "background 0.1s" }}
+              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: textSub, border: `1px solid ${borderColor}`, borderRadius: 6, padding: "4px 8px", cursor: "pointer", userSelect: "none", background: showTrendPicker ? (dark ? "#374151" : "#F3F4F6") : "transparent", transition: "background 0.1s" }}
             >
               {trendRange}
               <ChevronDown size={11} color={textSub} style={{ transform: showTrendPicker ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
@@ -114,7 +114,7 @@ export function RightPanel() {
                   <div
                     key={opt}
                     onClick={() => { setTrendRange(opt); setShowTrendPicker(false); }}
-                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", cursor: "pointer", fontSize: 13, color: trendRange === opt ? "#1D6AE5" : textMain, fontWeight: trendRange === opt ? 600 : 400, transition: "background 0.1s" }}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", cursor: "pointer", fontSize: 14, color: trendRange === opt ? "#1D6AE5" : textMain, fontWeight: trendRange === opt ? 600 : 400, transition: "background 0.1s" }}
                     onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = hoverBg)}
                     onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
                   >
@@ -129,10 +129,10 @@ export function RightPanel() {
 
         {/* Chart — fixed dimensions to prevent recharts 0×0 duplicate-key bug */}
         <div style={{ flex: 1, padding: "12px 8px 12px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0 }}>
-          <LineChart width={290} height={160} data={trendData}>
+          <LineChart key={trendRange} width={290} height={160} data={trendData}>
             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-            <XAxis dataKey="date" tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: textSub }} axisLine={false} tickLine={false} width={28} />
+            <XAxis dataKey="date" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
             <Tooltip contentStyle={tooltipStyle} />
             <Line type="monotone" dataKey="alerts" stroke="#EF4444" strokeWidth={2.5} dot={{ fill: "#EF4444", r: 3 }} activeDot={{ r: 5 }} />
           </LineChart>

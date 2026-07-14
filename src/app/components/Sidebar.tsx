@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import {
   LayoutDashboard, Bell, TrendingUp, Users, Contact, ScrollText,
-  Shield, ChevronDown, Moon, Sun, Monitor, LogOut, Check, Settings, X,
+  ChevronDown, Moon, Sun, Monitor, LogOut, Check, Settings, X,
 } from "lucide-react";
+import viraTrakLogo from "../../imports/ViraTrak_Logo.png";
 import { useTheme, ThemeMode } from "../context/ThemeContext";
 import { useApp } from "../context/AppContext";
 
@@ -11,7 +12,7 @@ const allNavItems = [
   { icon: Bell,            label: "Alerts & Evidence",   id: "alerts",     roles: ["Owner", "Administrator", "Supervisor"] },
   { icon: TrendingUp,      label: "Analytics",            id: "analytics",  roles: ["Owner", "Administrator", "Supervisor"] },
   { icon: Users,           label: "Users",                id: "users",      roles: ["Owner", "Administrator"] },
-  { icon: Contact,         label: "Employee Info",        id: "employees",  roles: ["Owner", "Administrator", "Supervisor"] },
+  { icon: Contact,         label: "Driver Info",          id: "employees",  roles: ["Owner", "Administrator", "Supervisor"] },
   { icon: ScrollText,      label: "System Logs",          id: "logs",       roles: ["Owner", "Administrator"] },
 ];
 
@@ -66,12 +67,10 @@ export function Sidebar({ currentPage, onNavigate, onLogout, onClose }: SidebarP
 
       {/* Logo */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "18px 16px 16px", borderBottom: `1px solid ${border}` }}>
-        <div style={{ width: 32, height: 32, background: "#1D6AE5", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Shield size={17} color="#fff" />
-        </div>
+        <img src={viraTrakLogo} alt="ViraTrak" style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: textMain, lineHeight: 1.2 }}>ViraTrak</div>
-          <div style={{ fontSize: 10, color: textMuted, lineHeight: 1.3 }}>Behavior Detection</div>
+          <div style={{ fontWeight: 700, fontSize: 16, color: textMain, lineHeight: 1.2 }}>ViraTrak</div>
+          <div style={{ fontSize: 12, color: textMuted, lineHeight: 1.3 }}>Behavior Detection</div>
         </div>
         {onClose && (
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: textMuted, display: "flex", padding: 4, borderRadius: 6, flexShrink: 0 }}>
@@ -93,7 +92,7 @@ export function Sidebar({ currentPage, onNavigate, onLogout, onClose }: SidebarP
               onMouseLeave={(e) => { if (!active) { (e.currentTarget as HTMLDivElement).style.background = "transparent"; (e.currentTarget as HTMLDivElement).style.color = textMuted; } }}
             >
               <Icon size={16} strokeWidth={active ? 2.5 : 1.5} />
-              <span style={{ fontSize: 13, fontWeight: active ? 600 : 400 }}>{label}</span>
+              <span style={{ fontSize: 14, fontWeight: active ? 600 : 400 }}>{label}</span>
             </div>
           );
         })}
@@ -108,16 +107,16 @@ export function Sidebar({ currentPage, onNavigate, onLogout, onClose }: SidebarP
           onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; (e.currentTarget as HTMLDivElement).style.color = textMuted; }}
         >
           <CurrentThemeIcon size={16} strokeWidth={1.5} />
-          <span style={{ fontSize: 13, flex: 1 }}>{themeOptions.find((o) => o.value === mode)?.label}</span>
+          <span style={{ fontSize: 14, flex: 1 }}>{themeOptions.find((o) => o.value === mode)?.label}</span>
           <ChevronDown size={12} color={textMuted} style={{ transform: showTheme ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
         </div>
 
         {showTheme && (
           <div style={{ position: "absolute", bottom: "calc(100% + 4px)", left: 8, right: 8, background: popupBg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.15)", overflow: "hidden", zIndex: 200 }}>
-            <div style={{ padding: "8px 12px 6px", fontSize: 11, fontWeight: 600, color: textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Appearance</div>
+            <div style={{ padding: "8px 12px 6px", fontSize: 12, fontWeight: 600, color: textMuted, textTransform: "uppercase", letterSpacing: "0.05em" }}>Appearance</div>
             {themeOptions.map(({ value, label, icon: Icon }) => (
               <div key={value} onClick={() => { setMode(value); setShowTheme(false); }}
-                style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", cursor: "pointer", color: mode === value ? "#1D6AE5" : textMain, fontWeight: mode === value ? 600 : 400, fontSize: 13, transition: "background 0.1s" }}
+                style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", cursor: "pointer", color: mode === value ? "#1D6AE5" : textMain, fontWeight: mode === value ? 600 : 400, fontSize: 14, transition: "background 0.1s" }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = hoverBg)}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
               >
@@ -136,22 +135,22 @@ export function Sidebar({ currentPage, onNavigate, onLogout, onClose }: SidebarP
           onClick={() => setShowLogout((v) => !v)}
           style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#1F2937" : "#F8F9FA", borderRadius: 8, padding: "8px 10px", cursor: "pointer", border: `1px solid ${border}` }}
         >
-          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, fontWeight: 700, flexShrink: 0, overflow: "hidden" }}>
+          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0, overflow: "hidden" }}>
             {settings.avatar ? <img src={settings.avatar} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : displayInitials}
           </div>
-          <span style={{ fontSize: 12, color: textMain, fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</span>
+          <span style={{ fontSize: 13, color: textMain, fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</span>
           <ChevronDown size={12} color={textMuted} style={{ transform: showLogout ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }} />
         </div>
 
         {showLogout && (
           <div style={{ position: "absolute", bottom: "calc(100% - 4px)", left: 8, right: 8, background: popupBg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.15)", overflow: "hidden", zIndex: 100 }}>
             <div style={{ padding: "10px 14px", borderBottom: `1px solid ${border}` }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: textMain }}>{displayName}</div>
-              <div style={{ fontSize: 11, color: textMuted }}>{currentUser?.email}</div>
-              <span style={{ display: "inline-block", marginTop: 4, padding: "1px 8px", borderRadius: 999, fontSize: 10, fontWeight: 600, background: "#EBF2FF", color: "#1D6AE5" }}>{currentUser?.role}</span>
+              <div style={{ fontSize: 14, fontWeight: 600, color: textMain }}>{displayName}</div>
+              <div style={{ fontSize: 12, color: textMuted }}>{currentUser?.email}</div>
+              <span style={{ display: "inline-block", marginTop: 4, padding: "1px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "#EBF2FF", color: "#1D6AE5" }}>{currentUser?.role}</span>
             </div>
             <div onClick={() => { onNavigate("settings"); setShowLogout(false); }}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", cursor: "pointer", fontSize: 13, color: textMain, transition: "background 0.1s" }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", cursor: "pointer", fontSize: 14, color: textMain, transition: "background 0.1s" }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = hoverBg)}
               onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
             >
@@ -159,7 +158,7 @@ export function Sidebar({ currentPage, onNavigate, onLogout, onClose }: SidebarP
             </div>
             <div style={{ height: 1, background: border }} />
             <div onClick={() => { setShowLogout(false); onLogout(); }}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", cursor: "pointer", color: "#EF4444", fontSize: 13, fontWeight: 500, transition: "background 0.1s" }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", cursor: "pointer", color: "#EF4444", fontSize: 14, fontWeight: 500, transition: "background 0.1s" }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = dark ? "#374151" : "#FEF2F2")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}
             >
@@ -170,7 +169,7 @@ export function Sidebar({ currentPage, onNavigate, onLogout, onClose }: SidebarP
       </div>
 
       <div style={{ padding: "0 12px 12px", textAlign: "center" }}>
-        <span style={{ fontSize: 10, color: textMuted }}>© 2026 ViraTrak System</span>
+        <span style={{ fontSize: 12, color: textMuted }}>© 2026 ViraTrak System</span>
       </div>
     </aside>
   );

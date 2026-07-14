@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { logsApi, DbLog } from "../../api/viratrak";
-import { Search, Download, Check } from "lucide-react";
+import { Search, Download, Check, ScrollText } from "lucide-react";
+import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -137,44 +138,37 @@ export function SystemLogsPage() {
         />
       )}
 
-      {/* Header */}
-      <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "flex-end", justifyContent: "space-between", gap: isMobile ? 12 : 0, marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: isMobile ? 16 : 20, fontWeight: 700, color: textMain, marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.04em" }}>SYSTEM LOGS</h1>
-          <p style={{ fontSize: 13, color: textSub }}>Unified audit trail — system events &amp; hardware diagnostics</p>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={exportExcel} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-            <Download size={14} /> Excel
-          </button>
-          <button onClick={() => setShowPDFPreview(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#EF4444", color: "#fff", borderRadius: 8, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-            <Download size={14} /> PDF {selected.size > 0 && `(${selected.size})`}
-          </button>
-        </div>
-      </div>
+      <PageHeader icon={ScrollText} iconColor="#6B7280" title="System Logs" subtitle="Unified audit trail — system events & hardware diagnostics">
+        <button onClick={exportExcel} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+          <Download size={14} /> Excel
+        </button>
+        <button onClick={() => setShowPDFPreview(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#EF4444", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+          <Download size={14} /> PDF {selected.size > 0 && `(${selected.size})`}
+        </button>
+      </PageHeader>
 
       {/* Filters */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, borderRadius: 8, padding: "7px 12px", minWidth: 220 }}>
           <Search size={13} color={textSub} />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search logs…" style={{ background: "transparent", border: "none", outline: "none", fontSize: 13, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search logs…" style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
         </div>
 
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Type:</span>
+          <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Type:</span>
           {["All", "INFO", "WARNING", "ERROR"].map((f) => (
             <button key={f} onClick={() => setLevelFilter(f)}
-              style={{ padding: "5px 11px", borderRadius: 999, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer", background: levelFilter === f ? "#1D6AE5" : filterBg, color: levelFilter === f ? "#fff" : textSub, transition: "all 0.15s", fontFamily: "Inter, sans-serif" }}>
+              style={{ padding: "5px 11px", borderRadius: 999, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer", background: levelFilter === f ? "#1D6AE5" : filterBg, color: levelFilter === f ? "#fff" : textSub, transition: "all 0.15s", fontFamily: "Inter, sans-serif" }}>
               {f}
             </button>
           ))}
         </div>
 
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Source:</span>
+          <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Source:</span>
           {["All", "System", "Hardware"].map((f) => (
             <button key={f} onClick={() => setSourceFilter(f)}
-              style={{ padding: "5px 11px", borderRadius: 999, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer", background: sourceFilter === f ? "#1D6AE5" : filterBg, color: sourceFilter === f ? "#fff" : textSub, transition: "all 0.15s", fontFamily: "Inter, sans-serif" }}>
+              style={{ padding: "5px 11px", borderRadius: 999, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer", background: sourceFilter === f ? "#1D6AE5" : filterBg, color: sourceFilter === f ? "#fff" : textSub, transition: "all 0.15s", fontFamily: "Inter, sans-serif" }}>
               {f}
             </button>
           ))}
@@ -184,11 +178,11 @@ export function SystemLogsPage() {
       {/* Select / Deselect */}
       {filtered.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <button onClick={selectAll} style={{ fontSize: 12, color: "#1D6AE5", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Select All</button>
+          <button onClick={selectAll} style={{ fontSize: 13, color: "#1D6AE5", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Select All</button>
           <span style={{ color: dark ? "#4B5563" : "#D1D5DB" }}>·</span>
-          <button onClick={deselectAll} style={{ fontSize: 12, color: textSub, background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Deselect All</button>
-          {selected.size > 0 && <span style={{ fontSize: 12, color: textSub }}>{selected.size} selected for export</span>}
-          <span style={{ fontSize: 12, color: textSub, marginLeft: "auto" }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""}</span>
+          <button onClick={deselectAll} style={{ fontSize: 13, color: textSub, background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Deselect All</button>
+          {selected.size > 0 && <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for export</span>}
+          <span style={{ fontSize: 13, color: textSub, marginLeft: "auto" }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""}</span>
         </div>
       )}
 
@@ -206,15 +200,15 @@ export function SystemLogsPage() {
                   </div>
                 </th>
                 {["Date", "Time", "Type", "Source", "Reference", "Description"].map((h) => (
-                  <th key={h} style={{ fontSize: 11, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+                  <th key={h} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", fontSize: 14, color: textSub }}>Loading logs…</td></tr>
+                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>Loading logs…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", fontSize: 14, color: textSub }}>No logs match the current filters.</td></tr>
+                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No logs match the current filters.</td></tr>
               ) : filtered.map((l, i) => {
                 const checked = selected.has(l.id);
                 return (
@@ -227,16 +221,16 @@ export function SystemLogsPage() {
                         {checked && <Check size={10} color="#fff" />}
                       </div>
                     </td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, color: textSub, whiteSpace: "nowrap", fontFamily: "monospace" }}>{l.date}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, color: textSub, whiteSpace: "nowrap", fontFamily: "monospace" }}>{l.time}</td>
+                    <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap", fontFamily: "monospace" }}>{l.date}</td>
+                    <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap", fontFamily: "monospace" }}>{l.time}</td>
                     <td style={{ padding: "10px 14px" }}>
-                      <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: levelStyle[l.level].bg, color: levelStyle[l.level].color }}>{l.level}</span>
+                      <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, background: levelStyle[l.level].bg, color: levelStyle[l.level].color }}>{l.level}</span>
                     </td>
                     <td style={{ padding: "10px 14px" }}>
-                      <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: sourceStyle[l.source].bg, color: sourceStyle[l.source].color }}>{l.source}</span>
+                      <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, background: sourceStyle[l.source].bg, color: sourceStyle[l.source].color }}>{l.source}</span>
                     </td>
-                    <td style={{ padding: "10px 14px", fontSize: 12, color: textSub, whiteSpace: "nowrap" }}>{l.ref}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 13, color: textMain }}>{l.action}</td>
+                    <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap" }}>{l.ref}</td>
+                    <td style={{ padding: "10px 14px", fontSize: 14, color: textMain }}>{l.action}</td>
                   </tr>
                 );
               })}

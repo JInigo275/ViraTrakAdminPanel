@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Camera, Eye, EyeOff, Check, Bell, Moon, Shield, Save } from "lucide-react";
+import { Camera, Eye, EyeOff, Check, Bell, Moon, Shield, Save, Settings } from "lucide-react";
+import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp } from "../context/AppContext";
 
@@ -9,7 +10,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <div style={{ background: dark ? "#1F2937" : "#fff", borderRadius: 12, boxShadow: dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)", overflow: "hidden", marginBottom: 16 }}>
       <div style={{ padding: "14px 20px", borderBottom: `1px solid ${dark ? "#374151" : "#F3F4F6"}` }}>
-        <span style={{ fontSize: 14, fontWeight: 600, color: dark ? "#F9FAFB" : "#111827" }}>{title}</span>
+        <span style={{ fontSize: 15, fontWeight: 600, color: dark ? "#F9FAFB" : "#111827" }}>{title}</span>
       </div>
       <div style={{ padding: "20px" }}>{children}</div>
     </div>
@@ -23,8 +24,8 @@ function FloatField({ label, value, onChange, type = "text", suffix }: { label: 
   return (
     <div style={{ position: "relative" }}>
       <input type={type} value={value} onChange={(e) => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-        style={{ width: "100%", padding: lifted ? "22px 44px 8px 14px" : "15px 44px 15px 14px", fontSize: 14, color: dark ? "#F9FAFB" : "#111827", background: dark ? "#374151" : "#fff", border: `1.5px solid ${focused ? "#1D6AE5" : dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none", boxSizing: "border-box", transition: "all 0.18s", fontFamily: "Inter, sans-serif" }} />
-      <label style={{ position: "absolute", left: 14, top: lifted ? 8 : "50%", transform: lifted ? "none" : "translateY(-50%)", fontSize: lifted ? 11 : 14, fontWeight: lifted ? 500 : 400, color: focused ? "#1D6AE5" : dark ? "#6B7280" : "#9CA3AF", pointerEvents: "none", transition: "all 0.18s ease", fontFamily: "Inter, sans-serif" }}>{label}</label>
+        style={{ width: "100%", padding: lifted ? "22px 44px 8px 14px" : "15px 44px 15px 14px", fontSize: 15, color: dark ? "#F9FAFB" : "#111827", background: dark ? "#374151" : "#fff", border: `1.5px solid ${focused ? "#1D6AE5" : dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none", boxSizing: "border-box", transition: "all 0.18s", fontFamily: "Inter, sans-serif" }} />
+      <label style={{ position: "absolute", left: 14, top: lifted ? 8 : "50%", transform: lifted ? "none" : "translateY(-50%)", fontSize: lifted ? 12 : 15, fontWeight: lifted ? 500 : 400, color: focused ? "#1D6AE5" : dark ? "#6B7280" : "#9CA3AF", pointerEvents: "none", transition: "all 0.18s ease", fontFamily: "Inter, sans-serif" }}>{label}</label>
       {suffix && <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }}>{suffix}</div>}
     </div>
   );
@@ -106,17 +107,14 @@ export function SettingsPage() {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: textMain, marginBottom: 2, textTransform: "uppercase", letterSpacing: "0.04em" }}>SETTINGS</h1>
-        <p style={{ fontSize: 13, color: textSub }}>Manage your profile, security, and preferences</p>
-      </div>
+      <PageHeader icon={Settings} iconColor="#1D6AE5" title="Settings" subtitle="Manage your profile, security, and preferences" />
 
       {/* Profile */}
       <Section title="Profile">
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 20 }}>
           <div style={{ position: "relative" }}>
             <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "3px solid #EBF2FF" }}>
-              {avatar ? <img src={avatar} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 24, fontWeight: 700, color: "#fff" }}>{(firstName[0] ?? "") + (lastName[0] ?? "")}</span>}
+              {avatar ? <img src={avatar} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 25, fontWeight: 700, color: "#fff" }}>{(firstName[0] ?? "") + (lastName[0] ?? "")}</span>}
             </div>
             <button onClick={() => fileRef.current?.click()} style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderRadius: "50%", background: "#1D6AE5", border: "2px solid #fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Camera size={12} color="#fff" />
@@ -124,10 +122,10 @@ export function SettingsPage() {
             <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: "none" }} />
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: textMain }}>{firstName} {lastName}</div>
-            <div style={{ fontSize: 13, color: textSub, marginTop: 2 }}>{currentUser?.email}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: textMain }}>{firstName} {lastName}</div>
+            <div style={{ fontSize: 14, color: textSub, marginTop: 2 }}>{currentUser?.email}</div>
             <div style={{ marginTop: 6 }}>
-              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: "#EBF2FF", color: "#1D6AE5" }}>{currentUser?.role}</span>
+              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "#EBF2FF", color: "#1D6AE5" }}>{currentUser?.role}</span>
             </div>
           </div>
         </div>
@@ -137,10 +135,10 @@ export function SettingsPage() {
             <FloatField label="Last Name" value={lastName} onChange={setLastName} />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={saveProfile} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+            <button onClick={saveProfile} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
               {profileSaved ? <><Check size={14} /> Saved</> : <><Save size={14} /> Save Profile</>}
             </button>
-            {avatar && <button onClick={() => setAvatar("")} style={{ padding: "10px 14px", background: "transparent", border: `1px solid ${borderColor}`, borderRadius: 8, fontSize: 13, color: textSub, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Remove Photo</button>}
+            {avatar && <button onClick={() => setAvatar("")} style={{ padding: "10px 14px", background: "transparent", border: `1px solid ${borderColor}`, borderRadius: 8, fontSize: 14, color: textSub, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Remove Photo</button>}
           </div>
         </div>
       </Section>
@@ -151,8 +149,8 @@ export function SettingsPage() {
           <FloatField label="Current Password" type={showOld ? "text" : "password"} value={oldPass} onChange={setOldPass} suffix={eyeBtn(showOld, () => setShowOld((v) => !v))} />
           <FloatField label="New Password" type={showNew ? "text" : "password"} value={newPass} onChange={setNewPass} suffix={eyeBtn(showNew, () => setShowNew((v) => !v))} />
           <FloatField label="Confirm New Password" type={showConfirm ? "text" : "password"} value={confirmPass} onChange={setConfirmPass} suffix={eyeBtn(showConfirm, () => setShowConfirm((v) => !v))} />
-          {passError && <div style={{ fontSize: 13, color: "#EF4444", background: "#FEF2F2", padding: "8px 12px", borderRadius: 8 }}>{passError}</div>}
-          <button onClick={changePassword} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", width: "fit-content" }}>
+          {passError && <div style={{ fontSize: 14, color: "#EF4444", background: "#FEF2F2", padding: "8px 12px", borderRadius: 8 }}>{passError}</div>}
+          <button onClick={changePassword} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", width: "fit-content" }}>
             {passSaved ? <><Check size={14} /> Password Updated</> : "Update Password"}
           </button>
         </div>
@@ -174,8 +172,8 @@ export function SettingsPage() {
                   <Icon size={16} color={dark ? "#9CA3AF" : "#6B7280"} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: textMain }}>{label}</div>
-                  <div style={{ fontSize: 12, color: textSub, marginTop: 1 }}>{desc}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: textMain }}>{label}</div>
+                  <div style={{ fontSize: 13, color: textSub, marginTop: 1 }}>{desc}</div>
                 </div>
               </div>
               <Toggle value={prefs[key as keyof typeof prefs]} onChange={(v) => setPrefs((p) => ({ ...p, [key]: v }))} />

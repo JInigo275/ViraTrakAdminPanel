@@ -1,17 +1,26 @@
-import { projectId } from "../../utils/supabase/info";
+import { projectId, publicAnonKey } from "../../utils/supabase/info";
 
-const BASE = `https://${projectId}.supabase.co/functions/v1/make-server-2033c26b`;
+const REST = `https://${projectId}.supabase.co/rest/v1`;
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
+function headers(extra: Record<string, string> = {}): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    "apikey": publicAnonKey,
+    "Authorization": `Bearer ${publicAnonKey}`,
+    "Prefer": "return=representation",
+    ...extra,
+  };
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${REST}${path}`, {
     ...options,
+    headers: headers(options.headers as Record<string, string> ?? {}),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error ?? res.statusText);
-  }
-  return res.json();
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new Error((data as { message?: string })?.message ?? res.statusText);
+  return data as T;
 }
 
 // ---------- Users ----------
@@ -28,14 +37,14 @@ export type DbUser = {
 };
 
 export const usersApi = {
-  list: () => request<DbUser[]>("/users"),
-  create: (u: Omit<DbUser, "created_at">) => request<DbUser>("/users", { method: "POST", body: JSON.stringify(u) }),
-  update: (id: string, patch: Partial<DbUser>) => request<DbUser>(`/users/${id}`, { method: "PUT", body: JSON.stringify(patch) }),
-  remove: (id: string) => request<{ success: boolean }>(`/users/${id}`, { method: "DELETE" }),
+  list: () => request<DbUser[]>("/users?order=created_at"),
+  create: (u: Omit<DbUser, "created_at">) => request<DbUser[]>("/users", { method: "POST", body: JSON.stringify(u) }).then((r) => r[0]),
+  update: (id: string, patch: Partial<DbUser>) => request<DbUser[]>(`/users?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) }).then((r) => r[0]),
+  remove: (id: string) => request<void>(`/users?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
 
-// ---------- Employees ----------
-export type DbEmployee = {
+// ---------- Drivers ----------
+export type DbDriver = {
   id: string;
   first_name: string;
   last_name: string;
@@ -44,11 +53,11 @@ export type DbEmployee = {
   safety_score: number;
 };
 
-export const employeesApi = {
-  list: () => request<DbEmployee[]>("/employees"),
-  create: (e: Omit<DbEmployee, "created_at">) => request<DbEmployee>("/employees", { method: "POST", body: JSON.stringify(e) }),
-  update: (id: string, patch: Partial<DbEmployee>) => request<DbEmployee>(`/employees/${id}`, { method: "PUT", body: JSON.stringify(patch) }),
-  remove: (id: string) => request<{ success: boolean }>(`/employees/${id}`, { method: "DELETE" }),
+export const driversApi = {
+  list: () => request<DbDriver[]>("/employees?order=created_at"),
+  create: (e: Omit<DbDriver, "created_at">) => request<DbDriver[]>("/employees", { method: "POST", body: JSON.stringify(e) }).then((r) => r[0]),
+  update: (id: string, patch: Partial<DbDriver>) => request<DbDriver[]>(`/employees?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) }).then((r) => r[0]),
+  remove: (id: string) => request<void>(`/employees?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
 
 // ---------- Alerts ----------
@@ -66,9 +75,9 @@ export type DbAlert = {
 };
 
 export const alertsApi = {
-  list: () => request<DbAlert[]>("/alerts"),
-  create: (a: Omit<DbAlert, "id" | "created_at">) => request<DbAlert>("/alerts", { method: "POST", body: JSON.stringify(a) }),
-  remove: (id: number) => request<{ success: boolean }>(`/alerts/${id}`, { method: "DELETE" }),
+  list: () => request<DbAlert[]>("/alerts?order=date.desc,time.desc"),
+  create: (a: Omit<DbAlert, "id" | "created_at">) => request<DbAlert[]>("/alerts", { method: "POST", body: JSON.stringify(a) }).then((r) => r[0]),
+  remove: (id: number) => request<void>(`/alerts?id=eq.${id}`, { method: "DELETE" }),
 };
 
 // ---------- System Logs ----------
@@ -83,7 +92,7 @@ export type DbLog = {
 };
 
 export const logsApi = {
-  list: () => request<DbLog[]>("/system-logs"),
-  create: (l: Omit<DbLog, "id" | "created_at">) => request<DbLog>("/system-logs", { method: "POST", body: JSON.stringify(l) }),
-  remove: (id: number) => request<{ success: boolean }>(`/system-logs/${id}`, { method: "DELETE" }),
+  list: () => request<DbLog[]>("/system_logs?order=date.desc,time.desc"),
+  create: (l: Omit<DbLog, "id" | "created_at">) => request<DbLog[]>("/system_logs", { method: "POST", body: JSON.stringify(l) }).then((r) => r[0]),
+  remove: (id: number) => request<void>(`/system_logs?id=eq.${id}`, { method: "DELETE" }),
 };

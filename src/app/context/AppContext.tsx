@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { usersApi, employeesApi, DbUser, DbEmployee } from "../../api/viratrak";
+import { usersApi, driversApi, DbUser, DbDriver } from "../../api/viratrak";
 
 export type Role = "Owner" | "Administrator" | "Supervisor";
 
@@ -16,7 +16,7 @@ export interface AppUser {
   avatar?: string;
 }
 
-export interface Employee {
+export interface Driver {
   id: string;
   firstName: string;
   lastName: string;
@@ -42,7 +42,7 @@ export function genTempPassword() {
   return `${adj}${sym}${noun}${num}`;
 }
 
-export function genEmployeeId(existing: Employee[]) {
+export function genDriverId(existing: Driver[]) {
   const max = existing.reduce((m, e) => {
     const n = parseInt(e.id.replace("EMP-", ""), 10);
     return isNaN(n) ? m : Math.max(m, n);
@@ -79,7 +79,7 @@ function mapUser(u: DbUser): AppUser {
   };
 }
 
-function mapEmployee(e: DbEmployee): Employee {
+function mapDriver(e: DbDriver): Driver {
   return {
     id: e.id,
     firstName: e.first_name,
@@ -95,7 +95,7 @@ const seedUsers: AppUser[] = [
   { id: "usr-owner-001", firstName: "Admin", lastName: "User", email: "admin@viratrak.com", role: "Owner", status: "Active", lastLogin: "Never", password: "admin123", mustChangePassword: false },
 ];
 
-const seedEmployees: Employee[] = [
+const seedDrivers: Driver[] = [
   { id: "EMP-001", firstName: "Juan",   lastName: "Dela Cruz",  vehicle: "TRK-101", contact: "+63 917 111 2233", safetyScore: 87 },
   { id: "EMP-002", firstName: "Mark",   lastName: "Santos",     vehicle: "TRK-104", contact: "+63 917 222 3344", safetyScore: 92 },
   { id: "EMP-003", firstName: "Pedro",  lastName: "Reyes",      vehicle: "TRK-107", contact: "+63 917 333 4455", safetyScore: 74 },
@@ -108,8 +108,8 @@ const seedEmployees: Employee[] = [
 interface AppContextType {
   users: AppUser[];
   setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
-  employees: Employee[];
-  setEmployees: React.Dispatch<React.SetStateAction<Employee[]>>;
+  drivers: Driver[];
+  setDrivers: React.Dispatch<React.SetStateAction<Driver[]>>;
   currentUser: AppUser | null;
   setCurrentUser: React.Dispatch<React.SetStateAction<AppUser | null>>;
   settings: AppSettings;
@@ -119,16 +119,16 @@ interface AppContextType {
   addUser: (u: AppUser, password: string) => Promise<void>;
   updateUser: (id: string, patch: Partial<AppUser>) => Promise<void>;
   removeUser: (id: string) => Promise<void>;
-  addEmployee: (e: Employee) => Promise<void>;
-  updateEmployee: (id: string, patch: Partial<Employee>) => Promise<void>;
-  removeEmployee: (id: string) => Promise<void>;
+  addDriver: (e: Driver) => Promise<void>;
+  updateDriver: (id: string, patch: Partial<Driver>) => Promise<void>;
+  removeDriver: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<AppUser[]>(seedUsers);
-  const [employees, setEmployees] = useState<Employee[]>(seedEmployees);
+  const [drivers, setDrivers] = useState<Driver[]>(seedDrivers);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [settings, setSettings] = useState<AppSettings>({ firstName: "Admin", lastName: "User" });
   const [dbReady, setDbReady] = useState(false);
@@ -137,7 +137,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     Promise.all([
       usersApi.list().then((rows) => setUsers(rows.map(mapUser))),
-      employeesApi.list().then((rows) => setEmployees(rows.map(mapEmployee))),
+      driversApi.list().then((rows) => setDrivers(rows.map(mapDriver))),
     ])
       .catch((e) => console.warn("Supabase load failed, using seed data:", e))
       .finally(() => setDbReady(true));
@@ -174,39 +174,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUsers((prev) => prev.filter((u) => u.id !== id));
   }
 
-  // --- Employees write-through ---
-  async function addEmployee(e: Employee) {
-    const db: DbEmployee = {
+  // --- Drivers write-through ---
+  async function addDriver(e: Driver) {
+    const db: DbDriver = {
       id: e.id, first_name: e.firstName, last_name: e.lastName,
       vehicle: e.vehicle, contact: e.contact, safety_score: e.safetyScore,
     };
-    const saved = await employeesApi.create(db);
-    setEmployees((prev) => [...prev, mapEmployee(saved)]);
+    const saved = await driversApi.create(db);
+    setDrivers((prev) => [...prev, mapDriver(saved)]);
   }
 
-  async function updateEmployee(id: string, patch: Partial<Employee>) {
-    const dbPatch: Partial<DbEmployee> = {};
+  async function updateDriver(id: string, patch: Partial<Driver>) {
+    const dbPatch: Partial<DbDriver> = {};
     if (patch.firstName !== undefined) dbPatch.first_name = patch.firstName;
     if (patch.lastName !== undefined) dbPatch.last_name = patch.lastName;
     if (patch.vehicle !== undefined) dbPatch.vehicle = patch.vehicle;
     if (patch.contact !== undefined) dbPatch.contact = patch.contact;
     if (patch.safetyScore !== undefined) dbPatch.safety_score = patch.safetyScore;
-    const saved = await employeesApi.update(id, dbPatch);
-    setEmployees((prev) => prev.map((e) => e.id === id ? mapEmployee(saved) : e));
+    const saved = await driversApi.update(id, dbPatch);
+    setDrivers((prev) => prev.map((e) => e.id === id ? mapDriver(saved) : e));
   }
 
-  async function removeEmployee(id: string) {
-    await employeesApi.remove(id);
-    setEmployees((prev) => prev.filter((e) => e.id !== id));
+  async function removeDriver(id: string) {
+    await driversApi.remove(id);
+    setDrivers((prev) => prev.filter((e) => e.id !== id));
   }
 
   return (
     <AppContext.Provider value={{
-      users, setUsers, employees, setEmployees,
+      users, setUsers, drivers, setDrivers,
       currentUser, setCurrentUser, settings, setSettings,
       dbReady,
       addUser, updateUser, removeUser,
-      addEmployee, updateEmployee, removeEmployee,
+      addDriver, updateDriver, removeDriver,
     }}>
       {children}
     </AppContext.Provider>
