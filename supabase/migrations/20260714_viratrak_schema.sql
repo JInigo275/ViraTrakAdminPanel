@@ -5,7 +5,7 @@
 -- USERS  (system accounts: Owner / Administrator / Supervisor)
 -- -------------------------------------------------------
 create table if not exists public.users (
-  id            text primary key,
+  id            serial primary key,
   first_name    text        not null,
   last_name     text        not null,
   email         text unique not null,
@@ -21,7 +21,7 @@ create table if not exists public.users (
 -- EMPLOYEES  (driver profiles)
 -- -------------------------------------------------------
 create table if not exists public.employees (
-  id            text primary key,
+  id            serial primary key,
   first_name    text    not null,
   last_name     text    not null,
   vehicle       text    not null,
@@ -29,6 +29,26 @@ create table if not exists public.employees (
   safety_score  integer not null default 100 check (safety_score >= 0 and safety_score <= 100),
   created_at    timestamptz not null default now()
 );
+
+-- -------------------------------------------------------
+-- Employee code: [MM][YYYY][0001] via sequence + trigger
+-- -------------------------------------------------------
+create sequence if not exists public.employees_code_seq;
+
+alter table public.employees add column if not exists employee_code text unique;
+
+create or replace function public.generate_employee_code() returns trigger as $$
+begin
+  if new.employee_code is null or new.employee_code = '' then
+    new.employee_code := to_char(now(), 'MMYYYY') || lpad(nextval('public.employees_code_seq')::text, 4, '0');
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists set_employee_code on public.employees;
+create trigger set_employee_code before insert on public.employees
+for each row execute procedure public.generate_employee_code();
 
 -- -------------------------------------------------------
 -- ALERTS  (detected driver behavior events)
@@ -73,20 +93,20 @@ alter table public.system_logs disable row level security;
 -- Seed: default owner account
 -- -------------------------------------------------------
 insert into public.users (id, first_name, last_name, email, role, status, last_login, password, must_change_password)
-values ('usr-owner-001', 'Admin', 'User', 'admin@viratrak.com', 'Owner', 'Active', 'Never', 'admin123', false)
+values (1, 'Admin', 'User', 'admin@viratrak.com', 'Owner', 'Active', 'Never', 'admin123', false)
 on conflict (id) do nothing;
 
 -- -------------------------------------------------------
 -- Seed: sample employees
 -- -------------------------------------------------------
-insert into public.employees (id, first_name, last_name, vehicle, contact, safety_score) values
-  ('EMP-001', 'Juan',   'Dela Cruz',  'TRK-101', '+63 912 345 6789', 87),
-  ('EMP-002', 'Mark',   'Santos',     'TRK-104', '+63 917 234 5678', 92),
-  ('EMP-003', 'Pedro',  'Reyes',      'TRK-107', '+63 918 345 6790', 74),
-  ('EMP-004', 'Luis',   'Fernandez',  'TRK-103', '+63 919 456 7891', 95),
-  ('EMP-005', 'Ramon',  'Garcia',     'TRK-102', '+63 920 567 8902', 88),
-  ('EMP-006', 'Carlos', 'Santos',     'TRK-108', '+63 921 678 9013', 61),
-  ('EMP-007', 'Mario',  'Cruz',       'TRK-105', '+63 922 789 0124', 78)
+insert into public.employees (id, employee_code, first_name, last_name, vehicle, contact, safety_score) values
+  (1, '0620260001', 'Juan',   'Dela Cruz',  'TRK-101', '+63 912 345 6789', 87),
+  (2, '0620260002', 'Mark',   'Santos',     'TRK-104', '+63 917 234 5678', 92),
+  (3, '0620260003', 'Pedro',  'Reyes',      'TRK-107', '+63 918 345 6790', 74),
+  (4, '0620260004', 'Luis',   'Fernandez',  'TRK-103', '+63 919 456 7891', 95),
+  (5, '0620260005', 'Ramon',  'Garcia',     'TRK-102', '+63 920 567 8902', 88),
+  (6, '0620260006', 'Carlos', 'Santos',     'TRK-108', '+63 921 678 9013', 61),
+  (7, '0620260007', 'Mario',  'Cruz',       'TRK-105', '+63 922 789 0124', 78)
 on conflict (id) do nothing;
 
 -- -------------------------------------------------------
