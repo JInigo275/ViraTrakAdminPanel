@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
-import viraTrakLogo from "../imports/ViraTrak_Logo.png";
+// Use URL import for image assets to avoid requiring a PNG module declaration
+const viraTrakLogo = new URL("../imports/ViraTrak_Logo.png", import.meta.url).href;
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Sidebar } from "./components/Sidebar";
