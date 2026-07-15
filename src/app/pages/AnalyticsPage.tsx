@@ -34,7 +34,12 @@ const sevMap: Record<string, { bg: string; color: string }> = {
 };
 
 const EVENT_COLORS: Record<string, string> = {
+  "Drowsiness": "#EF4444",
+  "Lane Drift": "#F59E0B",
+  "Distraction": "#1D6AE5",
+  "Speeding": "#8B5CF6",
   "Yawning": "#EF4444",
+  "Hard Braking": "#10B981",
   "Eyes Closed": "#F59E0B",
   "Micro Sleep": "#8B5CF6",
   "Head Pose": "#1D6AE5",
@@ -958,7 +963,7 @@ export function AnalyticsPage() {
           >
             {/* On mobile: fixed-width scrollable chart so all drivers show clearly */}
             <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch" as any }}>
-              <div style={{ width: isMobile ? 520 : "100%", height: isMobile ? 180 : 200 }}>
+              <div style={{ width: isMobile ? Math.max(320, driverComparison.length * 60) : "100%", height: isMobile ? 180 : 200 }}>
                 <ResponsiveContainer key={`bar-${period}`} width="100%" height="100%">
                   <BarChart data={driverComparison} margin={{ left: -10, right: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -995,7 +1000,7 @@ export function AnalyticsPage() {
               <table
                 style={{
                   borderCollapse: "collapse",
-                  minWidth: 380,
+                  minWidth: isMobile ? 280 : 380,
                   width: "100%",
                 }}
               >
