@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import * as kv from "./kv_store.tsx";
 
 // Environment accessor that works in Deno and Node (for typecheckers that
 // don't know about the Deno global).
@@ -48,6 +47,63 @@ async function sbFetch(url: string, init: RequestInit) {
   const data = text ? JSON.parse(text) : null;
   if (!res.ok) return { data: null, error: data };
   return { data, error: null };
+}
+
+async function kvSet(key: string, value: unknown): Promise<void> {
+  const { error } = await sbFetch(sbUrl("/kv_store_2033c26b"), {
+    method: "POST",
+    headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=representation" }),
+    body: JSON.stringify({ key, value }),
+  });
+  if (error) throw new Error(error.message);
+}
+
+async function kvGet(key: string): Promise<unknown> {
+  const encodedKey = encodeURIComponent(key);
+  const { data, error } = await sbFetch(sbUrl(`/kv_store_2033c26b?key=eq.${encodedKey}&select=value`), {
+    method: "GET",
+    headers: sbHeaders(),
+  });
+  if (error) throw new Error(error.message);
+  return Array.isArray(data) && data[0] ? data[0].value : undefined;
+}
+
+async function kvDel(key: string): Promise<void> {
+  const encodedKey = encodeURIComponent(key);
+  const { error } = await sbFetch(sbUrl(`/kv_store_2033c26b?key=eq.${encodedKey}`), {
+    method: "DELETE",
+    headers: sbHeaders(),
+  });
+  if (error) throw new Error(error.message);
+}
+
+async function kvMset(keys: string[], values: unknown[]): Promise<void> {
+  const rows = keys.map((k, i) => ({ key: k, value: values[i] }));
+  const { error } = await sbFetch(sbUrl("/kv_store_2033c26b"), {
+    method: "POST",
+    headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=representation" }),
+    body: JSON.stringify(rows),
+  });
+  if (error) throw new Error(error.message);
+}
+
+async function kvMget(keys: string[]): Promise<unknown[]> {
+  const results = await Promise.all(keys.map((k) => kvGet(k)));
+  return results;
+}
+
+async function kvMdel(keys: string[]): Promise<void> {
+  await Promise.all(keys.map((k) => kvDel(k)));
+}
+
+async function kvGetByPrefix(prefix: string): Promise<unknown[]> {
+  const like = encodeURIComponent(`${prefix}%`);
+  const { data, error } = await sbFetch(sbUrl(`/kv_store_2033c26b?key=like.${like}&select=value`), {
+    method: "GET",
+    headers: sbHeaders(),
+  });
+  if (error) throw new Error(error.message);
+  return Array.isArray(data) ? data.map((d: { value: unknown }) => d.value) : [];
 }
 
 const BASE = "/make-server-2033c26b";
@@ -161,6 +217,85 @@ app.delete(`${BASE}/system-logs/:id`, async (c) => {
   const { error } = await sbFetch(sbUrl(`/system_logs?id=eq.${id}`), { method: "DELETE", headers: sbHeaders() });
   if (error) return c.json({ error }, 500);
   return c.json({ success: true });
+});
+
+// -------------------------------------------------------
+// KV STORE
+// -------------------------------------------------------
+app.put(`${BASE}/kv/:key`, async (c) => {
+  try {
+    const key = c.req.param("key");
+    const body = await c.req.json();
+    await kvSet(key, body?.value);
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500);
+  }
+});
+
+app.get(`${BASE}/kv/:key`, async (c) => {
+  try {
+    const key = c.req.param("key");
+    const value = await kvGet(key);
+    return c.json({ key, value });
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500);
+  }
+});
+
+app.delete(`${BASE}/kv/:key`, async (c) => {
+  try {
+    const key = c.req.param("key");
+    await kvDel(key);
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500);
+  }
+});
+
+app.post(`${BASE}/kv/mset`, async (c) => {
+  try {
+    const body = await c.req.json();
+    const keys = Array.isArray(body?.keys) ? body.keys : [];
+    const values = Array.isArray(body?.values) ? body.values : [];
+    if (keys.length !== values.length) return c.json({ error: "keys and values must have the same length" }, 400);
+    await kvMset(keys, values);
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500);
+  }
+});
+
+app.post(`${BASE}/kv/mget`, async (c) => {
+  try {
+    const body = await c.req.json();
+    const keys = Array.isArray(body?.keys) ? body.keys : [];
+    const values = await kvMget(keys);
+    return c.json({ values });
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500);
+  }
+});
+
+app.post(`${BASE}/kv/mdel`, async (c) => {
+  try {
+    const body = await c.req.json();
+    const keys = Array.isArray(body?.keys) ? body.keys : [];
+    await kvMdel(keys);
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500);
+  }
+});
+
+app.get(`${BASE}/kv/by-prefix/:prefix`, async (c) => {
+  try {
+    const prefix = c.req.param("prefix");
+    const values = await kvGetByPrefix(prefix);
+    return c.json({ values });
+  } catch (error) {
+    return c.json({ error: (error as Error).message }, 500);
+  }
 });
 
 // Use globalThis to avoid referencing the undeclared Deno identifier in non-Deno
