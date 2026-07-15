@@ -1,27 +1,4 @@
-import { projectId, publicAnonKey } from "../../utils/supabase/info";
-
-const REST = `https://${projectId}.supabase.co/rest/v1`;
-
-function headers(extra: Record<string, string> = {}): Record<string, string> {
-  return {
-    "Content-Type": "application/json",
-    "apikey": publicAnonKey,
-    "Authorization": `Bearer ${publicAnonKey}`,
-    "Prefer": "return=representation",
-    ...extra,
-  };
-}
-
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${REST}${path}`, {
-    ...options,
-    headers: headers(options.headers as Record<string, string> ?? {}),
-  });
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!res.ok) throw new Error((data as { message?: string })?.message ?? res.statusText);
-  return data as T;
-}
+import { supabase } from "./supabaseClient";
 
 // ---------- Users ----------
 export type DbUser = {
@@ -34,13 +11,69 @@ export type DbUser = {
   last_login: string;
   password: string;
   must_change_password: boolean;
+  avatar?: string | null;
 };
 
+export const demoLoginUser: DbUser = {
+  id: "usr-owner-001",
+  first_name: "Admin",
+  last_name: "User",
+  email: "admin@viratrak.com",
+  role: "Owner",
+  status: "Active",
+  last_login: "Never",
+  password: "admin123",
+  must_change_password: false,
+};
+
+function requireSupabase() {
+  if (!supabase) {
+    throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+  }
+  return supabase;
+}
+
+async function selectRows<T>(table: string, orderBy?: string) {
+  const client = requireSupabase();
+  let query = client.from(table).select("*");
+  if (orderBy) query = query.order(orderBy, { ascending: false });
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as T[];
+}
+
+async function insertRow<T>(table: string, row: Record<string, unknown>) {
+  const client = requireSupabase();
+  const { data, error } = await client.from(table).insert(row).select("*").single();
+  if (error) throw error;
+  return data as T;
+}
+
+async function updateRow<T>(table: string, idColumn: string, id: string | number, patch: Record<string, unknown>) {
+  const client = requireSupabase();
+  const { data, error } = await client.from(table).update(patch).eq(idColumn, id).select("*").single();
+  if (error) throw error;
+  return data as T;
+}
+
+async function deleteRow(table: string, idColumn: string, id: string | number) {
+  const client = requireSupabase();
+  const { error } = await client.from(table).delete().eq(idColumn, id);
+  if (error) throw error;
+}
+
 export const usersApi = {
-  list: () => request<DbUser[]>("/users?order=created_at"),
-  create: (u: Omit<DbUser, "created_at">) => request<DbUser[]>("/users", { method: "POST", body: JSON.stringify(u) }).then((r) => r[0]),
-  update: (id: string, patch: Partial<DbUser>) => request<DbUser[]>(`/users?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) }).then((r) => r[0]),
-  remove: (id: string) => request<void>(`/users?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }),
+  list: async () => {
+    try {
+      return await selectRows<DbUser>("users", "created_at");
+    } catch (error) {
+      console.warn("Falling back to the built-in admin account because Supabase users could not be loaded.", error);
+      return [demoLoginUser];
+    }
+  },
+  create: async (u: Omit<DbUser, "created_at">) => insertRow<DbUser>("users", u as DbUser),
+  update: async (id: string, patch: Partial<DbUser>) => updateRow<DbUser>("users", "id", id, patch),
+  remove: async (id: string) => deleteRow("users", "id", id),
 };
 
 // ---------- Drivers ----------
@@ -54,10 +87,10 @@ export type DbDriver = {
 };
 
 export const driversApi = {
-  list: () => request<DbDriver[]>("/employees?order=created_at"),
-  create: (e: Omit<DbDriver, "created_at">) => request<DbDriver[]>("/employees", { method: "POST", body: JSON.stringify(e) }).then((r) => r[0]),
-  update: (id: string, patch: Partial<DbDriver>) => request<DbDriver[]>(`/employees?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) }).then((r) => r[0]),
-  remove: (id: string) => request<void>(`/employees?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }),
+  list: async () => selectRows<DbDriver>("drivers", "created_at"),
+  create: async (e: Omit<DbDriver, "created_at">) => insertRow<DbDriver>("drivers", e as DbDriver),
+  update: async (id: string, patch: Partial<DbDriver>) => updateRow<DbDriver>("drivers", "id", id, patch),
+  remove: async (id: string) => deleteRow("drivers", "id", id),
 };
 
 // ---------- Alerts ----------
@@ -75,9 +108,9 @@ export type DbAlert = {
 };
 
 export const alertsApi = {
-  list: () => request<DbAlert[]>("/alerts?order=date.desc,time.desc"),
-  create: (a: Omit<DbAlert, "id" | "created_at">) => request<DbAlert[]>("/alerts", { method: "POST", body: JSON.stringify(a) }).then((r) => r[0]),
-  remove: (id: number) => request<void>(`/alerts?id=eq.${id}`, { method: "DELETE" }),
+  list: async () => selectRows<DbAlert>("alerts", "id"),
+  create: async (a: Omit<DbAlert, "id" | "created_at">) => insertRow<DbAlert>("alerts", a as DbAlert),
+  remove: async (id: number) => deleteRow("alerts", "id", id),
 };
 
 // ---------- System Logs ----------
@@ -92,7 +125,7 @@ export type DbLog = {
 };
 
 export const logsApi = {
-  list: () => request<DbLog[]>("/system_logs?order=date.desc,time.desc"),
-  create: (l: Omit<DbLog, "id" | "created_at">) => request<DbLog[]>("/system_logs", { method: "POST", body: JSON.stringify(l) }).then((r) => r[0]),
-  remove: (id: number) => request<void>(`/system_logs?id=eq.${id}`, { method: "DELETE" }),
+  list: async () => selectRows<DbLog>("logs", "id"),
+  create: async (l: Omit<DbLog, "id" | "created_at">) => insertRow<DbLog>("logs", l as DbLog),
+  remove: async (id: number) => deleteRow("logs", "id", id),
 };

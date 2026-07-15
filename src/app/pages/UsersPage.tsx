@@ -4,7 +4,6 @@ import { Plus, Search, MoreVertical, X, Eye, EyeOff, Copy, Check, Mail, Shield, 
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, AppUser, Role, genTempPassword, getAddableRoles, canManageUsers, getFullName } from "../context/AppContext";
-import { usersApi } from "../../api/viratrak";
 
 const roleColors: Record<Role, { bg: string; color: string }> = {
   Owner:         { bg: "#FEF3C7", color: "#D97706" },

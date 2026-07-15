@@ -1,14 +1,48 @@
+import { useEffect, useMemo, useState } from "react";
 import { Wind, EyeOff, Zap, User, Navigation } from "lucide-react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
+import { alertsApi, DbAlert } from "../../api/viratrak";
 
-const events = [
-  { icon: Wind,       iconColor: "#F59E0B", iconBg: "#FFF7ED", event: "Yawning Detected",    driver: "Juan Dela Cruz",  vehicle: "TRK-101", time: "10:23:14 AM", severity: "High"   },
-  { icon: EyeOff,     iconColor: "#EF4444", iconBg: "#FEF2F2", event: "Eyes Closed",          driver: "Mark Santos",     vehicle: "TRK-104", time: "10:18:07 AM", severity: "High"   },
-  { icon: Zap,        iconColor: "#F59E0B", iconBg: "#FFF7ED", event: "Distraction Detected", driver: "Pedro Reyes",     vehicle: "TRK-107", time: "10:12:45 AM", severity: "Moderate" },
-  { icon: User,       iconColor: "#8B5CF6", iconBg: "#F5F3FF", event: "Poor Posture",          driver: "Luis Fernandez",  vehicle: "TRK-103", time: "09:58:33 AM", severity: "Moderate" },
-  { icon: Navigation, iconColor: "#1D6AE5", iconBg: "#EBF2FF", event: "Head Pose Abnormal",   driver: "Ramon Garcia",    vehicle: "TRK-102", time: "09:45:21 AM", severity: "Low"    },
-];
+const typeIconMap: Record<string, typeof Wind> = {
+  Yawning: Wind,
+  "Eyes Closed": EyeOff,
+  Distraction: Zap,
+  "Poor Posture": User,
+  "Head Pose": Navigation,
+  "Micro Sleep": Navigation,
+  "Blink Rate": Navigation,
+  "Body Posture": User,
+};
+
+type EventRow = {
+  icon: typeof Wind;
+  iconColor: string;
+  iconBg: string;
+  event: string;
+  driver: string;
+  vehicle: string;
+  time: string;
+  severity: DbAlert["severity"];
+};
+
+function toRow(alert: DbAlert): EventRow {
+  const iconMap: Record<DbAlert["severity"], { iconColor: string; iconBg: string }> = {
+    High: { iconColor: "#EF4444", iconBg: "#FEF2F2" },
+    Moderate: { iconColor: "#F59E0B", iconBg: "#FFF7ED" },
+    Low: { iconColor: "#10B981", iconBg: "#ECFDF5" },
+  };
+  return {
+    icon: typeIconMap[alert.type] ?? Zap,
+    iconColor: iconMap[alert.severity].iconColor,
+    iconBg: iconMap[alert.severity].iconBg,
+    event: alert.type,
+    driver: alert.driver,
+    vehicle: alert.vehicle,
+    time: alert.time,
+    severity: alert.severity,
+  };
+}
 
 function SeverityBadge({ severity }: { severity: string }) {
   const map: Record<string, { bg: string; color: string }> = {
@@ -31,6 +65,7 @@ interface RecentEventsProps {
 export function RecentEvents({ onViewAll }: RecentEventsProps) {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
+  const [events, setEvents] = useState<EventRow[]>([]);
   const cardBg = dark ? "#1F2937" : "#fff";
   const textMain = dark ? "#F9FAFB" : "#111827";
   const textSub = dark ? "#9CA3AF" : "#6B7280";
@@ -39,6 +74,12 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
   const rowHover = dark ? "#374151" : "#FAFAFA";
   const shadow = dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)";
   const thColor = dark ? "#6B7280" : "#9CA3AF";
+
+  useEffect(() => {
+    alertsApi.list().then((rows) => setEvents(rows.slice().sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`)).slice(0, 5).map(toRow))).catch(console.error);
+  }, []);
+
+  const total = useMemo(() => events.length, [events]);
 
   return (
     <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, fontFamily: "Inter, sans-serif", overflow: "hidden", transition: "background 0.2s", display: "flex", flexDirection: "column" }}>
@@ -64,7 +105,13 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
             </tr>
           </thead>
           <tbody>
-            {events.map((e, i) => {
+            {events.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{ padding: "28px 18px", textAlign: "center", color: textSub, fontSize: 14 }}>
+                  No recent alerts available.
+                </td>
+              </tr>
+            ) : events.map((e, i) => {
               const Icon = e.icon;
               return (
                 <tr

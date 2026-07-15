@@ -1,19 +1,8 @@
 import { Eye, Wind, Navigation, Zap, User } from "lucide-react";
 
-const statusRows = [
-  { icon: Eye, label: "Eyes", value: "Open", color: "#10B981", bg: "#ECFDF5" },
-  { icon: Wind, label: "Yawning", value: "No", color: "#10B981", bg: "#ECFDF5" },
-  { icon: Navigation, label: "Head Pose", value: "Normal", color: "#1D6AE5", bg: "#EBF2FF" },
-  { icon: Zap, label: "Distraction", value: "No", color: "#10B981", bg: "#ECFDF5" },
-  { icon: User, label: "Posture", value: "Good", color: "#10B981", bg: "#ECFDF5" },
-];
+const statusRows: { icon: typeof Eye; label: string; value: string; color: string; bg: string }[] = [];
 
-const vehicleInfo = [
-  { label: "Vehicle ID", value: "TRK-101" },
-  { label: "Driver", value: "Juan Dela Cruz" },
-  { label: "Route", value: "Manila → Clark" },
-  { label: "Speed", value: "62 km/h" },
-];
+const vehicleInfo: { label: string; value: string }[] = [];
 
 export function LiveMonitoring() {
   return (
@@ -161,29 +150,7 @@ export function LiveMonitoring() {
             <div style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>
               Detected Status
             </div>
-            <div className="flex flex-col gap-2">
-              {statusRows.map(({ icon: Icon, label, value, color, bg }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      style={{
-                        width: 26,
-                        height: 26,
-                        borderRadius: 6,
-                        background: bg,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon size={13} color={color} />
-                    </div>
-                    <span style={{ fontSize: 13, color: "#374151" }}>{label}</span>
-                  </div>
-                  <span style={{ fontSize: 13, color, fontWeight: 600 }}>{value}</span>
-                </div>
-              ))}
-            </div>
+            <div style={{ fontSize: 13, color: "#9CA3AF" }}>No live telemetry is seeded.</div>
           </div>
 
           {/* Vehicle info */}
@@ -191,14 +158,7 @@ export function LiveMonitoring() {
             <div style={{ fontSize: 12, fontWeight: 600, color: "#6B7280", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.04em" }}>
               Vehicle Info
             </div>
-            <div className="flex flex-col gap-1.5">
-              {vehicleInfo.map(({ label, value }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span style={{ fontSize: 12, color: "#9CA3AF" }}>{label}</span>
-                  <span style={{ fontSize: 13, color: "#111827", fontWeight: 500 }}>{value}</span>
-                </div>
-              ))}
-            </div>
+            <div style={{ fontSize: 13, color: "#9CA3AF" }}>No vehicle is selected yet.</div>
           </div>
         </div>
       </div>
