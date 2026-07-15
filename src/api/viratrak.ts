@@ -1,16 +1,4 @@
-function readStore<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeStore<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
+import { supabase } from "./supabaseClient";
 
 // ---------- Users ----------
 export type DbUser = {
@@ -23,12 +11,8 @@ export type DbUser = {
   last_login: string;
   password: string;
   must_change_password: boolean;
+  avatar?: string | null;
 };
-
-const USERS_KEY = "viratrak_users";
-const DRIVERS_KEY = "viratrak_drivers";
-const ALERTS_KEY = "viratrak_alerts";
-const LOGS_KEY = "viratrak_logs";
 
 export const demoLoginUser: DbUser = {
   id: "usr-owner-001",
@@ -42,29 +26,54 @@ export const demoLoginUser: DbUser = {
   must_change_password: false,
 };
 
-const seedUsers: DbUser[] = [demoLoginUser];
+function requireSupabase() {
+  if (!supabase) {
+    throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+  }
+  return supabase;
+}
+
+async function selectRows<T>(table: string, orderBy?: string) {
+  const client = requireSupabase();
+  let query = client.from(table).select("*");
+  if (orderBy) query = query.order(orderBy, { ascending: false });
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as T[];
+}
+
+async function insertRow<T>(table: string, row: Record<string, unknown>) {
+  const client = requireSupabase();
+  const { data, error } = await client.from(table).insert(row).select("*").single();
+  if (error) throw error;
+  return data as T;
+}
+
+async function updateRow<T>(table: string, idColumn: string, id: string | number, patch: Record<string, unknown>) {
+  const client = requireSupabase();
+  const { data, error } = await client.from(table).update(patch).eq(idColumn, id).select("*").single();
+  if (error) throw error;
+  return data as T;
+}
+
+async function deleteRow(table: string, idColumn: string, id: string | number) {
+  const client = requireSupabase();
+  const { error } = await client.from(table).delete().eq(idColumn, id);
+  if (error) throw error;
+}
 
 export const usersApi = {
-  list: async () => readStore<DbUser[]>(USERS_KEY, seedUsers),
-  create: async (u: Omit<DbUser, "created_at">) => {
-    const rows = readStore<DbUser[]>(USERS_KEY, seedUsers);
-    const saved = u as DbUser;
-    writeStore(USERS_KEY, [...rows, saved]);
-    return saved;
+  list: async () => {
+    try {
+      return await selectRows<DbUser>("viratrak_users", "created_at");
+    } catch (error) {
+      console.warn("Falling back to the built-in admin account because Supabase users could not be loaded.", error);
+      return [demoLoginUser];
+    }
   },
-  update: async (id: string, patch: Partial<DbUser>) => {
-    const rows = readStore<DbUser[]>(USERS_KEY, seedUsers);
-    const idx = rows.findIndex((u) => u.id === id);
-    if (idx < 0) throw new Error("User not found");
-    const saved = { ...rows[idx], ...patch };
-    rows[idx] = saved;
-    writeStore(USERS_KEY, rows);
-    return saved;
-  },
-  remove: async (id: string) => {
-    const rows = readStore<DbUser[]>(USERS_KEY, seedUsers);
-    writeStore(USERS_KEY, rows.filter((u) => u.id !== id));
-  },
+  create: async (u: Omit<DbUser, "created_at">) => insertRow<DbUser>("viratrak_users", u as DbUser),
+  update: async (id: string, patch: Partial<DbUser>) => updateRow<DbUser>("viratrak_users", "id", id, patch),
+  remove: async (id: string) => deleteRow("viratrak_users", "id", id),
 };
 
 // ---------- Drivers ----------
@@ -77,29 +86,11 @@ export type DbDriver = {
   safety_score: number;
 };
 
-const seedDrivers: DbDriver[] = [];
-
 export const driversApi = {
-  list: async () => readStore<DbDriver[]>(DRIVERS_KEY, seedDrivers),
-  create: async (e: Omit<DbDriver, "created_at">) => {
-    const rows = readStore<DbDriver[]>(DRIVERS_KEY, seedDrivers);
-    const saved = e as DbDriver;
-    writeStore(DRIVERS_KEY, [...rows, saved]);
-    return saved;
-  },
-  update: async (id: string, patch: Partial<DbDriver>) => {
-    const rows = readStore<DbDriver[]>(DRIVERS_KEY, seedDrivers);
-    const idx = rows.findIndex((e) => e.id === id);
-    if (idx < 0) throw new Error("Driver not found");
-    const saved = { ...rows[idx], ...patch };
-    rows[idx] = saved;
-    writeStore(DRIVERS_KEY, rows);
-    return saved;
-  },
-  remove: async (id: string) => {
-    const rows = readStore<DbDriver[]>(DRIVERS_KEY, seedDrivers);
-    writeStore(DRIVERS_KEY, rows.filter((e) => e.id !== id));
-  },
+  list: async () => selectRows<DbDriver>("viratrak_drivers", "created_at"),
+  create: async (e: Omit<DbDriver, "created_at">) => insertRow<DbDriver>("viratrak_drivers", e as DbDriver),
+  update: async (id: string, patch: Partial<DbDriver>) => updateRow<DbDriver>("viratrak_drivers", "id", id, patch),
+  remove: async (id: string) => deleteRow("viratrak_drivers", "id", id),
 };
 
 // ---------- Alerts ----------
@@ -116,21 +107,10 @@ export type DbAlert = {
   icon_bg: string;
 };
 
-const seedAlerts: DbAlert[] = [];
-
 export const alertsApi = {
-  list: async () => readStore<DbAlert[]>(ALERTS_KEY, seedAlerts),
-  create: async (a: Omit<DbAlert, "id" | "created_at">) => {
-    const rows = readStore<DbAlert[]>(ALERTS_KEY, seedAlerts);
-    const nextId = rows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
-    const saved = { ...(a as DbAlert), id: nextId };
-    writeStore(ALERTS_KEY, [saved, ...rows]);
-    return saved;
-  },
-  remove: async (id: number) => {
-    const rows = readStore<DbAlert[]>(ALERTS_KEY, seedAlerts);
-    writeStore(ALERTS_KEY, rows.filter((a) => a.id !== id));
-  },
+  list: async () => selectRows<DbAlert>("viratrak_alerts", "id"),
+  create: async (a: Omit<DbAlert, "id" | "created_at">) => insertRow<DbAlert>("viratrak_alerts", a as DbAlert),
+  remove: async (id: number) => deleteRow("viratrak_alerts", "id", id),
 };
 
 // ---------- System Logs ----------
@@ -144,19 +124,8 @@ export type DbLog = {
   action: string;
 };
 
-const seedLogs: DbLog[] = [];
-
 export const logsApi = {
-  list: async () => readStore<DbLog[]>(LOGS_KEY, seedLogs),
-  create: async (l: Omit<DbLog, "id" | "created_at">) => {
-    const rows = readStore<DbLog[]>(LOGS_KEY, seedLogs);
-    const nextId = rows.reduce((max, row) => Math.max(max, row.id), 0) + 1;
-    const saved = { ...(l as DbLog), id: nextId };
-    writeStore(LOGS_KEY, [saved, ...rows]);
-    return saved;
-  },
-  remove: async (id: number) => {
-    const rows = readStore<DbLog[]>(LOGS_KEY, seedLogs);
-    writeStore(LOGS_KEY, rows.filter((l) => l.id !== id));
-  },
+  list: async () => selectRows<DbLog>("viratrak_logs", "id"),
+  create: async (l: Omit<DbLog, "id" | "created_at">) => insertRow<DbLog>("viratrak_logs", l as DbLog),
+  remove: async (id: number) => deleteRow("viratrak_logs", "id", id),
 };
