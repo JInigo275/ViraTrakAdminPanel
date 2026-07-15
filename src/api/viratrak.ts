@@ -65,15 +65,15 @@ async function deleteRow(table: string, idColumn: string, id: string | number) {
 export const usersApi = {
   list: async () => {
     try {
-      return await selectRows<DbUser>("viratrak_users", "created_at");
+      return await selectRows<DbUser>("users", "created_at");
     } catch (error) {
       console.warn("Falling back to the built-in admin account because Supabase users could not be loaded.", error);
       return [demoLoginUser];
     }
   },
-  create: async (u: Omit<DbUser, "created_at">) => insertRow<DbUser>("viratrak_users", u as DbUser),
-  update: async (id: string, patch: Partial<DbUser>) => updateRow<DbUser>("viratrak_users", "id", id, patch),
-  remove: async (id: string) => deleteRow("viratrak_users", "id", id),
+  create: async (u: Omit<DbUser, "created_at">) => insertRow<DbUser>("users", u as DbUser),
+  update: async (id: string, patch: Partial<DbUser>) => updateRow<DbUser>("users", "id", id, patch),
+  remove: async (id: string) => deleteRow("users", "id", id),
 };
 
 // ---------- Drivers ----------
@@ -87,10 +87,10 @@ export type DbDriver = {
 };
 
 export const driversApi = {
-  list: async () => selectRows<DbDriver>("viratrak_drivers", "created_at"),
-  create: async (e: Omit<DbDriver, "created_at">) => insertRow<DbDriver>("viratrak_drivers", e as DbDriver),
-  update: async (id: string, patch: Partial<DbDriver>) => updateRow<DbDriver>("viratrak_drivers", "id", id, patch),
-  remove: async (id: string) => deleteRow("viratrak_drivers", "id", id),
+  list: async () => selectRows<DbDriver>("drivers", "created_at"),
+  create: async (e: Omit<DbDriver, "created_at">) => insertRow<DbDriver>("drivers", e as DbDriver),
+  update: async (id: string, patch: Partial<DbDriver>) => updateRow<DbDriver>("drivers", "id", id, patch),
+  remove: async (id: string) => deleteRow("drivers", "id", id),
 };
 
 // ---------- Alerts ----------
@@ -108,9 +108,9 @@ export type DbAlert = {
 };
 
 export const alertsApi = {
-  list: async () => selectRows<DbAlert>("viratrak_alerts", "id"),
-  create: async (a: Omit<DbAlert, "id" | "created_at">) => insertRow<DbAlert>("viratrak_alerts", a as DbAlert),
-  remove: async (id: number) => deleteRow("viratrak_alerts", "id", id),
+  list: async () => selectRows<DbAlert>("alerts", "id"),
+  create: async (a: Omit<DbAlert, "id" | "created_at">) => insertRow<DbAlert>("alerts", a as DbAlert),
+  remove: async (id: number) => deleteRow("alerts", "id", id),
 };
 
 // ---------- System Logs ----------
@@ -125,7 +125,7 @@ export type DbLog = {
 };
 
 export const logsApi = {
-  list: async () => selectRows<DbLog>("viratrak_logs", "id"),
-  create: async (l: Omit<DbLog, "id" | "created_at">) => insertRow<DbLog>("viratrak_logs", l as DbLog),
-  remove: async (id: number) => deleteRow("viratrak_logs", "id", id),
+  list: async () => selectRows<DbLog>("logs", "id"),
+  create: async (l: Omit<DbLog, "id" | "created_at">) => insertRow<DbLog>("logs", l as DbLog),
+  remove: async (id: number) => deleteRow("logs", "id", id),
 };
