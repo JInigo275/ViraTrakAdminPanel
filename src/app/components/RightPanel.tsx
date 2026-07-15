@@ -1,45 +1,18 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { useTheme } from "../context/ThemeContext";
+import { alertsApi, DbAlert } from "../../api/viratrak";
+import { buildBehaviorSummary, buildRightPanelTrend, Period } from "../utils/analytics";
 
-const donutData = [
-  { name: "Yawning",     value: 31, color: "#EF4444" },
-  { name: "Eyes Closed", value: 22, color: "#F59E0B" },
-  { name: "Distraction", value: 19, color: "#EAB308" },
-  { name: "Poor Posture",value: 16, color: "#10B981" },
-  { name: "Head Pose",   value: 12, color: "#1D6AE5" },
-];
-
-const trendDataSets: Record<string, { date: string; alerts: number }[]> = {
-  "Today": [
-    { date: "08:00", alerts: 1 }, { date: "09:00", alerts: 3 }, { date: "10:00", alerts: 7 },
-    { date: "11:00", alerts: 5 }, { date: "12:00", alerts: 2 }, { date: "13:00", alerts: 4 },
-    { date: "14:00", alerts: 6 },
-  ],
-  "Last 7 Days": [
-    { date: "14", alerts: 2 }, { date: "15", alerts: 5 }, { date: "16", alerts: 9 },
-    { date: "17", alerts: 13 },{ date: "18", alerts: 16 },{ date: "19", alerts: 8 },
-    { date: "20", alerts: 3 },
-  ],
-  "Last 30 Days": [
-    { date: "W1", alerts: 18 }, { date: "W2", alerts: 24 }, { date: "W3", alerts: 14 }, { date: "W4", alerts: 32 },
-  ],
-  "Last Year": [
-    { date: "Jan", alerts: 45 }, { date: "Feb", alerts: 38 }, { date: "Mar", alerts: 52 },
-    { date: "Apr", alerts: 41 }, { date: "May", alerts: 60 }, { date: "Jun", alerts: 32 },
-    { date: "Jul", alerts: 28 }, { date: "Aug", alerts: 35 }, { date: "Sep", alerts: 44 },
-    { date: "Oct", alerts: 55 }, { date: "Nov", alerts: 48 }, { date: "Dec", alerts: 39 },
-  ],
-};
-
-const trendOptions = ["Today", "Last 7 Days", "Last 30 Days", "Last Year"];
+const trendOptions: Period[] = ["Today", "Last 7 Days", "Last 30 Days", "Last Year"];
 
 export function RightPanel() {
   const { dark } = useTheme();
-  const [trendRange, setTrendRange] = useState("Last 7 Days");
+  const [trendRange, setTrendRange] = useState<Period>("Last 7 Days");
   const [showTrendPicker, setShowTrendPicker] = useState(false);
   const trendRef = useRef<HTMLDivElement>(null);
+  const [alerts, setAlerts] = useState<DbAlert[]>([]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -47,6 +20,10 @@ export function RightPanel() {
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    alertsApi.list().then(setAlerts).catch(console.error);
   }, []);
 
   const cardBg      = dark ? "#1F2937" : "#fff";
@@ -57,7 +34,9 @@ export function RightPanel() {
   const gridColor   = dark ? "#374151" : "#F3F4F6";
   const hoverBg     = dark ? "#374151" : "#F9FAFB";
   const tooltipStyle = { fontSize: 13, borderRadius: 8, border: `1px solid ${borderColor}`, background: cardBg, color: textMain };
-  const trendData   = trendDataSets[trendRange];
+  const donutData = useMemo(() => buildBehaviorSummary(alerts).map((item) => ({ name: item.name, value: item.value, color: item.color })), [alerts]);
+  const totalEvents = donutData.reduce((sum, item) => sum + item.value, 0);
+  const trendData = useMemo(() => buildRightPanelTrend(alerts, trendRange), [alerts, trendRange]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14, height: "100%", fontFamily: "Inter, sans-serif" }}>
@@ -76,7 +55,7 @@ export function RightPanel() {
               </Pie>
             </PieChart>
             <div style={{ position: "absolute", top: 110, left: 110, transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none" }}>
-              <div style={{ fontSize: 33, fontWeight: 700, color: textMain, lineHeight: 1 }}>32</div>
+              <div style={{ fontSize: 33, fontWeight: 700, color: textMain, lineHeight: 1 }}>{totalEvents}</div>
               <div style={{ fontSize: 13, color: textSub, marginTop: 4, lineHeight: 1.4, textAlign: "center" }}>Total<br/>Events</div>
             </div>
           </div>
@@ -87,8 +66,8 @@ export function RightPanel() {
             <div key={d.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ width: 9, height: 9, borderRadius: "50%", background: d.color, display: "inline-block", flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: textMain, flex: 1 }}>{d.name}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: textMain }}>{Math.round(32 * d.value / 100)}</span>
-              <span style={{ fontSize: 12, color: textSub, width: 32, textAlign: "right" }}>{d.value}%</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: textMain }}>{d.value}</span>
+                <span style={{ fontSize: 12, color: textSub, width: 32, textAlign: "right" }}>{totalEvents > 0 ? `${Math.round((d.value / totalEvents) * 100)}%` : "0%"}</span>
             </div>
           ))}
         </div>
@@ -129,9 +108,9 @@ export function RightPanel() {
 
         {/* Chart — fixed dimensions to prevent recharts 0×0 duplicate-key bug */}
         <div style={{ flex: 1, padding: "12px 8px 12px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0 }}>
-          <LineChart key={trendRange} width={290} height={160} data={trendData}>
+            <LineChart key={trendRange} width={290} height={160} data={trendData}>
             <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-            <XAxis dataKey="date" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
             <Tooltip contentStyle={tooltipStyle} />
             <Line type="monotone" dataKey="alerts" stroke="#EF4444" strokeWidth={2.5} dot={{ fill: "#EF4444", r: 3 }} activeDot={{ r: 5 }} />

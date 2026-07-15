@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Printer, TrendingUp, Download } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { PDFPreviewModal } from "../components/PDFPreviewModal";
@@ -6,6 +6,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useTheme } from "../context/ThemeContext";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { useApp } from "../context/AppContext";
+import { alertsApi, DbAlert } from "../../api/viratrak";
 import {
   BarChart,
   Bar,
@@ -25,471 +27,19 @@ type Period =
   | "This Month"
   | "This Year";
 
-const blinkTrend: Record<
-  Period,
-  { label: string; avg: number }[]
-> = {
-  Today: [
-    { label: "08:00", avg: 14 },
-    { label: "09:00", avg: 11 },
-    { label: "10:00", avg: 16 },
-    { label: "11:00", avg: 9 },
-    { label: "12:00", avg: 12 },
-    { label: "13:00", avg: 17 },
-    { label: "14:00", avg: 13 },
-  ],
-  "This Week": [
-    { label: "Mon", avg: 14 },
-    { label: "Tue", avg: 11 },
-    { label: "Wed", avg: 16 },
-    { label: "Thu", avg: 9 },
-    { label: "Fri", avg: 12 },
-    { label: "Sat", avg: 17 },
-    { label: "Sun", avg: 13 },
-  ],
-  "This Month": [
-    { label: "W1", avg: 13 },
-    { label: "W2", avg: 15 },
-    { label: "W3", avg: 10 },
-    { label: "W4", avg: 16 },
-  ],
-  "This Year": [
-    { label: "Jan", avg: 14 },
-    { label: "Feb", avg: 12 },
-    { label: "Mar", avg: 15 },
-    { label: "Apr", avg: 11 },
-    { label: "May", avg: 16 },
-    { label: "Jun", avg: 13 },
-    { label: "Jul", avg: 10 },
-    { label: "Aug", avg: 14 },
-    { label: "Sep", avg: 12 },
-    { label: "Oct", avg: 15 },
-    { label: "Nov", avg: 11 },
-    { label: "Dec", avg: 13 },
-  ],
-};
-
-const perclosTrend: Record<
-  Period,
-  { label: string; avg: number }[]
-> = {
-  Today: [
-    { label: "08:00", avg: 4 },
-    { label: "09:00", avg: 8 },
-    { label: "10:00", avg: 6 },
-    { label: "11:00", avg: 13 },
-    { label: "12:00", avg: 10 },
-    { label: "13:00", avg: 5 },
-    { label: "14:00", avg: 9 },
-  ],
-  "This Week": [
-    { label: "Mon", avg: 6 },
-    { label: "Tue", avg: 11 },
-    { label: "Wed", avg: 8 },
-    { label: "Thu", avg: 15 },
-    { label: "Fri", avg: 13 },
-    { label: "Sat", avg: 5 },
-    { label: "Sun", avg: 9 },
-  ],
-  "This Month": [
-    { label: "W1", avg: 8 },
-    { label: "W2", avg: 11 },
-    { label: "W3", avg: 6 },
-    { label: "W4", avg: 13 },
-  ],
-  "This Year": [
-    { label: "Jan", avg: 7 },
-    { label: "Feb", avg: 9 },
-    { label: "Mar", avg: 11 },
-    { label: "Apr", avg: 8 },
-    { label: "May", avg: 13 },
-    { label: "Jun", avg: 10 },
-    { label: "Jul", avg: 6 },
-    { label: "Aug", avg: 9 },
-    { label: "Sep", avg: 12 },
-    { label: "Oct", avg: 8 },
-    { label: "Nov", avg: 10 },
-    { label: "Dec", avg: 7 },
-  ],
-};
-
-const eventsByPeriod: Record<
-  Period,
-  { event: string; count: number; color: string }[]
-> = {
-  Today: [
-    { event: "Yawning", count: 14, color: "#EF4444" },
-    { event: "Eyes Closed", count: 9, color: "#F59E0B" },
-    { event: "Micro Sleep", count: 5, color: "#8B5CF6" },
-    { event: "Head Pose", count: 11, color: "#1D6AE5" },
-    { event: "Body Posture", count: 7, color: "#10B981" },
-    { event: "Blink Rate", count: 6, color: "#EAB308" },
-  ],
-  "This Week": [
-    { event: "Yawning", count: 52, color: "#EF4444" },
-    { event: "Eyes Closed", count: 38, color: "#F59E0B" },
-    { event: "Micro Sleep", count: 21, color: "#8B5CF6" },
-    { event: "Head Pose", count: 44, color: "#1D6AE5" },
-    { event: "Body Posture", count: 29, color: "#10B981" },
-    { event: "Blink Rate", count: 31, color: "#EAB308" },
-  ],
-  "This Month": [
-    { event: "Yawning", count: 198, color: "#EF4444" },
-    { event: "Eyes Closed", count: 143, color: "#F59E0B" },
-    { event: "Micro Sleep", count: 87, color: "#8B5CF6" },
-    { event: "Head Pose", count: 172, color: "#1D6AE5" },
-    { event: "Body Posture", count: 114, color: "#10B981" },
-    { event: "Blink Rate", count: 122, color: "#EAB308" },
-  ],
-  "This Year": [
-    { event: "Yawning", count: 1840, color: "#EF4444" },
-    { event: "Eyes Closed", count: 1290, color: "#F59E0B" },
-    { event: "Micro Sleep", count: 760, color: "#8B5CF6" },
-    { event: "Head Pose", count: 1580, color: "#1D6AE5" },
-    { event: "Body Posture", count: 1030, color: "#10B981" },
-    { event: "Blink Rate", count: 1110, color: "#EAB308" },
-  ],
-};
-
-const sevByPeriod: Record<
-  Period,
-  { label: string; count: number; color: string; bg: string }[]
-> = {
-  Today: [
-    {
-      label: "High",
-      count: 4,
-      color: "#EF4444",
-      bg: "#FEF2F2",
-    },
-    {
-      label: "Moderate",
-      count: 3,
-      color: "#F59E0B",
-      bg: "#FFF7ED",
-    },
-    { label: "Low", count: 1, color: "#10B981", bg: "#ECFDF5" },
-  ],
-  "This Week": [
-    {
-      label: "High",
-      count: 18,
-      color: "#EF4444",
-      bg: "#FEF2F2",
-    },
-    {
-      label: "Moderate",
-      count: 14,
-      color: "#F59E0B",
-      bg: "#FFF7ED",
-    },
-    { label: "Low", count: 9, color: "#10B981", bg: "#ECFDF5" },
-  ],
-  "This Month": [
-    {
-      label: "High",
-      count: 72,
-      color: "#EF4444",
-      bg: "#FEF2F2",
-    },
-    {
-      label: "Moderate",
-      count: 58,
-      color: "#F59E0B",
-      bg: "#FFF7ED",
-    },
-    {
-      label: "Low",
-      count: 34,
-      color: "#10B981",
-      bg: "#ECFDF5",
-    },
-  ],
-  "This Year": [
-    {
-      label: "High",
-      count: 680,
-      color: "#EF4444",
-      bg: "#FEF2F2",
-    },
-    {
-      label: "Moderate",
-      count: 524,
-      color: "#F59E0B",
-      bg: "#FFF7ED",
-    },
-    {
-      label: "Low",
-      count: 310,
-      color: "#10B981",
-      bg: "#ECFDF5",
-    },
-  ],
-};
-
-const kpisByPeriod: Record<
-  Period,
-  {
-    label: string;
-    value: string;
-    color: string;
-    note: string;
-  }[]
-> = {
-  Today: [
-    {
-      label: "Total Events",
-      value: "52",
-      color: "#1D6AE5",
-      note: "Today",
-    },
-    {
-      label: "High Severity",
-      value: "4",
-      color: "#EF4444",
-      note: "Requires attention",
-    },
-    {
-      label: "Moderate",
-      value: "3",
-      color: "#F59E0B",
-      note: "Monitor closely",
-    },
-    {
-      label: "Low",
-      value: "1",
-      color: "#10B981",
-      note: "Within range",
-    },
-    {
-      label: "Active Drivers",
-      value: "7",
-      color: "#8B5CF6",
-      note: "On duty today",
-    },
-    {
-      label: "Vehicles",
-      value: "7",
-      color: "#6B7280",
-      note: "In fleet",
-    },
-  ],
-  "This Week": [
-    {
-      label: "Total Events",
-      value: "215",
-      color: "#1D6AE5",
-      note: "This week",
-    },
-    {
-      label: "High Severity",
-      value: "18",
-      color: "#EF4444",
-      note: "Requires attention",
-    },
-    {
-      label: "Moderate",
-      value: "14",
-      color: "#F59E0B",
-      note: "Monitor closely",
-    },
-    {
-      label: "Low",
-      value: "9",
-      color: "#10B981",
-      note: "Within range",
-    },
-    {
-      label: "Active Drivers",
-      value: "7",
-      color: "#8B5CF6",
-      note: "This week",
-    },
-    {
-      label: "Vehicles",
-      value: "7",
-      color: "#6B7280",
-      note: "In fleet",
-    },
-  ],
-  "This Month": [
-    {
-      label: "Total Events",
-      value: "836",
-      color: "#1D6AE5",
-      note: "This month",
-    },
-    {
-      label: "High Severity",
-      value: "72",
-      color: "#EF4444",
-      note: "Requires attention",
-    },
-    {
-      label: "Moderate",
-      value: "58",
-      color: "#F59E0B",
-      note: "Monitor closely",
-    },
-    {
-      label: "Low",
-      value: "34",
-      color: "#10B981",
-      note: "Within range",
-    },
-    {
-      label: "Active Drivers",
-      value: "7",
-      color: "#8B5CF6",
-      note: "This month",
-    },
-    {
-      label: "Vehicles",
-      value: "7",
-      color: "#6B7280",
-      note: "In fleet",
-    },
-  ],
-  "This Year": [
-    {
-      label: "Total Events",
-      value: "7,814",
-      color: "#1D6AE5",
-      note: "This year",
-    },
-    {
-      label: "High Severity",
-      value: "680",
-      color: "#EF4444",
-      note: "Requires attention",
-    },
-    {
-      label: "Moderate",
-      value: "524",
-      color: "#F59E0B",
-      note: "Monitor closely",
-    },
-    {
-      label: "Low",
-      value: "310",
-      color: "#10B981",
-      note: "Within range",
-    },
-    {
-      label: "Active Drivers",
-      value: "7",
-      color: "#8B5CF6",
-      note: "This year",
-    },
-    {
-      label: "Vehicles",
-      value: "7",
-      color: "#6B7280",
-      note: "In fleet",
-    },
-  ],
-};
-
-const recentEvents = [
-  {
-    event: "Yawning",
-    driver: "Driver 01",
-    time: "10:23:14 AM",
-    severity: "High",
-  },
-  {
-    event: "Eyes Closed",
-    driver: "Driver 02",
-    time: "10:18:07 AM",
-    severity: "High",
-  },
-  {
-    event: "Head Pose",
-    driver: "Driver 03",
-    time: "10:12:45 AM",
-    severity: "Moderate",
-  },
-  {
-    event: "Body Posture",
-    driver: "Driver 04",
-    time: "09:58:33 AM",
-    severity: "Moderate",
-  },
-  {
-    event: "Micro Sleep",
-    driver: "Driver 05",
-    time: "09:45:21 AM",
-    severity: "Low",
-  },
-  {
-    event: "Blink Rate",
-    driver: "Driver 06",
-    time: "09:30:10 AM",
-    severity: "High",
-  },
-  {
-    event: "Yawning",
-    driver: "Driver 07",
-    time: "09:12:55 AM",
-    severity: "High",
-  },
-  {
-    event: "Head Pose",
-    driver: "Jose Reyes",
-    time: "08:50:22 AM",
-    severity: "Moderate",
-  },
-];
-
-const driverComparison = [
-  {
-    driver: "J. Dela Cruz",
-    blink: 72,
-    perclos: 78,
-    ear: 68,
-    posture: 72,
-  },
-  {
-    driver: "M. Santos",
-    blink: 88,
-    perclos: 92,
-    ear: 85,
-    posture: 91,
-  },
-  {
-    driver: "P. Reyes",
-    blink: 65,
-    perclos: 70,
-    ear: 72,
-    posture: 75,
-  },
-  {
-    driver: "L. Fernandez",
-    blink: 94,
-    perclos: 95,
-    ear: 92,
-    posture: 93,
-  },
-  {
-    driver: "R. Garcia",
-    blink: 85,
-    perclos: 88,
-    ear: 83,
-    posture: 88,
-  },
-  {
-    driver: "C. Santos",
-    blink: 60,
-    perclos: 65,
-    ear: 62,
-    posture: 64,
-  },
-];
-
 const sevMap: Record<string, { bg: string; color: string }> = {
   High: { bg: "#FEF2F2", color: "#EF4444" },
   Moderate: { bg: "#FFF7ED", color: "#F59E0B" },
   Low: { bg: "#ECFDF5", color: "#10B981" },
+};
+
+const EVENT_COLORS: Record<string, string> = {
+  "Yawning": "#EF4444",
+  "Eyes Closed": "#F59E0B",
+  "Micro Sleep": "#8B5CF6",
+  "Head Pose": "#1D6AE5",
+  "Body Posture": "#10B981",
+  "Blink Rate": "#EAB308",
 };
 
 const PERIODS: Period[] = [
@@ -499,12 +49,187 @@ const PERIODS: Period[] = [
   "This Year",
 ];
 
+type AlertSeriesPoint = { label: string; avg: number };
+type EventBreakdown = { event: string; count: number; color: string };
+type SeverityBreakdown = { label: string; count: number; color: string; bg: string };
+type KPI = { label: string; value: string; color: string; note: string };
+type RecentEvent = { event: string; driver: string; time: string; severity: string };
+type DriverComparisonRow = { driver: string; blink: number; perclos: number; ear: number; posture: number };
+
+function parseAlertTimestamp(alert: DbAlert): Date | null {
+  const timestamp = new Date(`${alert.date}T${alert.time}`);
+  return Number.isNaN(timestamp.getTime()) ? null : timestamp;
+}
+
+function getPeriodStart(period: Period, now = new Date()) {
+  const start = new Date(now);
+  if (period === "Today") {
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }
+  if (period === "This Week") {
+    const day = start.getDay();
+    const diff = (day + 6) % 7;
+    start.setDate(start.getDate() - diff);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }
+  if (period === "This Month") {
+    start.setDate(1);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }
+  start.setMonth(0, 1);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+function getPeriodLabels(period: Period) {
+  if (period === "Today") return ["00-04", "04-08", "08-12", "12-16", "16-20", "20-24"];
+  if (period === "This Week") return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  if (period === "This Month") return ["W1", "W2", "W3", "W4"];
+  return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+}
+
+function isWithinPeriod(timestamp: Date, period: Period, now = new Date()) {
+  return timestamp >= getPeriodStart(period, now);
+}
+
+function getPeriodBucketIndex(timestamp: Date, period: Period) {
+  if (period === "Today") return Math.min(5, Math.floor(timestamp.getHours() / 4));
+  if (period === "This Week") return Math.max(0, Math.min(6, (timestamp.getDay() + 6) % 7));
+  if (period === "This Month") {
+    const day = timestamp.getDate();
+    return Math.max(0, Math.min(3, Math.floor((day - 1) / 7)));
+  }
+  return timestamp.getMonth();
+}
+
+function buildSeries(alerts: DbAlert[], period: Period, valueSelector: (alert: DbAlert) => number): AlertSeriesPoint[] {
+  const labels = getPeriodLabels(period);
+  const buckets = labels.map((label) => ({ label, total: 0, count: 0 }));
+  alerts.forEach((alert) => {
+    const timestamp = parseAlertTimestamp(alert);
+    if (!timestamp || !isWithinPeriod(timestamp, period)) return;
+    const index = getPeriodBucketIndex(timestamp, period);
+    const bucket = buckets[index];
+    if (!bucket) return;
+    bucket.total += valueSelector(alert);
+    bucket.count += 1;
+  });
+  return buckets.map((bucket) => ({ label: bucket.label, avg: bucket.count > 0 ? bucket.total / bucket.count : 0 }));
+}
+
+function buildEventBreakdown(alerts: DbAlert[], period: Period): EventBreakdown[] {
+  const counts = new Map<string, number>();
+  alerts.forEach((alert) => {
+    const timestamp = parseAlertTimestamp(alert);
+    if (!timestamp || !isWithinPeriod(timestamp, period)) return;
+    counts.set(alert.type, (counts.get(alert.type) ?? 0) + 1);
+  });
+  return [...counts.entries()]
+    .map(([event, count]) => ({ event, count, color: EVENT_COLORS[event] ?? "#1D6AE5" }))
+    .sort((a, b) => b.count - a.count || a.event.localeCompare(b.event));
+}
+
+function buildSeverityBreakdown(alerts: DbAlert[], period: Period): SeverityBreakdown[] {
+  const counts = { High: 0, Moderate: 0, Low: 0 };
+  alerts.forEach((alert) => {
+    const timestamp = parseAlertTimestamp(alert);
+    if (!timestamp || !isWithinPeriod(timestamp, period)) return;
+    counts[alert.severity] += 1;
+  });
+  return (["High", "Moderate", "Low"] as const).map((label) => ({
+    label,
+    count: counts[label],
+    color: sevMap[label].color,
+    bg: sevMap[label].bg,
+  }));
+}
+
+function severityScore(severity: DbAlert["severity"]) {
+  if (severity === "High") return 3;
+  if (severity === "Moderate") return 2;
+  return 1;
+}
+
+function buildRecentEvents(alerts: DbAlert[]): RecentEvent[] {
+  return [...alerts]
+    .map((alert) => ({
+      alert,
+      timestamp: parseAlertTimestamp(alert),
+    }))
+    .filter((entry): entry is { alert: DbAlert; timestamp: Date } => Boolean(entry.timestamp))
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    .slice(0, 8)
+    .map(({ alert }) => ({
+      event: alert.type,
+      driver: alert.driver,
+      time: alert.time,
+      severity: alert.severity,
+    }));
+}
+
+function buildKpis(alerts: DbAlert[], driversCount: number, period: Period): KPI[] {
+  const periodAlerts = alerts.filter((alert) => {
+    const timestamp = parseAlertTimestamp(alert);
+    return Boolean(timestamp && isWithinPeriod(timestamp, period));
+  });
+  const counts = { High: 0, Moderate: 0, Low: 0 };
+  const vehicles = new Set<string>();
+  periodAlerts.forEach((alert) => {
+    counts[alert.severity] += 1;
+    vehicles.add(alert.vehicle);
+  });
+  return [
+    { label: "Total Events", value: String(periodAlerts.length), color: "#1D6AE5", note: period.toLowerCase() },
+    { label: "High Severity", value: String(counts.High), color: "#EF4444", note: "Requires attention" },
+    { label: "Moderate", value: String(counts.Moderate), color: "#F59E0B", note: "Monitor closely" },
+    { label: "Low", value: String(counts.Low), color: "#10B981", note: "Within range" },
+    { label: "Active Drivers", value: String(driversCount), color: "#8B5CF6", note: period.toLowerCase() },
+    { label: "Vehicles", value: String(vehicles.size), color: "#6B7280", note: "Derived from alerts" },
+  ];
+}
+
+function buildDriverComparison(alerts: DbAlert[], driverNames: string[]): DriverComparisonRow[] {
+  const counts = new Map<string, { blink: number; perclos: number; ear: number; posture: number }>();
+  const names = new Set<string>(driverNames);
+  alerts.forEach((alert) => names.add(alert.driver));
+  names.forEach((name) => counts.set(name, { blink: 0, perclos: 0, ear: 0, posture: 0 }));
+  alerts.forEach((alert) => {
+    const current = counts.get(alert.driver) ?? { blink: 0, perclos: 0, ear: 0, posture: 0 };
+    current.blink += 1;
+    if (alert.severity === "High") current.perclos += 1;
+    if (alert.severity === "Moderate") current.ear += 1;
+    current.posture += severityScore(alert.severity) * 10;
+    counts.set(alert.driver, current);
+  });
+  return [...counts.entries()]
+    .map(([driver, metrics]) => ({
+      driver,
+      blink: metrics.blink,
+      perclos: metrics.perclos,
+      ear: metrics.ear,
+      posture: Math.min(100, metrics.posture),
+    }))
+    .sort((a, b) => b.blink - a.blink || a.driver.localeCompare(b.driver))
+    .slice(0, 6);
+}
+
 export function AnalyticsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
+  const { drivers } = useApp();
   const [period, setPeriod] = useState<Period>("Today");
   const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [alerts, setAlerts] = useState<DbAlert[]>([]);
   const printRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    alertsApi.list()
+      .then((rows) => setAlerts(rows))
+      .catch(console.error);
+  }, []);
 
   const bg = dark ? "#111827" : "#F4F5F7";
   const cardBg = dark ? "#1F2937" : "#fff";
@@ -523,13 +248,22 @@ export function AnalyticsPage() {
     color: textMain,
   };
 
-  const eventSummary = eventsByPeriod[period];
-  const totalEvents = eventSummary.reduce(
-    (s, e) => s + e.count,
-    0,
+  const periodAlerts = useMemo(
+    () => alerts.filter((alert) => {
+      const timestamp = parseAlertTimestamp(alert);
+      return Boolean(timestamp && isWithinPeriod(timestamp, period));
+    }),
+    [alerts, period],
   );
-  const sevData = sevByPeriod[period];
-  const kpis = kpisByPeriod[period];
+
+  const eventSummary = useMemo(() => buildEventBreakdown(alerts, period), [alerts, period]);
+  const totalEvents = periodAlerts.length;
+  const sevData = useMemo(() => buildSeverityBreakdown(alerts, period), [alerts, period]);
+  const kpis = useMemo(() => buildKpis(alerts, drivers.length, period), [alerts, drivers.length, period]);
+  const recentEvents = useMemo(() => buildRecentEvents(periodAlerts), [periodAlerts]);
+  const blinkTrend = useMemo(() => ({ [period]: buildSeries(alerts, period, () => 1) } as Record<Period, AlertSeriesPoint[]>), [alerts, period]);
+  const perclosTrend = useMemo(() => ({ [period]: buildSeries(alerts, period, (alert) => severityScore(alert.severity)) } as Record<Period, AlertSeriesPoint[]>), [alerts, period]);
+  const driverComparison = useMemo(() => buildDriverComparison(periodAlerts, drivers.map((driver) => `${driver.firstName} ${driver.lastName}`.trim()).filter(Boolean)), [periodAlerts, drivers]);
 
   function buildPDF(): jsPDF {
     const doc = new jsPDF({
@@ -594,7 +328,7 @@ export function AnalyticsPage() {
       body: eventSummary.map((e) => [
         e.event,
         String(e.count),
-        `${Math.round((e.count / totalEvents) * 100)}%`,
+        `${totalEvents > 0 ? Math.round((e.count / totalEvents) * 100) : 0}%`,
       ]),
       styles: { fontSize: 10, cellPadding: 3 },
       headStyles: {
@@ -962,7 +696,7 @@ export function AnalyticsPage() {
           {/* Event type breakdown */}
           <Card
             title="Events by Type"
-            subtitle={`Total frequency per behavior category — ${period.toLowerCase()}`}
+            subtitle={`Derived from alert records for ${period.toLowerCase()}`}
           >
             <div
               style={{
@@ -971,7 +705,11 @@ export function AnalyticsPage() {
                 gap: 10,
               }}
             >
-              {eventSummary.map((e) => (
+              {eventSummary.length === 0 ? (
+                <div style={{ padding: "18px 0", color: textSub, fontSize: 14 }}>
+                  No alert data available for this period.
+                </div>
+              ) : eventSummary.map((e) => (
                 <div
                   key={e.event}
                   style={{
@@ -1005,7 +743,7 @@ export function AnalyticsPage() {
                   >
                     <div
                       style={{
-                        width: `${(e.count / totalEvents) * 100}%`,
+                        width: totalEvents > 0 ? `${(e.count / totalEvents) * 100}%` : "0%",
                         height: "100%",
                         background: e.color,
                         borderRadius: 4,
@@ -1037,7 +775,7 @@ export function AnalyticsPage() {
                       justifyContent: "flex-end",
                     }}
                   >
-                    {Math.round((e.count / totalEvents) * 100)}%
+                    {totalEvents > 0 ? `${Math.round((e.count / totalEvents) * 100)}%` : "0%"}
                   </span>
                 </div>
               ))}
@@ -1047,7 +785,7 @@ export function AnalyticsPage() {
           {/* Severity distribution */}
           <Card
             title="Severity Distribution"
-            subtitle="Breakdown of events by severity level"
+            subtitle="Severity mix derived from the current alert set"
           >
             <div
               style={{
@@ -1056,7 +794,11 @@ export function AnalyticsPage() {
                 gap: 14,
               }}
             >
-              {sevData.map((s) => {
+              {sevData.length === 0 ? (
+                <div style={{ padding: "18px 0", color: textSub, fontSize: 14 }}>
+                  No severity data available for this period.
+                </div>
+              ) : sevData.map((s) => {
                 const total = sevData.reduce(
                   (a, b) => a + b.count,
                   0,
@@ -1097,7 +839,7 @@ export function AnalyticsPage() {
                     >
                       <div
                         style={{
-                          width: `${(s.count / total) * 100}%`,
+                          width: total > 0 ? `${(s.count / total) * 100}%` : "0%",
                           height: "100%",
                           background: s.color,
                           borderRadius: 5,
@@ -1123,8 +865,8 @@ export function AnalyticsPage() {
 
           {/* Blink trend */}
           <Card
-            title={`Fleet Avg Blink Rate — ${period}`}
-            subtitle="Average blinks per minute across all drivers"
+            title={`Alert Volume — ${period}`}
+            subtitle="Alert counts grouped into time buckets"
           >
             <ResponsiveContainer
               key={`blink-${period}`}
@@ -1153,7 +895,7 @@ export function AnalyticsPage() {
                 <Line
                   type="monotone"
                   dataKey="avg"
-                  name="Avg Blink Rate"
+                  name="Alert Volume"
                   stroke="#1D6AE5"
                   strokeWidth={2.5}
                   dot={{ r: 3 }}
@@ -1165,8 +907,8 @@ export function AnalyticsPage() {
 
           {/* PERCLOS trend */}
           <Card
-            title={`Fleet Avg PERCLOS — ${period}`}
-            subtitle="Average eye closure percentage across all drivers"
+            title={`Severity Index — ${period}`}
+            subtitle="Average severity score derived from alerts"
           >
             <ResponsiveContainer
               key={`perclos-${period}`}
@@ -1185,7 +927,7 @@ export function AnalyticsPage() {
                   tickLine={false}
                 />
                 <YAxis
-                  domain={[0, 20]}
+                  domain={[0, 3.5]}
                   tick={{ fontSize: 12, fill: textSub }}
                   axisLine={false}
                   tickLine={false}
@@ -1193,15 +935,12 @@ export function AnalyticsPage() {
                 />
                 <Tooltip
                   contentStyle={tooltipStyle}
-                  formatter={(v: number) => [
-                    `${v}%`,
-                    "PERCLOS",
-                  ]}
+                  formatter={(v: number) => [v.toFixed(2), "Severity score"]}
                 />
                 <Line
                   type="monotone"
                   dataKey="avg"
-                  name="PERCLOS"
+                  name="Severity score"
                   stroke="#F59E0B"
                   strokeWidth={2.5}
                   dot={{ r: 3 }}
@@ -1213,8 +952,8 @@ export function AnalyticsPage() {
 
           {/* Driver comparison */}
           <Card
-            title="Driver Safety Scores"
-            subtitle="Composite score per driver across all metrics"
+            title="Driver Alert Load"
+            subtitle="Alert counts and weighted safety scores by driver"
             span={isMobile ? undefined : "1 / -1"}
           >
             {/* On mobile: fixed-width scrollable chart so all drivers show clearly */}
@@ -1227,10 +966,10 @@ export function AnalyticsPage() {
                     <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
                     <Tooltip contentStyle={tooltipStyle} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="blink" name="Blink Rate" fill="#1D6AE5" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="perclos" name="PERCLOS" fill="#F59E0B" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="ear" name="EAR" fill="#EF4444" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="posture" name="Posture" fill="#10B981" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="blink" name="Alerts" fill="#1D6AE5" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="perclos" name="High severity" fill="#F59E0B" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="ear" name="Moderate severity" fill="#EF4444" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="posture" name="Safety score" fill="#10B981" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1240,7 +979,7 @@ export function AnalyticsPage() {
           {/* Recent events */}
           <Card
             title="Recent Events"
-            subtitle="Latest detected behavior events across all drivers"
+            subtitle="Latest alert records from the current data set"
             span={isMobile ? undefined : "1 / -1"}
           >
             <div
@@ -1297,7 +1036,13 @@ export function AnalyticsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentEvents.map((e, i) => {
+                  {recentEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ padding: "24px 16px", textAlign: "center", color: textSub, fontSize: 14 }}>
+                        No recent alert records are available.
+                      </td>
+                    </tr>
+                  ) : recentEvents.map((e, i) => {
                     const sev = sevMap[e.severity];
                     return (
                       <tr
