@@ -2,13 +2,16 @@ import { Wind, EyeOff, Zap, User, Navigation } from "lucide-react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
 
-const events = [
-  { icon: Wind,       iconColor: "#F59E0B", iconBg: "#FFF7ED", event: "Yawning Detected",    driver: "Juan Dela Cruz",  vehicle: "TRK-101", time: "10:23:14 AM", severity: "High"   },
-  { icon: EyeOff,     iconColor: "#EF4444", iconBg: "#FEF2F2", event: "Eyes Closed",          driver: "Mark Santos",     vehicle: "TRK-104", time: "10:18:07 AM", severity: "High"   },
-  { icon: Zap,        iconColor: "#F59E0B", iconBg: "#FFF7ED", event: "Distraction Detected", driver: "Pedro Reyes",     vehicle: "TRK-107", time: "10:12:45 AM", severity: "Moderate" },
-  { icon: User,       iconColor: "#8B5CF6", iconBg: "#F5F3FF", event: "Poor Posture",          driver: "Luis Fernandez",  vehicle: "TRK-103", time: "09:58:33 AM", severity: "Moderate" },
-  { icon: Navigation, iconColor: "#1D6AE5", iconBg: "#EBF2FF", event: "Head Pose Abnormal",   driver: "Ramon Garcia",    vehicle: "TRK-102", time: "09:45:21 AM", severity: "Low"    },
-];
+const events: {
+  icon: typeof Wind;
+  iconColor: string;
+  iconBg: string;
+  event: string;
+  driver: string;
+  vehicle: string;
+  time: string;
+  severity: string;
+}[] = [];
 
 function SeverityBadge({ severity }: { severity: string }) {
   const map: Record<string, { bg: string; color: string }> = {
@@ -64,7 +67,13 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
             </tr>
           </thead>
           <tbody>
-            {events.map((e, i) => {
+            {events.length === 0 ? (
+              <tr>
+                <td colSpan={4} style={{ padding: "28px 18px", textAlign: "center", color: textSub, fontSize: 14 }}>
+                  No recent alerts are seeded.
+                </td>
+              </tr>
+            ) : events.map((e, i) => {
               const Icon = e.icon;
               return (
                 <tr

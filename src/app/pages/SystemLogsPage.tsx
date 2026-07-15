@@ -22,15 +22,6 @@ interface LogEntry {
   action: string;
 }
 
-// Static fallback seed (shown while persisted logs load)
-const seedLogs: LogEntry[] = [
-  { id: 1,   source: "System",   date: "2026-06-16", time: "10:24:01", level: "INFO",    ref: "Monitoring",       action: "Live monitoring feed started for TRK-101" },
-  { id: 3,   source: "System",   date: "2026-06-16", time: "10:18:07", level: "ERROR",   ref: "Detection",        action: "Eyes closed alert triggered — Mark Santos (TRK-104)" },
-  { id: 4,   source: "System",   date: "2026-06-16", time: "10:15:30", level: "INFO",    ref: "Auth",             action: "User logged in from 192.168.1.10 — Admin User" },
-  { id: 101, source: "Hardware", date: "2026-06-16", time: "10:20:05", level: "ERROR",   ref: "CAM-01 / TRK-101", action: "Frame drop detected — packet loss 14% [HW-4001]" },
-  { id: 102, source: "Hardware", date: "2026-06-16", time: "10:15:22", level: "WARNING", ref: "CAM-03 / TRK-107", action: "Low light compensation active — IR enabled [HW-3002]" },
-];
-
 const levelStyle: Record<LogLevel, { bg: string; color: string }> = {
   INFO:    { bg: "#EBF2FF", color: "#1D6AE5" },
   WARNING: { bg: "#FFF7ED", color: "#F59E0B" },
@@ -45,7 +36,7 @@ const sourceStyle: Record<LogSource, { bg: string; color: string }> = {
 export function SystemLogsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
-  const [allLogs, setAllLogs] = useState<LogEntry[]>(seedLogs);
+  const [allLogs, setAllLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState("All");

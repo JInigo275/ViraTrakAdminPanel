@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { usersApi, driversApi, DbUser, DbDriver } from "../../api/viratrak";
+import { usersApi, driversApi, DbUser, DbDriver, demoLoginUser } from "../../api/viratrak";
 
 export type Role = "Owner" | "Administrator" | "Supervisor";
 
@@ -90,19 +90,18 @@ function mapDriver(e: DbDriver): Driver {
   };
 }
 
-// Fallback seed data used on first load or if persisted data is unavailable
 const seedUsers: AppUser[] = [
-  { id: "usr-owner-001", firstName: "Admin", lastName: "User", email: "admin@viratrak.com", role: "Owner", status: "Active", lastLogin: "Never", password: "admin123", mustChangePassword: false },
-];
-
-const seedDrivers: Driver[] = [
-  { id: "EMP-001", firstName: "Juan",   lastName: "Dela Cruz",  vehicle: "TRK-101", contact: "+63 917 111 2233", safetyScore: 87 },
-  { id: "EMP-002", firstName: "Mark",   lastName: "Santos",     vehicle: "TRK-104", contact: "+63 917 222 3344", safetyScore: 92 },
-  { id: "EMP-003", firstName: "Pedro",  lastName: "Reyes",      vehicle: "TRK-107", contact: "+63 917 333 4455", safetyScore: 74 },
-  { id: "EMP-004", firstName: "Luis",   lastName: "Fernandez",  vehicle: "TRK-103", contact: "+63 917 444 5566", safetyScore: 95 },
-  { id: "EMP-005", firstName: "Ramon",  lastName: "Garcia",     vehicle: "TRK-102", contact: "+63 917 555 6677", safetyScore: 88 },
-  { id: "EMP-006", firstName: "Carlos", lastName: "Santos",     vehicle: "TRK-108", contact: "+63 917 666 7788", safetyScore: 61 },
-  { id: "EMP-007", firstName: "Mario",  lastName: "Cruz",       vehicle: "TRK-105", contact: "+63 917 777 8899", safetyScore: 78 },
+  {
+    id: demoLoginUser.id,
+    firstName: demoLoginUser.first_name,
+    lastName: demoLoginUser.last_name,
+    email: demoLoginUser.email,
+    role: demoLoginUser.role,
+    status: demoLoginUser.status,
+    lastLogin: demoLoginUser.last_login,
+    password: demoLoginUser.password,
+    mustChangePassword: demoLoginUser.must_change_password,
+  },
 ];
 
 interface AppContextType {
@@ -128,7 +127,7 @@ const AppContext = createContext<AppContextType>({} as AppContextType);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<AppUser[]>(seedUsers);
-  const [drivers, setDrivers] = useState<Driver[]>(seedDrivers);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
     try {
       const stay = localStorage.getItem("stayLoggedIn");
@@ -150,7 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       usersApi.list().then((rows) => setUsers(rows.map(mapUser))),
       driversApi.list().then((rows) => setDrivers(rows.map(mapDriver))),
     ])
-      .catch((e) => console.warn("Data load failed, using seed data:", e))
+      .catch((e) => console.warn("Data load failed, using available data:", e))
       .finally(() => setDbReady(true));
   }, []);
 
