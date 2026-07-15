@@ -181,4 +181,175 @@ CREATE INDEX IF NOT EXISTS idx_behavior_log_detection_id ON public.behavior_log(
 CREATE INDEX IF NOT EXISTS idx_behavior_log_event_id ON public.behavior_log(event_id);
 CREATE INDEX IF NOT EXISTS idx_system_log_device_id ON public.system_log(device_id);
 
+-- ============================================================
+-- 5. SEED DATA FOR THE APP
+-- ============================================================
+
+-- Admin account used by the dashboard login flow
+INSERT INTO public.users (
+  id,
+  first_name,
+  last_name,
+  email,
+  role,
+  status,
+  last_login,
+  password,
+  must_change_password
+)
+VALUES (
+  'usr-owner-001',
+  'Admin',
+  'User',
+  'admin@viratrak.com',
+  'Owner',
+  'Active',
+  'Never',
+  'admin123',
+  false
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Drivers
+INSERT INTO public.driver (
+  driver_id,
+  first_name,
+  last_name,
+  license_number,
+  contact_info
+)
+OVERRIDING SYSTEM VALUE
+VALUES
+  (1, 'Maya', 'Lopez', 'DL-1001', '+1-555-0101'),
+  (2, 'Jon', 'Patel', 'DL-1002', '+1-555-0102'),
+  (3, 'Alicia', 'Nguyen', 'DL-1003', '+1-555-0103')
+ON CONFLICT (driver_id) DO NOTHING;
+
+-- Vehicles linked to drivers
+INSERT INTO public.vehicle (
+  vehicle_id,
+  plate_number,
+  model,
+  driver_id
+)
+OVERRIDING SYSTEM VALUE
+VALUES
+  (1, 'PLT-2847', 'Tesla Model 3', 1),
+  (2, 'PLT-5634', 'Toyota Camry', 2),
+  (3, 'PLT-8392', 'Ford Transit Van', 3)
+ON CONFLICT (vehicle_id) DO NOTHING;
+
+-- Devices attached to vehicles
+INSERT INTO public.device (
+  device_id,
+  status,
+  video_feed,
+  vehicle_id
+)
+OVERRIDING SYSTEM VALUE
+VALUES
+  (1, 'Online', 'rtsp://cam/1', 1),
+  (2, 'Online', 'rtsp://cam/2', 2),
+  (3, 'Offline', 'rtsp://cam/3', 3)
+ON CONFLICT (device_id) DO NOTHING;
+
+-- Recorded evidence entries
+INSERT INTO public.recorded_evidence (
+  event_id,
+  timestamp,
+  device_id
+)
+OVERRIDING SYSTEM VALUE
+VALUES
+  (1, '2026-07-15 14:32:00', 1),
+  (2, '2026-07-15 11:18:00', 2),
+  (3, '2026-07-15 09:45:00', 3),
+  (4, '2026-07-14 16:22:00', 1)
+ON CONFLICT (event_id) DO NOTHING;
+
+-- Detection events tied to evidence
+INSERT INTO public.detection (
+  detection_id,
+  timestamp,
+  perclos,
+  blink_rate,
+  yawn,
+  body_posture,
+  head_pose,
+  fatigue_score,
+  driver_state,
+  event_id
+)
+OVERRIDING SYSTEM VALUE
+VALUES
+  (1, '2026-07-15 14:32:00', 0.24, 12.4, 0.86, 0.61, 0.28, 86.5, 'fatigued', 1),
+  (2, '2026-07-15 11:18:00', 0.18, 10.2, 0.12, 0.72, 0.16, 72.4, 'distracted', 2),
+  (3, '2026-07-15 09:45:00', 0.15, 9.8, 0.08, 0.84, 0.12, 68.2, 'alert', 3),
+  (4, '2026-07-14 16:22:00', 0.31, 13.8, 0.95, 0.49, 0.35, 91.1, 'fatigued', 4)
+ON CONFLICT (detection_id) DO NOTHING;
+
+-- Alerts derived from detections
+INSERT INTO public.alert (
+  alert_id,
+  alert_level,
+  alert_type,
+  duration,
+  detection_id
+)
+OVERRIDING SYSTEM VALUE
+VALUES
+  (1, 'High', 'Yawning', '00:00:30', 1),
+  (2, 'Moderate', 'Eyes Closed', '00:00:15', 2),
+  (3, 'Low', 'Micro Sleep', '00:00:10', 3),
+  (4, 'High', 'Head Pose', '00:00:20', 4)
+ON CONFLICT (alert_id) DO NOTHING;
+
+-- Device actions for the alerts
+INSERT INTO public.device_action (
+  action_id,
+  action_type,
+  duration,
+  timestamp,
+  device_id,
+  alert_id
+)
+OVERRIDING SYSTEM VALUE
+VALUES
+  (1, 'Notify Supervisor', '00:00:05', '2026-07-15 14:33:00', 1, 1),
+  (2, 'Log Event', '00:00:01', '2026-07-15 11:20:00', 2, 2)
+ON CONFLICT (action_id) DO NOTHING;
+
+-- Behavior logs for dashboard visibility
+INSERT INTO public.behavior_log (
+  log_id,
+  message,
+  timestamp,
+  date,
+  alert_id,
+  device_id,
+  vehicle_id,
+  detection_id,
+  event_id
+)
+OVERRIDING SYSTEM VALUE
+VALUES
+  (1, 'Yawning metric exceeded threshold', '2026-07-15 14:33:00', '2026-07-15', 1, 1, 1, 1, 1),
+  (2, 'Eyes Closed metric flagged by classifier', '2026-07-15 11:20:00', '2026-07-15', 2, 2, 2, 2, 2)
+ON CONFLICT (log_id) DO NOTHING;
+
+-- System logs for dashboard and system pages
+INSERT INTO public.system_log (
+  systemlog_id,
+  message,
+  log_type,
+  timestamp,
+  device_id
+)
+OVERRIDING SYSTEM VALUE
+VALUES
+  (1, 'Dashboard data synchronized', 'INFO', '2026-07-15 14:35:00', 1),
+  (2, 'Camera calibration required', 'WARNING', '2026-07-15 10:15:00', 2),
+  (3, 'Device communication timeout', 'ERROR', '2026-07-15 09:50:00', 3)
+ON CONFLICT (systemlog_id) DO NOTHING;
+
 COMMIT;
