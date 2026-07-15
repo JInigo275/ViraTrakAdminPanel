@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { logsApi, DbLog } from "../../api/viratrak";
+import { logsApi } from "../../api/viratrak";
 import { Search, Download, Check, ScrollText } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
@@ -22,7 +22,7 @@ interface LogEntry {
   action: string;
 }
 
-// Static fallback seed (shown while Supabase loads)
+// Static fallback seed (shown while persisted logs load)
 const seedLogs: LogEntry[] = [
   { id: 1,   source: "System",   date: "2026-06-16", time: "10:24:01", level: "INFO",    ref: "Monitoring",       action: "Live monitoring feed started for TRK-101" },
   { id: 3,   source: "System",   date: "2026-06-16", time: "10:18:07", level: "ERROR",   ref: "Detection",        action: "Eyes closed alert triggered — Mark Santos (TRK-104)" },

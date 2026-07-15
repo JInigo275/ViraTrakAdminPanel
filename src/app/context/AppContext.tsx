@@ -90,7 +90,7 @@ function mapDriver(e: DbDriver): Driver {
   };
 }
 
-// Fallback seed data used while Supabase loads or on error
+// Fallback seed data used on first load or if persisted data is unavailable
 const seedUsers: AppUser[] = [
   { id: "usr-owner-001", firstName: "Admin", lastName: "User", email: "admin@viratrak.com", role: "Owner", status: "Active", lastLogin: "Never", password: "admin123", mustChangePassword: false },
 ];
@@ -115,7 +115,7 @@ interface AppContextType {
   settings: AppSettings;
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   dbReady: boolean;
-  // Persistent CRUD helpers (write-through to Supabase)
+  // Persistent CRUD helpers (write-through to local storage)
   addUser: (u: AppUser, password: string) => Promise<void>;
   updateUser: (id: string, patch: Partial<AppUser>) => Promise<void>;
   removeUser: (id: string) => Promise<void>;
@@ -144,13 +144,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>({ firstName: "Admin", lastName: "User" });
   const [dbReady, setDbReady] = useState(false);
 
-  // Load from Supabase on mount
+  // Load persisted app data on mount
   useEffect(() => {
     Promise.all([
       usersApi.list().then((rows) => setUsers(rows.map(mapUser))),
       driversApi.list().then((rows) => setDrivers(rows.map(mapDriver))),
     ])
-      .catch((e) => console.warn("Supabase load failed, using seed data:", e))
+      .catch((e) => console.warn("Data load failed, using seed data:", e))
       .finally(() => setDbReady(true));
   }, []);
 
