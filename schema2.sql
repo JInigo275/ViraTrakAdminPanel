@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS public.device (
 );
 
 CREATE TABLE IF NOT EXISTS public.recorded_evidence (
-  event_id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  event_id text NOT NULL,
   timestamp timestamp without time zone NOT NULL DEFAULT now(),
   device_id integer,
   CONSTRAINT recorded_evidence_pkey PRIMARY KEY (event_id),
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS public.detection (
   head_pose double precision,
   fatigue_score double precision,
   driver_state character varying,
-  event_id integer,
+  event_id text,
   CONSTRAINT detection_pkey PRIMARY KEY (detection_id),
   CONSTRAINT detection_event_id_fkey FOREIGN KEY (event_id)
     REFERENCES public.recorded_evidence(event_id) ON DELETE SET NULL
@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS public.behavior_log (
   device_id integer,
   vehicle_id integer,
   detection_id integer,
-  event_id integer,
+  event_id text,
   CONSTRAINT behavior_log_pkey PRIMARY KEY (log_id),
   CONSTRAINT behavior_log_alert_id_fkey FOREIGN KEY (alert_id)
     REFERENCES public.alert(alert_id) ON DELETE SET NULL,
@@ -259,12 +259,11 @@ INSERT INTO public.recorded_evidence (
   timestamp,
   device_id
 )
-OVERRIDING SYSTEM VALUE
 VALUES
-  (1, '2026-07-15 14:32:00', 1),
-  (2, '2026-07-15 11:18:00', 2),
-  (3, '2026-07-15 09:45:00', 3),
-  (4, '2026-07-14 16:22:00', 1)
+  ('20260715143200-1-A1B2C3', '2026-07-15 14:32:00', 1),
+  ('20260715111800-2-D4E5F6', '2026-07-15 11:18:00', 2),
+  ('20260715094500-3-G7H8I9', '2026-07-15 09:45:00', 3),
+  ('20260714162200-4-J0K1L2', '2026-07-14 16:22:00', 1)
 ON CONFLICT (event_id) DO NOTHING;
 
 -- Detection events tied to evidence
@@ -282,10 +281,10 @@ INSERT INTO public.detection (
 )
 OVERRIDING SYSTEM VALUE
 VALUES
-  (1, '2026-07-15 14:32:00', 0.24, 12.4, 0.86, 0.61, 0.28, 86.5, 'fatigued', 1),
-  (2, '2026-07-15 11:18:00', 0.18, 10.2, 0.12, 0.72, 0.16, 72.4, 'distracted', 2),
-  (3, '2026-07-15 09:45:00', 0.15, 9.8, 0.08, 0.84, 0.12, 68.2, 'alert', 3),
-  (4, '2026-07-14 16:22:00', 0.31, 13.8, 0.95, 0.49, 0.35, 91.1, 'fatigued', 4)
+  (1, '2026-07-15 14:32:00', 0.24, 12.4, 0.86, 0.61, 0.28, 86.5, 'fatigued', '20260715143200-1-A1B2C3'),
+  (2, '2026-07-15 11:18:00', 0.18, 10.2, 0.12, 0.72, 0.16, 72.4, 'distracted', '20260715111800-2-D4E5F6'),
+  (3, '2026-07-15 09:45:00', 0.15, 9.8, 0.08, 0.84, 0.12, 68.2, 'alert', '20260715094500-3-G7H8I9'),
+  (4, '2026-07-14 16:22:00', 0.31, 13.8, 0.95, 0.49, 0.35, 91.1, 'fatigued', '20260714162200-4-J0K1L2')
 ON CONFLICT (detection_id) DO NOTHING;
 
 -- Alerts derived from detections
@@ -333,8 +332,8 @@ INSERT INTO public.behavior_log (
 )
 OVERRIDING SYSTEM VALUE
 VALUES
-  (1, 'Yawning metric exceeded threshold', '2026-07-15 14:33:00', '2026-07-15', 1, 1, 1, 1, 1),
-  (2, 'Eyes Closed metric flagged by classifier', '2026-07-15 11:20:00', '2026-07-15', 2, 2, 2, 2, 2)
+  (1, 'Yawning metric exceeded threshold', '2026-07-15 14:33:00', '2026-07-15', 1, 1, 1, 1, '20260715143200-1-A1B2C3'),
+  (2, 'Eyes Closed metric flagged by classifier', '2026-07-15 11:20:00', '2026-07-15', 2, 2, 2, 2, '20260715111800-2-D4E5F6')
 ON CONFLICT (log_id) DO NOTHING;
 
 -- System logs for dashboard and system pages

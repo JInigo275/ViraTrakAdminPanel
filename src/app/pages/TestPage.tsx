@@ -22,6 +22,14 @@ function buildUniqueSuffix() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function buildRecordEvidenceId(alertNumber: number) {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const time = now.toISOString().slice(11, 19).replace(/:/g, "");
+  const random = Math.random().toString(36).slice(2, 10).toUpperCase();
+  return `${date}${time}${String(alertNumber).padStart(2, "0")}${random}`;
+}
+
 function buildUniqueEmail(value: string, suffix: string) {
   const trimmed = value.trim();
   if (!trimmed) return `test+${suffix}@viratrak.test`;
@@ -327,9 +335,12 @@ export function TestPage() {
 
       if (!deviceId) throw new Error("Device lookup failed.");
 
+      const alertIndex = alertTypes.findIndex((t) => t === alertType) + 1;
+      const evidenceEventId = buildRecordEvidenceId(alertIndex || 0);
       const { data: evidenceData, error: evidenceError } = await supabase
         .from("recorded_evidence")
         .insert({
+          event_id: evidenceEventId,
           timestamp: new Date().toISOString(),
           device_id: deviceId,
         })
