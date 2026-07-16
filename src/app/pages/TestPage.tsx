@@ -29,6 +29,13 @@ function buildUniqueEmail(value: string, suffix: string) {
   return `${local}+${suffix}@${domain}`;
 }
 
+function buildInsertEmail(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return "test@viratrak.test";
+  if (!trimmed.includes("@")) return `${trimmed}@viratrak.test`;
+  return trimmed;
+}
+
 function normalizeMetric(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -121,17 +128,29 @@ export function TestPage() {
     setUserStatus({ kind: "loading", message: "Creating user record..." });
     try {
       const uniqueSuffix = buildUniqueSuffix();
-      const { error } = await supabase.from("users").insert({
+      const email = buildInsertEmail(userEmail);
+      const isExplicitEmail = userEmail.trim().length > 0;
+      const insertUser = async (insertEmail: string) => await supabase.from("users").insert({
         id: `test-user-${uniqueSuffix}`,
         first_name: userFirstName.trim(),
         last_name: userLastName.trim(),
-        email: buildUniqueEmail(userEmail, uniqueSuffix),
+        email: insertEmail,
         role: userRole,
         status: "Active",
         last_login: new Date().toISOString(),
         password: "test123",
         must_change_password: false,
       });
+
+      let { error } = await insertUser(email);
+      if (error && /duplicate key|unique constraint|already exists/i.test(error.message || "")) {
+        if (isExplicitEmail) {
+          throw new Error("That email is already in use. Please enter a unique email.");
+        }
+        const fallbackEmail = buildUniqueEmail(email, uniqueSuffix);
+        const retry = await insertUser(fallbackEmail);
+        error = retry.error;
+      }
       if (error) throw error;
       setUserStatus({ kind: "success", message: "User inserted successfully." });
       resetUserForm();
@@ -149,28 +168,56 @@ export function TestPage() {
     setDriverStatus({ kind: "loading", message: "Creating driver and vehicle record..." });
     try {
       const uniqueSuffix = buildUniqueSuffix();
-      const safeLicenseNumber = licenseNumber.trim() ? `${licenseNumber.trim()}-${uniqueSuffix}` : `TEST-LICENSE-${uniqueSuffix}`;
-      const safePlateNumber = plateNumber.trim() ? `${plateNumber.trim()}-${uniqueSuffix}` : `TEST-PLATE-${uniqueSuffix}`;
-      const { data: driverData, error: driverError } = await supabase
+      const licenseValue = licenseNumber.trim() || `TEST-LICENSE-${uniqueSuffix}`;
+      const plateValue = plateNumber.trim() || `TEST-PLATE-${uniqueSuffix}`;
+      const isExplicitLicense = licenseNumber.trim().length > 0;
+      const isExplicitPlate = plateNumber.trim().length > 0;
+      const fallbackLicense = licenseNumber.trim() ? `${licenseNumber.trim()}-${uniqueSuffix}` : `TEST-LICENSE-${uniqueSuffix}`;
+      const fallbackPlate = plateNumber.trim() ? `${plateNumber.trim()}-${uniqueSuffix}` : `TEST-PLATE-${uniqueSuffix}`;
+      const contactValue = contactInfo.trim() || "test@example.com";
+      const modelValue = vehicleModel.trim() || "Test Vehicle";
+
+      const insertDriver = async (license_number: string) => await supabase
         .from("driver")
         .insert({
           first_name: driverFirstName.trim() || "Test",
           last_name: driverLastName.trim() || "Driver",
-          license_number: safeLicenseNumber,
-          contact_info: contactInfo.trim() || "test@example.com",
+          license_number,
+          contact_info: contactValue,
         })
         .select("driver_id")
         .single();
+
+      let { data: driverData, error: driverError } = await insertDriver(licenseValue);
+      if (driverError && /duplicate key|unique constraint|already exists/i.test(driverError.message || "")) {
+        if (isExplicitLicense) {
+          throw new Error("That license number is already in use. Please enter a unique license.");
+        }
+        ({ data: driverData, error: driverError } = await insertDriver(fallbackLicense));
+      }
       if (driverError) throw driverError;
 
       const driverId = driverData?.driver_id;
       if (!driverId) throw new Error("Driver insert did not return an id");
 
-      const { error: vehicleError } = await supabase.from("vehicle").insert({
-        plate_number: safePlateNumber,
-        model: vehicleModel.trim(),
+      let vehiclePlate = plateValue;
+      let { error: vehicleError } = await supabase.from("vehicle").insert({
+        plate_number: vehiclePlate,
+        model: modelValue,
         driver_id: driverId,
       });
+      if (vehicleError && /duplicate key|unique constraint|already exists/i.test(vehicleError.message || "")) {
+        if (isExplicitPlate) {
+          throw new Error("That plate number is already in use. Please enter a unique plate.");
+        }
+        vehiclePlate = fallbackPlate;
+        const retry = await supabase.from("vehicle").insert({
+          plate_number: vehiclePlate,
+          model: modelValue,
+          driver_id: driverId,
+        });
+        vehicleError = retry.error;
+      }
       if (vehicleError) throw vehicleError;
 
       setDriverStatus({ kind: "success", message: "Driver and vehicle inserted successfully." });
