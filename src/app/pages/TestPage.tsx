@@ -410,7 +410,14 @@ export function TestPage() {
               ))}
             </select>
             <div style={{ fontSize: 12, fontWeight: 600, color: textMain }}>Alert type</div>
-            <input value={alertType} onChange={(e) => setAlertType(e.target.value)} placeholder="e.g. Yawning" style={inputStyle} />
+            <select value={alertType} onChange={(e) => setAlertType(e.target.value)} style={inputStyle}>
+              <option value="">Select an alert type</option>
+              {alertTypes.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
             <div style={{ fontSize: 12, fontWeight: 600, color: textMain }}>Alert severity</div>
             <select value={alertLevel} onChange={(e) => setAlertLevel(e.target.value)} style={inputStyle}>
               <option value="">Select severity</option>
