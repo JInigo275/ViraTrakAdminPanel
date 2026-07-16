@@ -228,7 +228,7 @@ type RawAlert = {
   timestamp: string;
   detection?: {
     timestamp: string;
-    event_id: number;
+    event_id: string;
     recorded_evidence?: {
       timestamp: string;
       device_id: number;
@@ -257,6 +257,14 @@ const EVENT_ICON_MAP: Record<string, { color: string; bg: string }> = {
   Moderate: { color: "#F59E0B", bg: "#FEF3C7" },
   Low: { color: "#10B981", bg: "#ECFDF5" },
 };
+
+function buildRecordEvidenceId(alertNumber: number) {
+  const now = new Date();
+  const date = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const time = now.toISOString().slice(11, 19).replace(/:/g, "");
+  const random = Math.random().toString(36).slice(2, 10).toUpperCase();
+  return `${date}${time}${String(alertNumber).padStart(2, "0")}-${random}`;
+}
 
 async function fetchAlertsWithRelations(): Promise<RawAlert[]> {
   const client = requireSupabase();
@@ -376,9 +384,10 @@ export const alertsApi = {
     const client = requireSupabase();
     
     // Create a recorded_evidence entry first
+    const evidenceEventId = buildRecordEvidenceId(0);
     const { data: evidence, error: evidError } = await client
       .from("recorded_evidence")
-      .insert({ timestamp: new Date().toISOString() })
+      .insert({ event_id: evidenceEventId, timestamp: new Date().toISOString() })
       .select("event_id")
       .single();
     
