@@ -78,6 +78,15 @@ export function TestPage() {
   const textSub = dark ? "#9CA3AF" : "#6B7280";
   const border = dark ? "#374151" : "#E5E7EB";
 
+  const alertTypes = [
+    "Yawning",
+    "Eyes Closed",
+    "Head Pose",
+    "Body Posture",
+    "Micro Sleep",
+    "Blink Rate",
+  ];
+
   function resetUserForm() {
     setUserFirstName("");
     setUserLastName("");
