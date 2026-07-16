@@ -3,6 +3,7 @@ import { PageHeader } from "../components/PageHeader";
 import { FlaskConical, UserRound, CarFront, BellRing, ScrollText, DatabaseZap } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { supabase } from "../../api/supabaseClient";
 
 type SubmitStatus = {
@@ -457,14 +458,18 @@ export function TestPage() {
               ))}
             </select>
             <div style={{ fontSize: 12, fontWeight: 600, color: textMain }}>Alert type</div>
-            <select value={alertType} onChange={(e) => setAlertType(e.target.value)} style={inputStyle}>
-              <option value="">Select an alert type</option>
-              {alertTypes.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+            <Select value={alertType} onValueChange={(value) => setAlertType(value)}>
+              <SelectTrigger className="w-full" aria-label="Select alert type">
+                <SelectValue placeholder="Select an alert type" />
+              </SelectTrigger>
+              <SelectContent>
+                {alertTypes.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div style={{ fontSize: 12, fontWeight: 600, color: textMain }}>Alert severity</div>
             <select value={alertLevel} onChange={(e) => setAlertLevel(e.target.value)} style={inputStyle}>
               <option value="">Select severity</option>
@@ -559,3 +564,5 @@ const buttonStyle: CSSProperties = {
   fontWeight: 700,
   cursor: "pointer",
 };
+
+//
