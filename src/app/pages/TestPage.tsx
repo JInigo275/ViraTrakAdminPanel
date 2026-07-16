@@ -23,6 +23,7 @@ function buildUniqueSuffix() {
 
 function buildUniqueEmail(value: string, suffix: string) {
   const trimmed = value.trim();
+  if (!trimmed) return `test+${suffix}@viratrak.test`;
   if (!trimmed.includes("@")) return `${trimmed}+${suffix}@viratrak.test`;
   const [local, domain] = trimmed.split("@", 2);
   return `${local}+${suffix}@${domain}`;
@@ -148,15 +149,15 @@ export function TestPage() {
     setDriverStatus({ kind: "loading", message: "Creating driver and vehicle record..." });
     try {
       const uniqueSuffix = buildUniqueSuffix();
-      const safeLicenseNumber = `${licenseNumber.trim()}-${uniqueSuffix}`;
-      const safePlateNumber = `${plateNumber.trim()}-${uniqueSuffix}`;
+      const safeLicenseNumber = licenseNumber.trim() ? `${licenseNumber.trim()}-${uniqueSuffix}` : `TEST-LICENSE-${uniqueSuffix}`;
+      const safePlateNumber = plateNumber.trim() ? `${plateNumber.trim()}-${uniqueSuffix}` : `TEST-PLATE-${uniqueSuffix}`;
       const { data: driverData, error: driverError } = await supabase
         .from("driver")
         .insert({
-          first_name: driverFirstName.trim(),
-          last_name: driverLastName.trim(),
+          first_name: driverFirstName.trim() || "Test",
+          last_name: driverLastName.trim() || "Driver",
           license_number: safeLicenseNumber,
-          contact_info: contactInfo.trim(),
+          contact_info: contactInfo.trim() || "test@example.com",
         })
         .select("driver_id")
         .single();

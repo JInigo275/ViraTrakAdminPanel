@@ -130,6 +130,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
     try {
+      const sessionRaw = sessionStorage.getItem("currentUser");
+      if (sessionRaw) return JSON.parse(sessionRaw) as AppUser;
       const stay = localStorage.getItem("stayLoggedIn");
       if (stay === "true") {
         const raw = localStorage.getItem("currentUser");
@@ -153,9 +155,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .finally(() => setDbReady(true));
   }, []);
 
-  // Persist currentUser only when stayLoggedIn is true
+  // Persist currentUser in session storage while logged in, and in local storage only when stayLoggedIn is true.
   useEffect(() => {
     try {
+      if (currentUser) {
+        sessionStorage.setItem("currentUser", JSON.stringify(currentUser));
+      } else {
+        sessionStorage.removeItem("currentUser");
+      }
       const stay = localStorage.getItem("stayLoggedIn");
       if (currentUser && stay === "true") {
         localStorage.setItem("currentUser", JSON.stringify(currentUser));
