@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  LayoutDashboard, Bell, TrendingUp, Users, Contact, ScrollText,
+  LayoutDashboard, Bell, TrendingUp, Users, Contact, ScrollText, FlaskConical,
   ChevronDown, Moon, Sun, Monitor, LogOut, Check, Settings, X,
 } from "lucide-react";
 import viraTrakLogo from "../../imports/ViraTrak_Logo.png";
@@ -14,6 +14,7 @@ const allNavItems = [
   { icon: Users,           label: "Users",                id: "users",      roles: ["Owner", "Administrator"] },
   { icon: Contact,         label: "Driver Info",          id: "employees",  roles: ["Owner", "Administrator", "Supervisor"] },
   { icon: ScrollText,      label: "System Logs",          id: "logs",       roles: ["Owner", "Administrator"] },
+  { icon: FlaskConical,    label: "Test Page",            id: "test",       roles: ["Owner", "Administrator", "Supervisor"] },
 ];
 
 const themeOptions: { value: ThemeMode; label: string; icon: typeof Monitor }[] = [

@@ -94,7 +94,7 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
       </div>
 
       <div style={{ overflowY: "auto", maxHeight: 280, overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 420 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isMobile ? 320 : 420 }}>
           <thead style={{ position: "sticky", top: 0, background: cardBg, zIndex: 1 }}>
             <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
               {["Event", "Driver", "Time", "Severity"].map((h) => (

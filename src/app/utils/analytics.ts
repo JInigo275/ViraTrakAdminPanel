@@ -42,7 +42,20 @@ const severityWeight: Record<DbAlert["severity"], number> = {
 };
 
 function parseAlertTimestamp(alert: DbAlert): Date | null {
-  const timestamp = new Date(`${alert.date}T${alert.time}`);
+  // Parse "MM/DD/YYYY" and "HH:MM" format
+  const dateParts = alert.date.split('/').map(Number);
+  const timeParts = alert.time.split(':').map(Number);
+  
+  if (dateParts.length !== 3 || timeParts.length < 2) return null;
+  
+  const [month, day, year] = dateParts;
+  const [hours, minutes] = timeParts;
+  
+  if (isNaN(month) || isNaN(day) || isNaN(year) || isNaN(hours) || isNaN(minutes)) {
+    return null;
+  }
+  
+  const timestamp = new Date(year, month - 1, day, hours, minutes, 0);
   return Number.isNaN(timestamp.getTime()) ? null : timestamp;
 }
 

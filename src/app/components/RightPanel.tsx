@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Check } from "lucide-react";
-import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useTheme } from "../context/ThemeContext";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { alertsApi, DbAlert } from "../../api/viratrak";
 import { buildBehaviorSummary, buildRightPanelTrend, Period } from "../utils/analytics";
 
@@ -9,6 +10,7 @@ const trendOptions: Period[] = ["Today", "Last 7 Days", "Last 30 Days", "Last Ye
 
 export function RightPanel() {
   const { dark } = useTheme();
+  const isMobile = useIsMobile();
   const [trendRange, setTrendRange] = useState<Period>("Last 7 Days");
   const [showTrendPicker, setShowTrendPicker] = useState(false);
   const trendRef = useRef<HTMLDivElement>(null);
@@ -48,15 +50,17 @@ export function RightPanel() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", padding: "14px 16px 8px", position: "relative" }}>
-          <div style={{ position: "relative", width: 220, height: 220, margin: "0 auto" }}>
-            <PieChart width={220} height={220}>
-              <Pie data={donutData} cx={110} cy={110} innerRadius={66} outerRadius={92} dataKey="value" strokeWidth={0} paddingAngle={3}>
-                {donutData.map((entry, idx) => <Cell key={`donut-cell-${idx}`} fill={entry.color} />)}
-              </Pie>
-            </PieChart>
-            <div style={{ position: "absolute", top: 110, left: 110, transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none" }}>
-              <div style={{ fontSize: 33, fontWeight: 700, color: textMain, lineHeight: 1 }}>{totalEvents}</div>
-              <div style={{ fontSize: 13, color: textSub, marginTop: 4, lineHeight: 1.4, textAlign: "center" }}>Total<br/>Events</div>
+          <div style={{ position: "relative", width: isMobile ? 160 : 220, height: isMobile ? 160 : 220, margin: "0 auto" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={donutData} cx="50%" cy="50%" innerRadius={isMobile ? 48 : 66} outerRadius={isMobile ? 70 : 92} dataKey="value" strokeWidth={0} paddingAngle={3}>
+                  {donutData.map((entry, idx) => <Cell key={`donut-cell-${idx}`} fill={entry.color} />)}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none" }}>
+              <div style={{ fontSize: isMobile ? 24 : 33, fontWeight: 700, color: textMain, lineHeight: 1 }}>{totalEvents}</div>
+              <div style={{ fontSize: isMobile ? 11 : 13, color: textSub, marginTop: 4, lineHeight: 1.4, textAlign: "center" }}>Total<br/>Events</div>
             </div>
           </div>
         </div>
@@ -106,15 +110,17 @@ export function RightPanel() {
           </div>
         </div>
 
-        {/* Chart — fixed dimensions to prevent recharts 0×0 duplicate-key bug */}
-        <div style={{ flex: 1, padding: "12px 8px 12px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0 }}>
-            <LineChart key={trendRange} width={290} height={160} data={trendData}>
-            <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-              <XAxis dataKey="date" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Line type="monotone" dataKey="alerts" stroke="#EF4444" strokeWidth={2.5} dot={{ fill: "#EF4444", r: 3 }} activeDot={{ r: 5 }} />
-          </LineChart>
+        {/* Chart — responsive container */}
+        <div style={{ flex: 1, padding: "12px 8px 12px", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, width: "100%" }}>
+          <ResponsiveContainer width="100%" height={isMobile ? 140 : 160} key={trendRange}>
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="date" tick={{ fontSize: isMobile ? 10 : 12, fill: textSub }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: isMobile ? 10 : 12, fill: textSub }} axisLine={false} tickLine={false} width={isMobile ? 24 : 28} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Line type="monotone" dataKey="alerts" stroke="#EF4444" strokeWidth={2.5} dot={{ fill: "#EF4444", r: 3 }} activeDot={{ r: 5 }} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>
