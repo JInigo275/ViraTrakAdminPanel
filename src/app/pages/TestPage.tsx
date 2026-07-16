@@ -85,6 +85,15 @@ export function TestPage() {
   const textSub = dark ? "#9CA3AF" : "#6B7280";
   const border = dark ? "#374151" : "#E5E7EB";
 
+  const alertTypes = [
+    "Yawning",
+    "Eyes Closed",
+    "Head Pose",
+    "Body Posture",
+    "Micro Sleep",
+    "Blink Rate",
+  ];
+
   function resetUserForm() {
     setUserFirstName("");
     setUserLastName("");
@@ -448,7 +457,14 @@ export function TestPage() {
               ))}
             </select>
             <div style={{ fontSize: 12, fontWeight: 600, color: textMain }}>Alert type</div>
-            <input value={alertType} onChange={(e) => setAlertType(e.target.value)} placeholder="e.g. Yawning" style={inputStyle} />
+            <select value={alertType} onChange={(e) => setAlertType(e.target.value)} style={inputStyle}>
+              <option value="">Select an alert type</option>
+              {alertTypes.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
             <div style={{ fontSize: 12, fontWeight: 600, color: textMain }}>Alert severity</div>
             <select value={alertLevel} onChange={(e) => setAlertLevel(e.target.value)} style={inputStyle}>
               <option value="">Select severity</option>
