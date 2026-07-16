@@ -1,4 +1,4 @@
-import { ArrowLeft, Wind, EyeOff, Navigation, User, Activity } from "lucide-react";
+import { ArrowLeft, Wind, EyeOff, Navigation, User, Activity, Zap } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useState } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
@@ -18,11 +18,10 @@ const driverData: Record<string, {
   headPose: { axis: string; value: number }[];
   posture: { metric: string; score: number }[];
 }> = {
-  "EMP-001": {
+  "drv-001": {
     alerts: [
-      { icon: Wind,       iconColor: "#F59E0B", iconBg: "#FFF7ED", type: "Yawning",      date: "2026-06-16", time: "10:23:14", severity: "High"     },
-      { icon: User,       iconColor: "#8B5CF6", iconBg: "#F5F3FF", type: "Body Posture", date: "2026-06-15", time: "08:20:05", severity: "Low"      },
-      { icon: Wind,       iconColor: "#F59E0B", iconBg: "#FFF7ED", type: "Yawning",      date: "2026-06-14", time: "11:05:22", severity: "Moderate" },
+      { icon: Wind,       iconColor: "#EF4444", iconBg: "#FEE2E2", type: "Drowsiness",  date: "07/15/2026", time: "14:32", severity: "High"     },
+      { icon: Wind,       iconColor: "#F59E0B", iconBg: "#FEF3C7", type: "Yawning",      date: "07/14/2026", time: "13:55", severity: "Moderate" },
     ],
     blink:   [{ time: "08:00", rate: 17 },{ time: "09:00", rate: 14 },{ time: "10:00", rate: 10 },{ time: "11:00", rate: 8  },{ time: "12:00", rate: 13 },{ time: "13:00", rate: 7  }],
     perclos: [{ time: "08:00", value: 3  },{ time: "09:00", value: 5  },{ time: "10:00", value: 9  },{ time: "11:00", value: 16 },{ time: "12:00", value: 8  },{ time: "13:00", value: 20 }],
@@ -31,10 +30,10 @@ const driverData: Record<string, {
     headPose:[{ axis: "Pitch", value: 14 },{ axis: "Yaw", value: 10 },{ axis: "Roll", value: 6 }],
     posture: [{ metric: "Back", score: 72 },{ metric: "Neck", score: 60 },{ metric: "Shoulders", score: 78 },{ metric: "Arms", score: 85 },{ metric: "Lean", score: 55 }],
   },
-  "EMP-002": {
+  "drv-002": {
     alerts: [
-      { icon: EyeOff,     iconColor: "#EF4444", iconBg: "#FEF2F2", type: "Eyes Closed",  date: "2026-06-16", time: "10:18:07", severity: "High"     },
-      { icon: Navigation, iconColor: "#1D6AE5", iconBg: "#EBF2FF", type: "Blink Rate",   date: "2026-06-14", time: "14:05:33", severity: "Moderate" },
+      { icon: Wind,       iconColor: "#F59E0B", iconBg: "#FEF3C7", type: "Lane Drift",   date: "07/15/2026", time: "11:18", severity: "Moderate" },
+      { icon: Wind,       iconColor: "#10B981", iconBg: "#ECFDF5", type: "Lane Drift",   date: "07/13/2026", time: "15:10", severity: "Low"      },
     ],
     blink:   [{ time: "08:00", rate: 20 },{ time: "09:00", rate: 18 },{ time: "10:00", rate: 15 },{ time: "11:00", rate: 13 },{ time: "12:00", rate: 17 },{ time: "13:00", rate: 12 }],
     perclos: [{ time: "08:00", value: 2  },{ time: "09:00", value: 3  },{ time: "10:00", value: 6  },{ time: "11:00", value: 9  },{ time: "12:00", value: 5  },{ time: "13:00", value: 12 }],
@@ -42,6 +41,30 @@ const driverData: Record<string, {
     mar:     [{ time: "08:00", value: 0.1 },{ time: "09:00", value: 0.2 },{ time: "10:00", value: 0.4 },{ time: "11:00", value: 0.6 },{ time: "12:00", value: 0.3 },{ time: "13:00", value: 0.5 }],
     headPose:[{ axis: "Pitch", value: 6 },{ axis: "Yaw", value: 4 },{ axis: "Roll", value: 3 }],
     posture: [{ metric: "Back", score: 90 },{ metric: "Neck", score: 88 },{ metric: "Shoulders", score: 92 },{ metric: "Arms", score: 95 },{ metric: "Lean", score: 85 }],
+  },
+  "drv-003": {
+    alerts: [
+      { icon: Zap,        iconColor: "#1D6AE5", iconBg: "#DBEAFE", type: "Distraction",  date: "07/15/2026", time: "09:45", severity: "Low"      },
+      { icon: User,       iconColor: "#F59E0B", iconBg: "#FEF3C7", type: "Hard Braking", date: "07/13/2026", time: "10:33", severity: "Moderate" },
+    ],
+    blink:   [{ time: "08:00", rate: 15 },{ time: "09:00", rate: 13 },{ time: "10:00", rate: 12 },{ time: "11:00", rate: 10 },{ time: "12:00", rate: 14 },{ time: "13:00", rate: 11 }],
+    perclos: [{ time: "08:00", value: 4  },{ time: "09:00", value: 6  },{ time: "10:00", value: 8  },{ time: "11:00", value: 11 },{ time: "12:00", value: 7  },{ time: "13:00", value: 14 }],
+    ear:     [{ time: "08:00", value: 0.30 },{ time: "09:00", value: 0.27 },{ time: "10:00", value: 0.24 },{ time: "11:00", value: 0.19 },{ time: "12:00", value: 0.26 },{ time: "13:00", value: 0.17 }],
+    mar:     [{ time: "08:00", value: 0.2 },{ time: "09:00", value: 0.3 },{ time: "10:00", value: 0.6 },{ time: "11:00", value: 0.8 },{ time: "12:00", value: 0.4 },{ time: "13:00", value: 0.9 }],
+    headPose:[{ axis: "Pitch", value: 10 },{ axis: "Yaw", value: 8 },{ axis: "Roll", value: 5 }],
+    posture: [{ metric: "Back", score: 80 },{ metric: "Neck", score: 72 },{ metric: "Shoulders", score: 84 },{ metric: "Arms", score: 90 },{ metric: "Lean", score: 65 }],
+  },
+  "drv-004": {
+    alerts: [
+      { icon: Navigation, iconColor: "#EF4444", iconBg: "#FEE2E2", type: "Speeding",     date: "07/14/2026", time: "16:22", severity: "High"     },
+      { icon: Wind,       iconColor: "#EF4444", iconBg: "#FEE2E2", type: "Drowsiness",  date: "07/10/2026", time: "17:42", severity: "High"     },
+    ],
+    blink:   [{ time: "08:00", rate: 18 },{ time: "09:00", rate: 16 },{ time: "10:00", rate: 14 },{ time: "11:00", rate: 12 },{ time: "12:00", rate: 15 },{ time: "13:00", rate: 13 }],
+    perclos: [{ time: "08:00", value: 2  },{ time: "09:00", value: 4  },{ time: "10:00", value: 5  },{ time: "11:00", value: 8  },{ time: "12:00", value: 6  },{ time: "13:00", value: 9  }],
+    ear:     [{ time: "08:00", value: 0.33 },{ time: "09:00", value: 0.31 },{ time: "10:00", value: 0.26 },{ time: "11:00", value: 0.22 },{ time: "12:00", value: 0.28 },{ time: "13:00", value: 0.19 }],
+    mar:     [{ time: "08:00", value: 0.15 },{ time: "09:00", value: 0.25 },{ time: "10:00", value: 0.35 },{ time: "11:00", value: 0.5 },{ time: "12:00", value: 0.3 },{ time: "13:00", value: 0.7 }],
+    headPose:[{ axis: "Pitch", value: 8 },{ axis: "Yaw", value: 6 },{ axis: "Roll", value: 4 }],
+    posture: [{ metric: "Back", score: 88 },{ metric: "Neck", score: 85 },{ metric: "Shoulders", score: 90 },{ metric: "Arms", score: 92 },{ metric: "Lean", score: 82 }],
   },
 };
 
@@ -68,15 +91,25 @@ type PeriodSummary = {
 
 // Per-period summaries derived from time-stamped data
 const periodSummaries: Record<string, Record<PeriodKey, PeriodSummary>> = {
-  "EMP-001": {
+  "drv-001": {
     "Today":      { avgBlink: 11, avgPerclos: 10.2, avgEAR: 0.23, avgMAR: 0.67, totalAlerts: 1,  safetyTrend: "down"   },
-    "This Week":  { avgBlink: 13, avgPerclos: 8.4,  avgEAR: 0.26, avgMAR: 0.52, totalAlerts: 3,  safetyTrend: "down"   },
-    "This Month": { avgBlink: 15, avgPerclos: 6.1,  avgEAR: 0.28, avgMAR: 0.38, totalAlerts: 7,  safetyTrend: "stable" },
+    "This Week":  { avgBlink: 13, avgPerclos: 8.4,  avgEAR: 0.26, avgMAR: 0.52, totalAlerts: 2,  safetyTrend: "down"   },
+    "This Month": { avgBlink: 15, avgPerclos: 6.1,  avgEAR: 0.28, avgMAR: 0.38, totalAlerts: 2,  safetyTrend: "stable" },
   },
-  "EMP-002": {
+  "drv-002": {
     "Today":      { avgBlink: 16, avgPerclos: 6.2,  avgEAR: 0.28, avgMAR: 0.35, totalAlerts: 1,  safetyTrend: "stable" },
     "This Week":  { avgBlink: 17, avgPerclos: 5.0,  avgEAR: 0.30, avgMAR: 0.28, totalAlerts: 2,  safetyTrend: "up"     },
-    "This Month": { avgBlink: 18, avgPerclos: 4.2,  avgEAR: 0.32, avgMAR: 0.22, totalAlerts: 4,  safetyTrend: "up"     },
+    "This Month": { avgBlink: 18, avgPerclos: 4.2,  avgEAR: 0.32, avgMAR: 0.22, totalAlerts: 2,  safetyTrend: "up"     },
+  },
+  "drv-003": {
+    "Today":      { avgBlink: 14, avgPerclos: 7.5,  avgEAR: 0.26, avgMAR: 0.45, totalAlerts: 1,  safetyTrend: "stable" },
+    "This Week":  { avgBlink: 15, avgPerclos: 6.8,  avgEAR: 0.27, avgMAR: 0.40, totalAlerts: 2,  safetyTrend: "down"   },
+    "This Month": { avgBlink: 16, avgPerclos: 5.5,  avgEAR: 0.29, avgMAR: 0.32, totalAlerts: 2,  safetyTrend: "stable" },
+  },
+  "drv-004": {
+    "Today":      { avgBlink: 15, avgPerclos: 5.8,  avgEAR: 0.27, avgMAR: 0.32, totalAlerts: 0,  safetyTrend: "stable" },
+    "This Week":  { avgBlink: 16, avgPerclos: 5.0,  avgEAR: 0.29, avgMAR: 0.28, totalAlerts: 2,  safetyTrend: "up"     },
+    "This Month": { avgBlink: 17, avgPerclos: 4.2,  avgEAR: 0.30, avgMAR: 0.25, totalAlerts: 2,  safetyTrend: "up"     },
   },
 };
 
@@ -329,7 +362,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
             <div style={{ textAlign: "center", padding: "24px 0", fontSize: 14, color: textSub }}>No alerts recorded for this driver.</div>
           ) : (
             <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 380 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isMobile ? 280 : 380 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
                   {["Event Type", "Date", "Time", "Severity"].map((h) => (

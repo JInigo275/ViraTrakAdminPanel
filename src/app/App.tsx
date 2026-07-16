@@ -15,6 +15,7 @@ import { DriversPage } from "./pages/DriversPage";
 import { DriverDetailPage } from "./pages/DriverDetailPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { TestPage } from "./pages/TestPage";
 
 function AppInner() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -83,6 +84,7 @@ function AppInner() {
       case "employees":  return <DriversPage onViewDetail={(id) => setDriverDetailId(id)} />;
       case "logs":       return <SystemLogsPage />;
       case "settings":   return <SettingsPage />;
+      case "test":       return <TestPage />;
       default:           return <DashboardPage isMobile={isMobile} />;
     }
   };
