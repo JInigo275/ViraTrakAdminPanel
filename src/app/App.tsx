@@ -19,8 +19,20 @@ import { TestPage } from "./pages/TestPage";
 
 function AppInner() {
   const [loggedIn, setLoggedIn] = useState(false);
-  const [currentPage, setCurrentPage] = useState("dashboard");
-  const [driverDetailId, setDriverDetailId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(() => {
+    try {
+      return localStorage.getItem("currentPage") || "dashboard";
+    } catch (e) {
+      return "dashboard";
+    }
+  });
+  const [driverDetailId, setDriverDetailId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem("driverDetailId");
+    } catch (e) {
+      return null;
+    }
+  });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { dark } = useTheme();
   const { currentUser, setCurrentUser } = useApp();
@@ -48,6 +60,26 @@ function AppInner() {
     link.href = viraTrakLogo;
   }, []);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("currentPage", currentPage);
+    } catch (e) {
+      // ignore
+    }
+  }, [currentPage]);
+
+  useEffect(() => {
+    try {
+      if (driverDetailId) {
+        localStorage.setItem("driverDetailId", driverDetailId);
+      } else {
+        localStorage.removeItem("driverDetailId");
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [driverDetailId]);
+
   const isMobile = windowWidth < 768;
   const zoom = isMobile ? 1
     : windowWidth < 1400 ? 0.93
@@ -63,7 +95,11 @@ function AppInner() {
     setLoggedIn(false);
     setCurrentPage("dashboard");
     setDrawerOpen(false);
-    try { localStorage.removeItem("stayLoggedIn"); localStorage.removeItem("currentUser"); } catch (e) { }
+    try {
+      localStorage.removeItem("stayLoggedIn");
+      localStorage.removeItem("currentUser");
+      sessionStorage.removeItem("currentUser");
+    } catch (e) { }
   }
 
   function navigate(page: string) {

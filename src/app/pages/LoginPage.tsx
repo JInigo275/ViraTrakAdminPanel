@@ -48,6 +48,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(false);
+  const [showForgotPasswordInfo, setShowForgotPasswordInfo] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
@@ -123,9 +124,21 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 suffix={<button type="button" onClick={() => setShowPassword((v) => !v)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "#9CA3AF", display: "flex", lineHeight: 1 }}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>}
               />
               <div style={{ textAlign: "right", marginTop: 6 }}>
-                <a href="#" style={{ fontSize: 12, color: "#1D6AE5", textDecoration: "none", fontWeight: 500 }}>Forgot password?</a>
+                <button type="button" onClick={() => { setShowForgotPasswordInfo(true); setError(""); }}
+                  style={{ fontSize: 12, color: "#1D6AE5", textDecoration: "none", fontWeight: 500, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                  Forgot password?
+                </button>
               </div>
             </div>
+
+            {showForgotPasswordInfo && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 12px", background: "#EFF6FF", borderRadius: 10, border: "1px solid #BFDBFE" }}>
+                <AlertCircle size={16} color="#0369A1" style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 13, color: "#0369A1" }}>
+                  Forgot your password? Contact your supervisor so they can reset it for you.
+                </span>
+              </div>
+            )}
 
             {error && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#FEF2F2", borderRadius: 8, border: "1px solid #FECACA" }}>
