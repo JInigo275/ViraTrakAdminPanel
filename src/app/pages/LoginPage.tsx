@@ -1,6 +1,9 @@
 import { useState, useRef, ReactNode, useEffect } from "react";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 import viraTrakLogo from "../../imports/ViraTrak_Logo.png";
+import Drowsiness from "../../imports/Drowsiness.png";
+import Analytics from "../../imports/Analytics.png";
+import Alert from "../../imports/Alert.png";
 import { useApp } from "../context/AppContext";
 
 interface FloatingInputProps {
@@ -95,9 +98,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
         <div style={{ position: "relative", zIndex: 1 }}>
           <h2 style={{ fontSize: 32, fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 16 }}>Smarter Driver<br />Safety Monitoring</h2>
-          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.72)", lineHeight: 1.6, maxWidth: 340 }}>Real-time driver behavior detection powered by AI. Keep your fleet safe, compliant, and efficient.</p>
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.72)", lineHeight: 1.6, maxWidth: 340 }}>Smarter driver safety starts here. Detect driver behavior in real time and support safer freight transportation with AI-powered technology.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 36 }}>
-            {[["👁️", "Drowsiness & distraction detection"], ["📊", "Live analytics and behavior reports"], ["🔔", "Instant alert notifications"]].map(([emoji, text]) => (
+            {[[<img src={Drowsiness} alt="Drowsiness" style={{ width: 20, height: 20 }}/>, "Driver Behavior Detection"], [<img src={Analytics} alt="Analytics" style={{ width: 20, height: 20 }}/>, "Analytics and Behavior Reports"], [<img src={Alert} alt="Alert" style={{ width: 20, height: 20 }}/>, "Smart Alerts & Event Logs"]].map(([emoji, text]) => (
               <div key={text} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{emoji}</div>
                 <span style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>{text}</span>
