@@ -188,10 +188,10 @@ function AppInner() {
         ::-webkit-scrollbar-thumb:hover { background: ${dark ? "#4B5563" : "#9CA3AF"}; }
         * { box-sizing: border-box; }
         h1, h2, h3, h4, p { margin: 0; }
-        button { font-family: Inter, sans-serif; -webkit-tap-highlight-color: transparent; }
+        button { font-family: 'Stack Sans Text', sans-serif; -webkit-tap-highlight-color: transparent; }
         button:focus { outline: none; }
         button:focus-visible { outline: 2px solid #1D6AE5; outline-offset: 2px; }
-        input { font-family: Inter, sans-serif; }
+        input { font-family: 'Stack Sans Text', sans-serif; }
       `}</style>
     </div>
   );
