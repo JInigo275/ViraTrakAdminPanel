@@ -133,7 +133,7 @@ function AppInner() {
       flexDirection: "column",
       height: zoom === 1 ? "100vh" : `${100 / zoom}vh`,
       width: zoom === 1 ? "100%" : `${100 / zoom}vw`,
-      fontFamily: "Inter, sans-serif",
+      fontFamily: "Gelasio, sans-serif",
       background: dark ? "#111827" : "#F4F5F7",
       overflow: "hidden",
       transition: "background 0.2s",
@@ -188,10 +188,10 @@ function AppInner() {
         ::-webkit-scrollbar-thumb:hover { background: ${dark ? "#4B5563" : "#9CA3AF"}; }
         * { box-sizing: border-box; }
         h1, h2, h3, h4, p { margin: 0; }
-        button { font-family: 'Stack Sans Text', sans-serif; -webkit-tap-highlight-color: transparent; }
+        button { font-family: 'Gelasio', sans-serif; -webkit-tap-highlight-color: transparent; }
         button:focus { outline: none; }
         button:focus-visible { outline: 2px solid #1D6AE5; outline-offset: 2px; }
-        input { font-family: 'Stack Sans Text', sans-serif; }
+        input { font-family: 'Gelasio', sans-serif; }
       `}</style>
     </div>
   );

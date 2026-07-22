@@ -399,7 +399,7 @@ export function AnalyticsPage() {
       .write(`<!DOCTYPE html><html><head><title>Analytics Report — ${period}</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Stack Sans Text', sans-serif; background: #fff; color: #111827; padding: 32px; }
+        body { font-family: 'Gelasio', sans-serif; background: #fff; color: #111827; padding: 32px; }
         h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
         p  { font-size: 13px; color: #6B7280; margin-bottom: 24px; }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }

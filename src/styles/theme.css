@@ -2,6 +2,7 @@
 
 :root {
   --font-size: 16px;
+  --font-family: 'Gelasio', sans-serif;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -126,7 +127,11 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Stack Sans Text', sans-serif;
+    font-family: var(--font-family);
+  }
+
+  body * {
+    font-family: var(--font-family) !important;
   }
 
   /**
