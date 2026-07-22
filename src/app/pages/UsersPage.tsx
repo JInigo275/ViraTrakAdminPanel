@@ -6,14 +6,14 @@ import { useTheme } from "../context/ThemeContext";
 import { useApp, AppUser, Role, genTempPassword, getAddableRoles, canManageUsers, getFullName } from "../context/AppContext";
 
 const roleColors: Record<Role, { bg: string; color: string }> = {
-  Owner:         { bg: "#FEF3C7", color: "#D97706" },
+  Superadmin:    { bg: "#FEF3C7", color: "#D97706" },
   Administrator: { bg: "#EBF2FF", color: "#1D6AE5" },
   Supervisor:    { bg: "#F5F3FF", color: "#8B5CF6" },
 };
 
 const roleInfo = [
-  { role: "Owner" as Role, icon: Crown, color: "#D97706", bg: "#FEF3C7", desc: "Full system access. Can add and manage Administrators and Supervisors. Only one per system." },
-  { role: "Administrator" as Role, icon: Shield, color: "#1D6AE5", bg: "#EBF2FF", desc: "Full operational access. Can only add and manage Supervisors. Cannot manage other Administrators or Owners." },
+  { role: "Superadmin" as Role, icon: Crown, color: "#D97706", bg: "#FEF3C7", desc: "Full system access. Can add and manage Administrators and Supervisors. Only one per system." },
+  { role: "Administrator" as Role, icon: Shield, color: "#1D6AE5", bg: "#EBF2FF", desc: "Full operational access. Can only add and manage Supervisors. Cannot manage other Administrators or Superadmins." },
   { role: "Supervisor" as Role, icon: UserCog, color: "#8B5CF6", bg: "#F5F3FF", desc: "Restricted access — Dashboard, Alerts & Recordings, Analytics, and Driver Info only. Cannot add users." },
 ];
 
@@ -333,7 +333,7 @@ export function UsersPage() {
                 </td>
                 <td style={{ padding: "12px 18px", fontSize: 14, color: textSub }}>{u.lastLogin}</td>
                 <td style={{ padding: "12px 18px" }}>
-                  {canAdd && u.role !== "Owner" && (
+                  {canAdd && u.role !== "Superadmin" && ( 
                     <KebabMenu
                       user={u}
                       adderRole={myRole}

@@ -21,6 +21,10 @@ import {
   Legend,
 } from "recharts";
 
+type JsPdfWithAutoTable = jsPDF & {
+  lastAutoTable?: { finalY: number };
+};
+
 type Period =
   | "Today"
   | "This Week"
@@ -357,7 +361,7 @@ export function AnalyticsPage() {
       alternateRowStyles: { fillColor: [248, 249, 250] },
       margin: { left: 14, right: 14 },
     });
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = ((doc as JsPdfWithAutoTable).lastAutoTable?.finalY ?? y) + 8;
 
     // Recent Events table
     doc
@@ -975,7 +979,7 @@ export function AnalyticsPage() {
             span={isMobile ? undefined : "1 / -1"}
           >
             {/* On mobile: fixed-width scrollable chart so all drivers show clearly */}
-            <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch" as any }}>
+            <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch" as const }}>
               <div style={{ width: isMobile ? Math.max(320, driverComparison.length * 60) : "100%", height: isMobile ? 180 : 200 }}>
                 <ResponsiveContainer key={`bar-${period}`} width="100%" height="100%">
                   <BarChart data={driverComparison} margin={{ left: -10, right: 8 }}>
@@ -1006,7 +1010,7 @@ export function AnalyticsPage() {
                 overflowY: "auto",
                 maxHeight: 280,
                 overflowX: "auto",
-                WebkitOverflowScrolling: "touch" as any,
+                WebkitOverflowScrolling: "touch" as const,
                 width: "100%",
               }}
             >

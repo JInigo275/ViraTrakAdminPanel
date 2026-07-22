@@ -6,7 +6,7 @@ export type DbUser = {
   first_name: string;
   last_name: string;
   email: string;
-  role: "Owner" | "Administrator" | "Supervisor";
+  role: "Superadmin" | "Administrator" | "Supervisor";
   status: "Active" | "Inactive";
   last_login: string;
   password: string;
@@ -15,11 +15,11 @@ export type DbUser = {
 };
 
 export const demoLoginUser: DbUser = {
-  id: "usr-owner-001",
+  id: "usr-superadmin-001",
   first_name: "Admin",
   last_name: "User",
   email: "admin@viratrak.com",
-  role: "Owner",
+  role: "Superadmin",
   status: "Active",
   last_login: "Never",
   password: "admin123",
@@ -98,7 +98,24 @@ type RawDriver = {
   first_name: string;
   last_name: string;
   contact_info: string | null;
-  vehicle?: { plate_number: string; model: string | null };
+  vehicle?: { plate_number: string; model: string | null }[];
+};
+
+type DriverQueryVehicle = { plate_number: string; model: string | null };
+type DriverQueryRow = {
+  driver_id: number;
+  first_name: string;
+  last_name: string;
+  contact_info: string | null;
+  vehicle: DriverQueryVehicle[] | DriverQueryVehicle | null;
+};
+
+type RawDevice = {
+  device_id: number;
+  vehicle?: {
+    plate_number: string;
+    driver?: { first_name: string; last_name: string }[];
+  }[];
 };
 
 async function fetchDriversWithVehicles(): Promise<RawDriver[]> {
@@ -109,7 +126,21 @@ async function fetchDriversWithVehicles(): Promise<RawDriver[]> {
     .order("created_at", { ascending: false });
   
   if (error) throw error;
-  return (data ?? []) as RawDriver[];
+  const rows = (data ?? []) as unknown as DriverQueryRow[];
+  return rows.map((row): RawDriver => ({
+    driver_id: row.driver_id,
+    first_name: row.first_name,
+    last_name: row.last_name,
+    contact_info: row.contact_info,
+    vehicle: Array.isArray(row.vehicle)
+      ? row.vehicle.map((vehicle) => ({
+          plate_number: vehicle.plate_number,
+          model: vehicle.model,
+        }))
+      : row.vehicle
+        ? [{ plate_number: row.vehicle.plate_number, model: row.vehicle.model }]
+        : [],
+  }));
 }
 
 async function calculateSafetyScore(driverId: number): Promise<number> {
@@ -122,7 +153,6 @@ async function calculateSafetyScore(driverId: number): Promise<number> {
   
   if (error || !alerts) return 85; // Default safe score
   
-  const total = alerts.length;
   const highCount = alerts.filter((a) => a.alert_level === "High").length;
   
   // Score: 100 - (high_alerts * 10 + moderate_alerts * 3)
@@ -223,17 +253,17 @@ export type DbAlert = {
 
 type RawAlert = {
   alert_id: number;
-  alert_level: string;
-  alert_type: string;
-  timestamp: string;
+  alert_level?: string;
+  alert_type?: string;
+  timestamp?: string;
   detection?: {
     timestamp: string;
     event_id: string;
     recorded_evidence?: {
       timestamp: string;
       device_id: number;
-    };
-  };
+    }[];
+  }[];
   device?: {
     vehicle_id: number;
     vehicle?: {
@@ -244,6 +274,18 @@ type RawAlert = {
       };
     };
   };
+};
+
+type AlertQueryRow = {
+  alert_id: number;
+  alert_level?: string;
+  alert_type?: string;
+  timestamp?: string;
+  detection?: {
+    timestamp: string;
+    event_id: string;
+    recorded_evidence?: { timestamp: string; device_id: number }[];
+  }[];
 };
 
 const SEVERITY_MAP: Record<string, "High" | "Moderate" | "Low"> = {
@@ -288,11 +330,29 @@ async function fetchAlertsWithRelations(): Promise<RawAlert[]> {
     .order("alert_id", { ascending: false });
   
   if (error) throw error;
-  return (data ?? []) as RawAlert[];
+  const rows = (data ?? []) as unknown as AlertQueryRow[];
+  return rows.map((row): RawAlert => ({
+    alert_id: row.alert_id,
+    alert_level: row.alert_level,
+    alert_type: row.alert_type,
+    timestamp: row.timestamp,
+    detection: Array.isArray(row.detection)
+      ? row.detection.map((detection) => ({
+          timestamp: detection.timestamp,
+          event_id: detection.event_id,
+          recorded_evidence: Array.isArray(detection.recorded_evidence)
+            ? detection.recorded_evidence.map((evidence) => ({
+                timestamp: evidence.timestamp,
+                device_id: evidence.device_id,
+              }))
+            : [],
+        }))
+      : [],
+  }));
 }
 
 function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: string): DbAlert {
-  const timestamp = raw.detection?.timestamp || new Date().toISOString();
+  const timestamp = raw.timestamp || raw.detection?.[0]?.timestamp || raw.detection?.[0]?.recorded_evidence?.[0]?.timestamp || new Date().toISOString();
   const date = new Date(timestamp).toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
@@ -304,7 +364,7 @@ function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: st
     hour12: false,
   });
   
-  const severity = SEVERITY_MAP[raw.alert_level] || "Low";
+  const severity = raw.alert_level ? SEVERITY_MAP[raw.alert_level] || "Low" : "Low";
   const iconMap = EVENT_ICON_MAP[severity];
   
   return {
@@ -333,7 +393,7 @@ export const alertsApi = {
       if (devError) throw devError;
       
       const deviceMap = new Map<number, { driver: string; vehicle: string }>();
-      devices?.forEach((device: any) => {
+      devices?.forEach((device: RawDevice) => {
         const vehicleInfo = device.vehicle?.[0];
         const driverInfo = vehicleInfo?.driver?.[0];
         
@@ -364,8 +424,8 @@ export const alertsApi = {
       if (alertError) throw alertError;
       
       // Map alerts with driver/vehicle info
-      return (alerts ?? []).map((raw: any) => {
-        const deviceId = raw.detection?.recorded_evidence?.[0]?.device_id;
+      return (alerts ?? []).map((raw: RawAlert) => {
+        const deviceId = raw.detection?.[0]?.recorded_evidence?.[0]?.device_id;
         const deviceInfo = deviceId ? deviceMap.get(deviceId) : undefined;
         
         return mapRawAlertToDbAlert(

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { usersApi, driversApi, DbUser, DbDriver, demoLoginUser } from "../../api/viratrak";
 
-export type Role = "Owner" | "Administrator" | "Supervisor";
+export type Role = "Superadmin" | "Administrator" | "Supervisor";
 
 export interface AppUser {
   id: string;
@@ -55,13 +55,13 @@ export function getFullName(u: { firstName: string; lastName: string }) {
 }
 
 export function getAddableRoles(adderRole: Role): Role[] {
-  if (adderRole === "Owner") return ["Administrator", "Supervisor"];
+  if (adderRole === "Superadmin") return ["Administrator", "Supervisor"];
   if (adderRole === "Administrator") return ["Supervisor"];
   return [];
 }
 
 export function canManageUsers(role: Role): boolean {
-  return role === "Owner" || role === "Administrator";
+  return role === "Superadmin" || role === "Administrator";
 }
 
 // Map DB snake_case → app camelCase

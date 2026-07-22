@@ -45,6 +45,10 @@ function normalizeMetric(value: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function TestPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -153,8 +157,8 @@ export function TestPage() {
       if (error) throw error;
       setUserStatus({ kind: "success", message: "User inserted successfully." });
       resetUserForm();
-    } catch (error: any) {
-      setUserStatus({ kind: "error", message: error?.message || "User insert failed." });
+    } catch (error: unknown) {
+      setUserStatus({ kind: "error", message: getErrorMessage(error, "User insert failed.") });
     }
   }
 
@@ -193,8 +197,8 @@ export function TestPage() {
 
       setDriverStatus({ kind: "success", message: "Driver and vehicle inserted successfully." });
       resetDriverForm();
-    } catch (error: any) {
-      setDriverStatus({ kind: "error", message: error?.message || "Driver insert failed." });
+    } catch (error: unknown) {
+      setDriverStatus({ kind: "error", message: getErrorMessage(error, "Driver insert failed.") });
     }
   }
 
@@ -340,8 +344,8 @@ export function TestPage() {
       setAlertStatus({ kind: "success", message: "Alert, detection, evidence, and driver-linked records inserted successfully." });
       resetAlertForm();
       await loadDriverOptions();
-    } catch (error: any) {
-      setAlertStatus({ kind: "error", message: error?.message || "Alert insert failed." });
+    } catch (error: unknown) {
+      setAlertStatus({ kind: "error", message: getErrorMessage(error, "Alert insert failed.") });
     }
   }
 
@@ -361,8 +365,8 @@ export function TestPage() {
       if (error) throw error;
       setLogStatus({ kind: "success", message: "System log inserted successfully." });
       resetLogForm();
-    } catch (error: any) {
-      setLogStatus({ kind: "error", message: error?.message || "Log insert failed." });
+    } catch (error: unknown) {
+      setLogStatus({ kind: "error", message: getErrorMessage(error, "Log insert failed.") });
     }
   }
 
@@ -384,7 +388,7 @@ export function TestPage() {
               <option value="">Select a role</option>
               <option value="Supervisor">Supervisor</option>
               <option value="Administrator">Administrator</option>
-              <option value="Owner">Owner</option>
+              <option value="Superadmin">Superadmin</option>
             </select>
             <button onClick={submitUserForm} style={buttonStyle}>Submit to users</button>
             <StatusBox status={userStatus} />
