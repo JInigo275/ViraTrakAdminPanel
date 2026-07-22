@@ -3,6 +3,11 @@ import { usersApi, driversApi, DbUser, DbDriver, demoLoginUser } from "../../api
 
 export type Role = "Superadmin" | "Administrator" | "Supervisor";
 
+function normalizeRole(role: string): Role {
+  if (role === "Owner") return "Superadmin";
+  return role as Role;
+}
+
 export interface AppUser {
   id: string;
   firstName: string;
@@ -71,7 +76,7 @@ function mapUser(u: DbUser): AppUser {
     firstName: u.first_name,
     lastName: u.last_name,
     email: u.email,
-    role: u.role,
+    role: normalizeRole(String(u.role)),
     status: u.status,
     lastLogin: u.last_login,
     password: u.password,
@@ -131,11 +136,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
     try {
       const sessionRaw = sessionStorage.getItem("currentUser");
-      if (sessionRaw) return JSON.parse(sessionRaw) as AppUser;
+      if (sessionRaw) {
+        const user = JSON.parse(sessionRaw) as AppUser;
+        return { ...user, role: normalizeRole(String(user.role)) };
+      }
       const stay = localStorage.getItem("stayLoggedIn");
       if (stay === "true") {
         const raw = localStorage.getItem("currentUser");
-        if (raw) return JSON.parse(raw) as AppUser;
+        if (raw) {
+          const user = JSON.parse(raw) as AppUser;
+          return { ...user, role: normalizeRole(String(user.role)) };
+        }
       }
     } catch (e) {
       // ignore
