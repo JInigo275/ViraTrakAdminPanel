@@ -25,8 +25,10 @@ The normalized schema requires data in these tables:
 - **driver** (driver_id, first_name, last_name, license_number, contact_info)
 - **vehicle** (vehicle_id, plate_number, model, driver_id)
 - **device** (device_id, status, video_feed, vehicle_id)
-- **detection** (detection_id, timestamp, perclos, blink_rate, yawn, body_posture, head_pose, fatigue_score, driver_state, event_id)
-- **alert** (alert_id, alert_level, alert_type, duration, detection_id)
+- **recorded_evidence** (event_id, timestamp, device_id)
+- **detection_events** (id, created_at, reported_at, alert_level, triggered_metrics, eyes_status, yawn_status, head_pose_status, posture_status, fps, device_id, screenshot_url)
+- **detection** (detection_id, timestamp, perclos, blink_rate, yawn, body_posture, head_pose, fatigue_score, driver_state, event_id, detection_event_id)
+- **alert** (alert_id, alert_level, alert_type, duration, detection_id, detection_event_id)
 - **system_log** (systemlog_id, message, log_type, timestamp, device_id)
 
 ### 5. Verify Connectivity
