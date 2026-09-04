@@ -1,9 +1,9 @@
 import { useState, useRef, ReactNode, useEffect } from "react";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
-import viraTrakLogo from "../../imports/ViraTrak_Logo.png";
-import Drowsiness from "../../imports/Drowsiness.png";
-import Analytics from "../../imports/Analytics.png";
-import Alert from "../../imports/Alert.png";
+const viraTrakLogo = new URL("../../imports/ViraTrak_Logo.png", import.meta.url).href;
+const Drowsiness = new URL("../../imports/Drowsiness.png", import.meta.url).href;
+const Analytics = new URL("../../imports/Analytics.png", import.meta.url).href;
+const Alert = new URL("../../imports/Alert.png", import.meta.url).href;
 import { useApp } from "../context/AppContext";
 import { supabase } from "../../api/supabaseClient";
 import { usersApi } from "../../api/viratrak";
@@ -31,9 +31,9 @@ function FloatingInput({ label, type, value, onChange, hasError, suffix }: Float
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        style={{ width: "100%", padding: lifted ? "22px 44px 8px 16px" : "15px 44px 15px 16px", fontSize: 14, color: "#111827", background: "#fff", border: `1.5px solid ${hasError ? "#EF4444" : focused ? "#1D6AE5" : "#E5E7EB"}`, borderRadius: 10, outline: "none", boxSizing: "border-box", transition: "border-color 0.2s, padding 0.2s", fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}
+        style={{ width: "100%", padding: lifted ? "22px 44px 8px 16px" : "15px 44px 15px 16px", fontSize: 15, color: "#111827", background: "#fff", border: `1.5px solid ${hasError ? "#EF4444" : focused ? "#1D6AE5" : "#E5E7EB"}`, borderRadius: 10, outline: "none", boxSizing: "border-box", transition: "border-color 0.2s, padding 0.2s", fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}
       />
-      <label style={{ position: "absolute", left: 16, top: lifted ? 8 : "50%", transform: lifted ? "none" : "translateY(-50%)", fontSize: lifted ? 11 : 14, fontWeight: lifted ? 500 : 400, color: focused ? "#1D6AE5" : hasError ? "#EF4444" : "#9CA3AF", pointerEvents: "none", transition: "top 0.18s ease, font-size 0.18s ease, color 0.18s ease, transform 0.18s ease", lineHeight: 1, whiteSpace: "nowrap", fontFamily: "Inter, sans-serif" }}>
+      <label style={{ position: "absolute", left: 16, top: lifted ? 8 : "50%", transform: lifted ? "none" : "translateY(-50%)", fontSize: lifted ? 12 : 15, fontWeight: lifted ? 500 : 400, color: focused ? "#1D6AE5" : hasError ? "#EF4444" : "#9CA3AF", pointerEvents: "none", transition: "top 0.18s ease, font-size 0.18s ease, color 0.18s ease, transform 0.18s ease", lineHeight: 1, whiteSpace: "nowrap", fontFamily: "Inter, sans-serif" }}>
         {label}
       </label>
       {suffix && <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }}>{suffix}</div>}
@@ -54,6 +54,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   const [loading, setLoading] = useState(false);
   const [stayLoggedIn, setStayLoggedIn] = useState(false);
   const [showForgotPasswordInfo, setShowForgotPasswordInfo] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
@@ -98,6 +100,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           lastLogin: new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }),
           password: "",
           mustChangePassword: user.must_change_password,
+          avatar: user.avatar ?? undefined,
         };
         if (stayLoggedIn) localStorage.setItem("stayLoggedIn", "true"); else localStorage.removeItem("stayLoggedIn");
         setCurrentUser(updated);
@@ -110,6 +113,34 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     })();
   }
 
+  async function handleForgotPassword() {
+    setError("");
+    setForgotMessage("");
+    setShowForgotPasswordInfo(false);
+    const emailError = !email.trim() ? "Enter your email address first." : null;
+    if (emailError) { setError(emailError); return; }
+    if (!supabase) { setError("Supabase is not configured."); return; }
+
+    setForgotLoading(true);
+    try {
+      const { data, error: functionError } = await supabase.functions.invoke("request-password-reset", {
+        body: { email: email.trim().toLowerCase(), redirectTo: window.location.origin },
+      });
+      if (functionError) throw functionError;
+      if (data?.action === "contact_admin") {
+        setForgotMessage("Please contact your administrator to reset your password.");
+        setShowForgotPasswordInfo(true);
+        return;
+      }
+      setForgotMessage("A password reset link has been sent to the Owner's email address.");
+      setShowForgotPasswordInfo(true);
+    } catch (forgotError) {
+      setError(forgotError instanceof Error ? forgotError.message : "Could not start password recovery.");
+    } finally {
+      setForgotLoading(false);
+    }
+  }
+
   return (
     <div style={{ minHeight: "100vh", width: "100%", display: "flex", flexDirection: isMobile ? "column" : "row", fontFamily: "Inter, sans-serif", background: "#F4F5F7", overflowY: isMobile ? "auto" : "hidden" }}>
       {/* Branding panel */}
@@ -120,33 +151,37 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <div style={{ display: "flex", alignItems: "center", gap: 12, position: "relative", zIndex: 1 }}>
           <img src={viraTrakLogo} alt="ViraTrak" style={{ width: 48, height: 48, objectFit: "contain", filter: "drop-shadow(0 2px 8px rgba(0,0,0,0.3))" }} />
           <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>ViraTrak</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", marginTop: 1 }}>Behavior Detection System</div>
+            <div style={{ fontSize: 23, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>ViraTrak</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 1 }}>Behavior Detection System</div>
           </div>
         </div>
 
         <div style={{ position: "relative", zIndex: 1 }}>
-          <h2 style={{ fontSize: 32, fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 16 }}>Smarter Driver<br />Safety Monitoring</h2>
-          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.72)", lineHeight: 1.6, maxWidth: 340 }}>Smarter driver safety starts here. Detect driver behavior in real time and support safer freight transportation with AI-powered technology.</p>
+          <h2 style={{ fontSize: 33, fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "-0.02em", marginBottom: 16 }}>Smarter Driver<br />Safety Monitoring</h2>
+          <p style={{ fontSize: 16, color: "rgba(255,255,255,0.72)", lineHeight: 1.6, maxWidth: 340 }}>Smarter driver safety starts here. Detect driver behavior in real time and support safer freight transportation with AI-powered technology.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 36 }}>
-            {[[<img src={Drowsiness} alt="Drowsiness" style={{ width: 20, height: 20 }}/>, "Driver Behavior Detection"], [<img src={Analytics} alt="Analytics" style={{ width: 20, height: 20 }}/>, "Analytics and Behavior Reports"], [<img src={Alert} alt="Alert" style={{ width: 20, height: 20 }}/>, "Smart Alerts & Event Logs"]].map(([emoji, text]) => (
+            {[
+              { image: Drowsiness, alt: "Drowsiness", text: "Driver Behavior Detection" },
+              { image: Analytics, alt: "Analytics", text: "Analytics and Behavior Reports" },
+              { image: Alert, alt: "Alert", text: "Smart Alerts & Event Logs" },
+            ].map(({ image, alt, text }) => (
               <div key={text} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{emoji}</div>
-                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>{text}</span>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(255,255,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}><img src={image} alt={alt} style={{ width: 20, height: 20 }} /></div>
+                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.8)" }}>{text}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", position: "relative", zIndex: 1 }}>© 2026 ViraTrak System. All rights reserved.</p>
+        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", position: "relative", zIndex: 1 }}>© 2026 ViraTrak System. All rights reserved.</p>
       </div>
 
       {/* Form panel */}
       <div style={{ flex: isMobile ? "none" : 1, height: isMobile ? "100vh" : undefined, minHeight: isMobile ? "100vh" : undefined, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? "40px 28px" : 40, background: "#F4F5F7" }}>
         <div style={{ width: "100%", maxWidth: 400 }}>
           <div style={{ marginBottom: 36 }}>
-            <h1 style={{ fontSize: 26, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em", marginBottom: 6 }}>Welcome back</h1>
-            <p style={{ fontSize: 14, color: "#9CA3AF" }}>Sign in to your ViraTrak account</p>
+            <h1 style={{ fontSize: 27, fontWeight: 700, color: "#111827", letterSpacing: "-0.02em", marginBottom: 6 }}>Welcome back</h1>
+            <p style={{ fontSize: 15, color: "#9CA3AF" }}>Sign in to your ViraTrak account</p>
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -156,9 +191,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 suffix={<button type="button" onClick={() => setShowPassword((v) => !v)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "#9CA3AF", display: "flex", lineHeight: 1 }}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>}
               />
               <div style={{ textAlign: "right", marginTop: 6 }}>
-                <button type="button" onClick={() => { setShowForgotPasswordInfo(true); setError(""); }}
-                  style={{ fontSize: 12, color: "#1D6AE5", textDecoration: "none", fontWeight: 500, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                  Forgot password?
+                <button type="button" disabled={forgotLoading} onClick={handleForgotPassword}
+                  style={{ fontSize: 13, color: "#1D6AE5", textDecoration: "none", fontWeight: 500, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                  {forgotLoading ? "Checking account..." : "Forgot password?"}
                 </button>
               </div>
             </div>
@@ -166,8 +201,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             {showForgotPasswordInfo && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 12px", background: "#EFF6FF", borderRadius: 10, border: "1px solid #BFDBFE" }}>
                 <AlertCircle size={16} color="#0369A1" style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: 13, color: "#0369A1" }}>
-                  Forgot your password? Contact your supervisor so they can reset it for you.
+                <span style={{ fontSize: 14, color: "#0369A1" }}>
+                  {forgotMessage}
                 </span>
               </div>
             )}
@@ -175,17 +210,17 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             {error && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#FEF2F2", borderRadius: 8, border: "1px solid #FECACA" }}>
                 <AlertCircle size={15} color="#EF4444" style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: 13, color: "#EF4444" }}>{error}</span>
+                <span style={{ fontSize: 14, color: "#EF4444" }}>{error}</span>
               </div>
             )}
 
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
               <input type="checkbox" checked={stayLoggedIn} onChange={(e) => setStayLoggedIn(e.target.checked)} style={{ width: 16, height: 16 }} />
               <span>Stay logged in</span>
             </label>
 
             <button type="submit" disabled={loading}
-              style={{ width: "100%", padding: "13px", background: loading ? "#93C5FD" : "#1D6AE5", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4, transition: "background 0.15s" }}
+              style={{ width: "100%", padding: "13px", background: loading ? "#93C5FD" : "#1D6AE5", color: "#fff", border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4, transition: "background 0.15s" }}
               onMouseEnter={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = "#1558c7"; }}
               onMouseLeave={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.background = "#1D6AE5"; }}
             >
@@ -193,11 +228,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             </button>
           </form>
 
-          <div style={{ marginTop: 24, padding: "12px 14px", background: "#F0F9FF", borderRadius: 10, border: "1px solid #BAE6FD" }}>
+          {/*<div style={{ marginTop: 24, padding: "12px 14px", background: "#F0F9FF", borderRadius: 10, border: "1px solid #BAE6FD" }}>
             <p style={{ fontSize: 12, color: "#0369A1", margin: 0, lineHeight: 1.5 }}>
               <strong>Demo credentials:</strong><br />Email: admin@viratrak.com<br />Password: admin123
             </p>
-          </div>
+          </div>/*/}
         </div>
       </div>
 
@@ -205,3 +240,4 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     </div>
   );
 }
+// update to main
