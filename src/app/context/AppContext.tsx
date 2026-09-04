@@ -18,7 +18,7 @@ export interface AppUser {
   lastLogin: string;
   password: string;
   mustChangePassword: boolean;
-  avatar?: string;
+  avatar?: string | null;
 }
 
 export interface Driver {
@@ -27,12 +27,13 @@ export interface Driver {
   lastName: string;
   vehicle: string;
   contact: string;
+  avatar?: string | null;
 }
 
 export interface AppSettings {
   firstName: string;
   lastName: string;
-  avatar?: string;
+  avatar?: string | null;
 }
 
 const adjectives = ["Swift", "Bold", "Keen", "Iron", "Apex", "Nova", "Flux", "Echo", "Volt", "Peak"];
@@ -80,6 +81,7 @@ function mapUser(u: DbUser): AppUser {
     lastLogin: u.last_login,
     password: u.password,
     mustChangePassword: u.must_change_password,
+    avatar: u.avatar ?? undefined,
   };
 }
 
@@ -90,6 +92,7 @@ function mapDriver(e: DbDriver): Driver {
     lastName: e.last_name,
     vehicle: e.vehicle,
     contact: e.contact,
+    avatar: e.avatar ?? undefined,
   };
 }
 
@@ -160,7 +163,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Load persisted app data on mount
+  // Load data again after login so RLS-protected rows are fetched as the signed-in operator.
   useEffect(() => {
     Promise.all([
       usersApi.list().then((rows) => setUsers(rows.map(mapUser))),
@@ -168,7 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ])
       .catch((e) => console.warn("Data load failed, using available data:", e))
       .finally(() => setDbReady(true));
-  }, []);
+  }, [currentUser]);
 
   // Persist currentUser in session storage while logged in, and in local storage only when stayLoggedIn is true.
   useEffect(() => {
@@ -211,6 +214,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.lastLogin !== undefined) dbPatch.last_login = patch.lastLogin;
     if (patch.password !== undefined) dbPatch.password = patch.password;
     if (patch.mustChangePassword !== undefined) dbPatch.must_change_password = patch.mustChangePassword;
+    if (patch.avatar !== undefined) dbPatch.avatar = patch.avatar;
     const saved = await usersApi.update(id, dbPatch);
     setUsers((prev) => prev.map((u) => u.id === id ? mapUser(saved) : u));
   }
@@ -225,6 +229,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const db: DbDriver = {
       id: e.id, first_name: e.firstName, last_name: e.lastName,
       vehicle: e.vehicle, contact: e.contact,
+      avatar: e.avatar ?? null,
     };
     const saved = await driversApi.create(db);
     setDrivers((prev) => [...prev, mapDriver(saved)]);
@@ -236,6 +241,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.lastName !== undefined) dbPatch.last_name = patch.lastName;
     if (patch.vehicle !== undefined) dbPatch.vehicle = patch.vehicle;
     if (patch.contact !== undefined) dbPatch.contact = patch.contact;
+    if (patch.avatar !== undefined) dbPatch.avatar = patch.avatar;
     const saved = await driversApi.update(id, dbPatch);
     setDrivers((prev) => prev.map((e) => e.id === id ? mapDriver(saved) : e));
   }

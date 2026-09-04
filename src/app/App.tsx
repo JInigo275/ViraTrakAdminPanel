@@ -6,6 +6,7 @@ import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Sidebar } from "./components/Sidebar";
 import { LoginPage } from "./pages/LoginPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { AlertsPage } from "./pages/AlertsPage";
@@ -20,6 +21,7 @@ import { supabase } from "../api/supabaseClient";
 
 function AppInner() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(() => window.location.hash.includes("type=recovery"));
   const [currentPage, setCurrentPage] = useState(() => {
     try {
       return localStorage.getItem("currentPage") || "dashboard";
@@ -42,6 +44,14 @@ function AppInner() {
   useEffect(() => {
     setLoggedIn(!!currentUser);
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   useEffect(() => {
@@ -88,6 +98,7 @@ function AppInner() {
     : windowWidth < 1000 ? 0.77
     : 1;
 
+  if (passwordRecovery) return <ResetPasswordPage onComplete={() => { setPasswordRecovery(false); setLoggedIn(false); }} />;
   if (!loggedIn) return <LoginPage onLogin={() => { setCurrentPage("dashboard"); setDriverDetailId(null); setLoggedIn(true); }} />;
   if (currentUser?.mustChangePassword) return <ChangePasswordPage onDone={() => {}} />;
 

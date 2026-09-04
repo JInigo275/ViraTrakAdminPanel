@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Camera, Eye, EyeOff, Check, Save, Settings } from "lucide-react";
+import { Camera, Eye, EyeOff, Check, Save, Settings, ShieldCheck, LockKeyhole } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, Role } from "../context/AppContext";
@@ -13,15 +13,21 @@ const roleColors: Record<Role, { bg: string; color: string }> = {
   Supervisor: { bg: "#F5F3FF", color: "#8B5CF6" },
 };
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, eyebrow, children }: { title: string; eyebrow: string; children: React.ReactNode }) {
   const { dark } = useTheme();
   return (
-    <div style={{ background: dark ? "#1F2937" : "#fff", borderRadius: 12, boxShadow: dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)", overflow: "hidden", marginBottom: 16 }}>
-      <div style={{ padding: "14px 20px", borderBottom: `1px solid ${dark ? "#374151" : "#F3F4F6"}` }}>
-        <span style={{ fontSize: 15, fontWeight: 600, color: dark ? "#F9FAFB" : "#111827" }}>{title}</span>
+    <section style={{ background: dark ? "#1F2937" : "#fff", borderRadius: 16, boxShadow: dark ? "0 8px 28px rgba(0,0,0,0.18)" : "0 8px 28px rgba(15,23,42,0.07)", border: `1px solid ${dark ? "#374151" : "#E8EAED"}`, overflow: "hidden", marginBottom: 18 }}>
+      <div style={{ padding: "18px 22px 16px", borderBottom: `1px solid ${dark ? "#374151" : "#EEF0F3"}`, display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 11, background: dark ? "#243B64" : "#EBF2FF", color: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          {title === "Profile" ? <Settings size={18} /> : <ShieldCheck size={18} />}
+        </div>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#1D6AE5", letterSpacing: "0.08em", textTransform: "uppercase" }}>{eyebrow}</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: dark ? "#F9FAFB" : "#111827", marginTop: 2 }}>{title}</div>
+        </div>
       </div>
-      <div style={{ padding: "20px" }}>{children}</div>
-    </div>
+      <div style={{ padding: 22 }}>{children}</div>
+    </section>
   );
 }
 
@@ -56,10 +62,11 @@ export function SettingsPage() {
   const [passError, setPassError] = useState("");
   const [passSaved, setPassSaved] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const bg = dark ? "#111827" : "#F4F5F7";
   const textMain = dark ? "#F9FAFB" : "#111827";
   const textSub = dark ? "#9CA3AF" : "#6B7280";
   const borderColor = dark ? "#374151" : "#F3F4F6";
@@ -75,15 +82,24 @@ export function SettingsPage() {
 
   async function saveProfile() {
     const validationError = validateName(firstName, "First name") || validateName(lastName, "Last name");
-    if (validationError) return;
+    if (validationError) { setProfileError(validationError); return; }
+    setProfileError("");
+    setProfileSaving(true);
     const normalizedFirstName = formatName(firstName);
     const normalizedLastName = formatName(lastName);
     setFirstName(normalizedFirstName); setLastName(normalizedLastName);
-    setSettings((p) => ({ ...p, firstName: normalizedFirstName, lastName: normalizedLastName, avatar: avatar || undefined }));
-    setCurrentUser((prev) => prev ? { ...prev, firstName: normalizedFirstName, lastName: normalizedLastName } : prev);
+    setSettings((p) => ({ ...p, firstName: normalizedFirstName, lastName: normalizedLastName, avatar: avatar || null }));
+    setCurrentUser((prev) => prev ? { ...prev, firstName: normalizedFirstName, lastName: normalizedLastName, avatar: avatar || null } : prev);
     if (currentUser) {
-      updateUser(currentUser.id, { firstName: normalizedFirstName, lastName: normalizedLastName }).catch(console.error);
+      try {
+        await updateUser(currentUser.id, { firstName: normalizedFirstName, lastName: normalizedLastName, avatar: avatar || null });
+      } catch (error) {
+        setProfileError(error instanceof Error ? error.message : "Could not save your profile.");
+        setProfileSaving(false);
+        return;
+      }
     }
+    setProfileSaving(false);
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 2500);
   }
@@ -112,53 +128,60 @@ export function SettingsPage() {
   );
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
+    <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 14 : 26, background: dark ? "#0F172A" : "linear-gradient(135deg, #F7F9FC 0%, #F1F5F9 100%)", fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
       <PageHeader icon={Settings} iconColor="#1D6AE5" title="Settings" subtitle="Manage your profile and security" />
 
       {/* Profile */}
-      <Section title="Profile">
-        <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 20 }}>
+      <Section title="Profile" eyebrow="Personal workspace">
+        <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", gap: 20, marginBottom: 24, padding: isMobile ? 16 : "20px 22px", borderRadius: 14, background: dark ? "linear-gradient(120deg, #243B64, #1F2937)" : "linear-gradient(120deg, #EEF5FF, #F8FAFC)", border: `1px solid ${dark ? "#36517F" : "#DCE9FB"}` }}>
           <div style={{ position: "relative" }}>
-            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: "3px solid #EBF2FF" }}>
+            <div style={{ width: 88, height: 88, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: `4px solid ${dark ? "#93C5FD" : "#fff"}`, boxShadow: "0 4px 14px rgba(29,106,229,0.25)" }}>
               {avatar ? <img src={avatar} alt="avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 25, fontWeight: 700, color: "#fff" }}>{(firstName[0] ?? "") + (lastName[0] ?? "")}</span>}
             </div>
-            <button onClick={() => fileRef.current?.click()} style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderRadius: "50%", background: "#1D6AE5", border: "2px solid #fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Camera size={12} color="#fff" />
+            <button aria-label="Change profile photo" title="Change profile photo" onClick={() => fileRef.current?.click()} style={{ position: "absolute", bottom: 0, right: -2, width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", border: `3px solid ${dark ? "#243B64" : "#EEF5FF"}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Camera size={14} color="#fff" />
             </button>
             <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: "none" }} />
           </div>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: textMain }}>{firstName} {lastName}</div>
-            <div style={{ fontSize: 14, color: textSub, marginTop: 2 }}>{currentUser?.email}</div>
+            <div style={{ fontSize: 22, fontWeight: 750, color: textMain, letterSpacing: "-0.02em" }}>{firstName} {lastName}</div>
+            <div style={{ fontSize: 14, color: textSub, marginTop: 5 }}>{currentUser?.email}</div>
             <div style={{ marginTop: 6 }}>
-              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: roleStyle.bg, color: roleStyle.color }}>{currentUser?.role}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 11px", borderRadius: 999, fontSize: 12, fontWeight: 700, background: roleStyle.bg, color: roleStyle.color }}><ShieldCheck size={13} />{currentUser?.role}</span>
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: isMobile ? "100%" : 420 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: isMobile ? "100%" : 520 }}>
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10 }}>
             <FloatField label="First Name" value={firstName} onChange={setFirstName} />
             <FloatField label="Last Name" value={lastName} onChange={setLastName} />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={saveProfile} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-              {profileSaved ? <><Check size={14} /> Saved</> : <><Save size={14} /> Save Profile</>}
+            <button onClick={saveProfile} disabled={profileSaving} style={{ display: "flex", alignItems: "center", gap: 7, padding: "11px 18px", background: profileSaving ? "#7BA7EE" : "#1D6AE5", color: "#fff", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: profileSaving ? "wait" : "pointer", fontFamily: "Inter, sans-serif" }}>
+              {profileSaved ? <><Check size={14} /> Saved</> : profileSaving ? "Saving..." : <><Save size={14} /> Save Profile</>}
             </button>
             {avatar && <button onClick={() => setAvatar("")} style={{ padding: "10px 14px", background: "transparent", border: `1px solid ${borderColor}`, borderRadius: 8, fontSize: 14, color: textSub, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Remove Photo</button>}
           </div>
+          {profileError && <div style={{ fontSize: 14, color: "#EF4444", background: "#FEF2F2", padding: "8px 12px", borderRadius: 8 }}>{profileError}</div>}
         </div>
       </Section>
 
       {/* Password */}
-      <Section title="Change Password">
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: isMobile ? "100%" : 420 }}>
+      <Section title="Change Password" eyebrow="Account security">
+        <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: "flex-start", gap: 24 }}>
+          <div style={{ flex: 1, maxWidth: 360 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: textMain, fontSize: 15, fontWeight: 700 }}><LockKeyhole size={17} color="#1D6AE5" /> Keep your account secure</div>
+            <div style={{ fontSize: 13, color: textSub, lineHeight: 1.6, marginTop: 8 }}>Use a strong password that you do not reuse on another service.</div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%", maxWidth: 420 }}>
           <FloatField label="Current Password" type={showOld ? "text" : "password"} value={oldPass} onChange={setOldPass} suffix={eyeBtn(showOld, () => setShowOld((v) => !v))} />
           <FloatField label="New Password" type={showNew ? "text" : "password"} value={newPass} onChange={setNewPass} suffix={eyeBtn(showNew, () => setShowNew((v) => !v))} />
           <FloatField label="Confirm New Password" type={showConfirm ? "text" : "password"} value={confirmPass} onChange={setConfirmPass} suffix={eyeBtn(showConfirm, () => setShowConfirm((v) => !v))} />
           {passError && <div style={{ fontSize: 14, color: "#EF4444", background: "#FEF2F2", padding: "8px 12px", borderRadius: 8 }}>{passError}</div>}
-          <button onClick={changePassword} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", width: "fit-content" }}>
+          <button onClick={changePassword} style={{ display: "flex", alignItems: "center", gap: 6, padding: "11px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "Inter, sans-serif", width: "fit-content" }}>
             {passSaved ? <><Check size={14} /> Password Updated</> : "Update Password"}
           </button>
+          </div>
         </div>
       </Section>
 

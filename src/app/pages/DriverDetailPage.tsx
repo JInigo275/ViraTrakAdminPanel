@@ -192,8 +192,8 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 
       {/* Profile card */}
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, padding: "18px 22px", marginBottom: 16, display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", gap: 16 }}>
-        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 19, fontWeight: 700, flexShrink: 0 }}>
-          {(emp.firstName[0] ?? "") + (emp.lastName[0] ?? "")}
+        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 19, fontWeight: 700, flexShrink: 0, overflow: "hidden" }}>
+          {emp.avatar ? <img src={emp.avatar} alt={fullName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : `${emp.firstName[0] ?? ""}${emp.lastName[0] ?? ""}`}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: textMain }}>{fullName}</div>

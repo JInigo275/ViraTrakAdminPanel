@@ -114,6 +114,7 @@ export type DbDriver = {
   last_name: string;
   vehicle: string;
   contact: string;
+  avatar?: string | null;
 };
 
 type RawDriver = {
@@ -121,6 +122,7 @@ type RawDriver = {
   first_name: string;
   last_name: string;
   contact_info: string | null;
+  avatar?: string | null;
   vehicle?: { plate_number: string; model: string | null }[];
 };
 
@@ -130,6 +132,7 @@ type DriverQueryRow = {
   first_name: string;
   last_name: string;
   contact_info: string | null;
+  avatar?: string | null;
   vehicle: DriverQueryVehicle[] | DriverQueryVehicle | null;
 };
 
@@ -145,7 +148,7 @@ async function fetchDriversWithVehicles(): Promise<RawDriver[]> {
   const client = requireSupabase();
   const { data, error } = await client
     .from("driver")
-    .select("driver_id, first_name, last_name, contact_info, vehicle(plate_number, model)")
+    .select("driver_id, first_name, last_name, contact_info, avatar, vehicle(plate_number, model)")
     .order("created_at", { ascending: false });
   
   if (error) throw error;
@@ -155,6 +158,7 @@ async function fetchDriversWithVehicles(): Promise<RawDriver[]> {
     first_name: row.first_name,
     last_name: row.last_name,
     contact_info: row.contact_info,
+    avatar: row.avatar ?? null,
     vehicle: Array.isArray(row.vehicle)
       ? row.vehicle.map((vehicle) => ({
           plate_number: vehicle.plate_number,
@@ -173,6 +177,7 @@ function mapRawDriverToDbDriver(raw: RawDriver): DbDriver {
     last_name: raw.last_name,
     vehicle: raw.vehicle?.[0]?.plate_number || raw.vehicle?.[0]?.model || "Unassigned",
     contact: raw.contact_info || "",
+    avatar: raw.avatar ?? null,
   };
 }
 
@@ -202,6 +207,7 @@ export const driversApi = {
         last_name: formatName(e.last_name),
         license_number: `LIC-${Date.now()}`, // Generate placeholder
         contact_info: formatPhone(e.contact),
+        avatar: e.avatar ?? null,
       })
       .select("*")
       .single();
@@ -225,6 +231,7 @@ export const driversApi = {
         first_name: patch.first_name === undefined ? undefined : formatName(patch.first_name),
         last_name: patch.last_name === undefined ? undefined : formatName(patch.last_name),
         contact_info: patch.contact === undefined ? undefined : formatPhone(patch.contact),
+        avatar: patch.avatar === undefined ? undefined : patch.avatar,
       })
       .eq("driver_id", parseInt(id))
       .select("*")

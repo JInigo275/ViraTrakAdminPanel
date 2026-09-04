@@ -26,10 +26,13 @@ CREATE TABLE IF NOT EXISTS public.driver (
   last_name character varying NOT NULL,
   license_number character varying NOT NULL UNIQUE,
   contact_info character varying,
+  avatar text,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT driver_pkey PRIMARY KEY (driver_id)
 );
+
+ALTER TABLE public.driver ADD COLUMN IF NOT EXISTS avatar text;
 
 CREATE TABLE IF NOT EXISTS public.vehicle (
   vehicle_id integer GENERATED ALWAYS AS IDENTITY NOT NULL,

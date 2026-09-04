@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Search, Plus, MoreVertical, Trash2, X, Check, BarChart2, Contact } from "lucide-react";
+import { Search, Plus, MoreVertical, Trash2, X, Check, BarChart2, Contact, Camera } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, Driver, genDriverId } from "../context/AppContext";
@@ -38,7 +38,7 @@ function FloatField({ label, value, onChange, type = "text", maxLength, placehol
   );
 }
 
-function KebabMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+function KebabMenu({ hasPhoto, onEdit, onDeletePhoto, onDelete }: { hasPhoto: boolean; onEdit: () => void; onDeletePhoto: () => void; onDelete: () => void }) {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const ref = useRef<HTMLDivElement>(null);
@@ -58,7 +58,7 @@ function KebabMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => v
   function handleToggle() {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      const menuHeight = 100;
+      const menuHeight = hasPhoto ? 140 : 100;
       const top = rect.bottom + 4 + menuHeight <= window.innerHeight - 8
         ? rect.bottom + 4
         : Math.max(8, rect.top - menuHeight - 4);
@@ -78,6 +78,11 @@ function KebabMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => v
             <div onClick={() => { onEdit(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", cursor: "pointer", fontSize: 14, color: textMain }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = hoverBg)}
               onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}>Edit Driver</div>
+            {hasPhoto && <>
+              <div onClick={() => { onDeletePhoto(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", cursor: "pointer", fontSize: 14, color: "#EF4444" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = dark ? "#374151" : "#FEF2F2")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}>Delete Photo</div>
+            </>}
             <div style={{ height: 1, background: border }} />
             <div onClick={() => { onDelete(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", cursor: "pointer", fontSize: 14, color: "#EF4444" }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = dark ? "#374151" : "#FEF2F2")}
@@ -129,7 +134,7 @@ function ReceiptModal({ driver, onClose }: { driver: Driver; onClose: () => void
   );
 }
 
-const emptyForm = { firstName: "", lastName: "", vehicle: "", contact: "" };
+const emptyForm = { firstName: "", lastName: "", vehicle: "", contact: "", avatar: "" };
 const countries = `Philippines|+63
 Afghanistan|+93
 Albania|+355
@@ -341,6 +346,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Driver | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
+  const driverFileRef = useRef<HTMLInputElement>(null);
 
   const bg = dark ? "#111827" : "#F4F5F7";
   const cardBg = dark ? "#1F2937" : "#fff";
@@ -377,7 +383,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
     const digits = e.contact.replace(/\D/g, "");
     const localDigits = digits.startsWith("63") && digits.length > 10 ? digits.slice(2) : digits.replace(/^0/, "");
     setCountryCode(e.contact.trim().startsWith("+63") ? "+63" : "+63");
-    setForm({ firstName: e.firstName, lastName: e.lastName, vehicle: e.vehicle, contact: localDigits });
+    setForm({ firstName: e.firstName, lastName: e.lastName, vehicle: e.vehicle, contact: localDigits, avatar: e.avatar ?? "" });
     setFormError(""); setModal("edit");
   }
 
@@ -385,7 +391,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
     const fullContact = `${countryCode}${form.contact.replace(/\D/g, "")}`;
     const validationError = validateName(form.firstName, "First name") || validateName(form.lastName, "Last name") || validatePlate(form.vehicle) || validatePhone(fullContact);
     if (validationError) { setFormError(validationError); return; }
-    const normalized = { firstName: formatName(form.firstName), lastName: formatName(form.lastName), vehicle: formatPlate(form.vehicle), contact: formatPhone(fullContact) };
+    const normalized = { firstName: formatName(form.firstName), lastName: formatName(form.lastName), vehicle: formatPlate(form.vehicle), contact: formatPhone(fullContact), avatar: form.avatar || null };
 
     if (modal === "add") {
       const newDriver: Driver = { id: genDriverId(drivers), ...normalized };
@@ -470,8 +476,8 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                 </td>
                 <td style={{ padding: "11px 14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                      {(e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0, overflow: "hidden" }}>
+                      {e.avatar ? <img src={e.avatar} alt={`${e.firstName} ${e.lastName}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : `${e.firstName[0] ?? ""}${e.lastName[0] ?? ""}`}
                     </div>
                     <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.firstName} {e.lastName}</span>
                   </div>
@@ -487,7 +493,19 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                         <BarChart2 size={12} /> View
                       </button>
                     )}
-                    <KebabMenu onEdit={() => openEdit(e)} onDelete={() => setConfirmDelete(e.id)} />
+                    <KebabMenu
+                      hasPhoto={Boolean(e.avatar)}
+                      onEdit={() => openEdit(e)}
+                      onDeletePhoto={async () => {
+                        try {
+                          await updateDriver(e.id, { avatar: null });
+                          setSuccessMessage("Driver Photo Deleted");
+                        } catch {
+                          setSuccessMessage("Failed to delete driver photo");
+                        }
+                      }}
+                      onDelete={() => setConfirmDelete(e.id)}
+                    />
                   </div>
                 </td>
               </tr>
@@ -508,6 +526,16 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <FloatField label="Driver First Name" value={form.firstName} onChange={(v) => setForm((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Driver Last Name" value={form.lastName} onChange={(v) => setForm((p) => ({ ...p, lastName: v }))} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", color: "#fff", fontSize: 18, fontWeight: 700, flexShrink: 0 }}>
+                {form.avatar ? <img src={form.avatar} alt="Driver" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : `${form.firstName[0] ?? ""}${form.lastName[0] ?? ""}`}
+              </div>
+              <div>
+                <button type="button" onClick={() => driverFileRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#D1D5DB"}`, borderRadius: 8, color: dark ? "#F9FAFB" : "#374151", cursor: "pointer", fontSize: 13, fontWeight: 600 }}><Camera size={14} /> {form.avatar ? "Change Photo" : "Add Photo"}</button>
+                {form.avatar && <button type="button" onClick={() => setForm((p) => ({ ...p, avatar: "" }))} style={{ display: "block", marginTop: 5, padding: 0, background: "none", border: "none", color: "#EF4444", cursor: "pointer", fontSize: 12 }}>Remove photo</button>}
+                <input ref={driverFileRef} type="file" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => setForm((p) => ({ ...p, avatar: event.target?.result as string })); reader.readAsDataURL(file); }} style={{ display: "none" }} />
+              </div>
             </div>
             <FloatField label="Vehicle (max 8 characters)" value={form.vehicle} maxLength={8} onChange={(v) => setForm((p) => ({ ...p, vehicle: formatPlate(v) }))} />
             <div style={{ display: "grid", gridTemplateColumns: "minmax(145px, 0.9fr) 1.4fr", gap: 8 }}>

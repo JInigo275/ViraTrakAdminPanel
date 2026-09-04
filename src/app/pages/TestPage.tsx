@@ -209,7 +209,7 @@ export function TestPage() {
         .insert({
           first_name: driverFirstName.trim() || "Test",
           last_name: driverLastName.trim() || "Driver",
-          license_number: safeLicenseNumber,
+          license_number,
           contact_info: formatPhone(contactInfo || "5550100000"),
         })
         .select("driver_id")
@@ -227,16 +227,17 @@ export function TestPage() {
       const driverId = driverData?.driver_id;
       if (!driverId) throw new Error("Driver insert did not return an id");
 
-      const { error: vehicleError } = await supabase.from("vehicle").insert({
-            plate_number: formatPlate(safePlateNumber),
-        model: vehicleModel.trim(),
+      let vehiclePlate = formatPlate(plateValue);
+      let vehicleError = (await supabase.from("vehicle").insert({
+        plate_number: vehiclePlate,
+        model: modelValue,
         driver_id: driverId,
-      });
+      })).error;
       if (vehicleError && /duplicate key|unique constraint|already exists/i.test(vehicleError.message || "")) {
         if (isExplicitPlate) {
           throw new Error("That plate number is already in use. Please enter a unique plate.");
         }
-        vehiclePlate = fallbackPlate;
+        vehiclePlate = formatPlate(fallbackPlate);
         const retry = await supabase.from("vehicle").insert({
           plate_number: vehiclePlate,
           model: modelValue,
