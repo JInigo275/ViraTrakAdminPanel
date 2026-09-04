@@ -153,25 +153,6 @@ async function fetchDriversWithVehicles(): Promise<RawDriver[]> {
   }));
 }
 
-<<<<<<< Updated upstream
-async function calculateSafetyScore(driverId: number): Promise<number> {
-  // Query alerts related to this driver and calculate safety score
-  const client = requireSupabase();
-  const { data: alerts, error } = await client
-    .from("alert")
-    .select("alert_level, detection(event_id)")
-    .eq("detection.recorded_evidence.driver_id", driverId);
-  
-  if (error || !alerts) return 85; // Default safe score
-  
-  const highCount = alerts.filter((a) => a.alert_level === "High").length;
-  
-  // Score: 100 - (high_alerts * 10 + moderate_alerts * 3)
-  return Math.max(0, Math.min(100, 85 - (highCount * 10)));
-}
-
-=======
->>>>>>> Stashed changes
 function mapRawDriverToDbDriver(raw: RawDriver): DbDriver {
   return {
     id: String(raw.driver_id),
