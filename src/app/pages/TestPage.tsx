@@ -227,7 +227,7 @@ export function TestPage() {
       const driverId = driverData?.driver_id;
       if (!driverId) throw new Error("Driver insert did not return an id");
 
-      const { error: vehicleError } = await supabase.from("vehicle").insert({
+      let { error: vehicleError } = await supabase.from("vehicle").insert({
             plate_number: formatPlate(safePlateNumber),
         model: vehicleModel.trim(),
         driver_id: driverId,
