@@ -1,9 +1,17 @@
 import { useState, useRef } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Camera, Eye, EyeOff, Check, Bell, Moon, Shield, Save, Settings } from "lucide-react";
+import { Camera, Eye, EyeOff, Check, Save, Settings } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
-import { useApp } from "../context/AppContext";
+import { useApp, Role } from "../context/AppContext";
+import { supabase } from "../../api/supabaseClient";
+import { formatName, validateName, validatePassword } from "../../utils/validation";
+
+const roleColors: Record<Role, { bg: string; color: string }> = {
+  Owner: { bg: "#FEF3C7", color: "#D97706" },
+  Administrator: { bg: "#EBF2FF", color: "#1D6AE5" },
+  Supervisor: { bg: "#F5F3FF", color: "#8B5CF6" },
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const { dark } = useTheme();
@@ -31,14 +39,6 @@ function FloatField({ label, value, onChange, type = "text", suffix }: { label: 
   );
 }
 
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div onClick={() => onChange(!value)} style={{ width: 40, height: 22, borderRadius: 11, background: value ? "#1D6AE5" : "#D1D5DB", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
-      <div style={{ position: "absolute", top: 3, left: value ? 21 : 3, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
-    </div>
-  );
-}
-
 export function SettingsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -57,14 +57,13 @@ export function SettingsPage() {
   const [passSaved, setPassSaved] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
 
-  const [prefs, setPrefs] = useState({ emailAlerts: true, pushAlerts: true, weeklyReport: false, darkModeAuto: false, twoFactor: false });
-
   const fileRef = useRef<HTMLInputElement>(null);
 
   const bg = dark ? "#111827" : "#F4F5F7";
   const textMain = dark ? "#F9FAFB" : "#111827";
   const textSub = dark ? "#9CA3AF" : "#6B7280";
   const borderColor = dark ? "#374151" : "#F3F4F6";
+  const roleStyle = currentUser ? roleColors[currentUser.role] : roleColors.Supervisor;
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -75,10 +74,15 @@ export function SettingsPage() {
   }
 
   async function saveProfile() {
-    setSettings((p) => ({ ...p, firstName, lastName, avatar: avatar || undefined }));
-    setCurrentUser((prev) => prev ? { ...prev, firstName, lastName } : prev);
+    const validationError = validateName(firstName, "First name") || validateName(lastName, "Last name");
+    if (validationError) return;
+    const normalizedFirstName = formatName(firstName);
+    const normalizedLastName = formatName(lastName);
+    setFirstName(normalizedFirstName); setLastName(normalizedLastName);
+    setSettings((p) => ({ ...p, firstName: normalizedFirstName, lastName: normalizedLastName, avatar: avatar || undefined }));
+    setCurrentUser((prev) => prev ? { ...prev, firstName: normalizedFirstName, lastName: normalizedLastName } : prev);
     if (currentUser) {
-      updateUser(currentUser.id, { firstName, lastName }).catch(console.error);
+      updateUser(currentUser.id, { firstName: normalizedFirstName, lastName: normalizedLastName }).catch(console.error);
     }
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 2500);
@@ -87,13 +91,15 @@ export function SettingsPage() {
   async function changePassword() {
     setPassError("");
     if (!oldPass) { setPassError("Enter your current password."); return; }
-    if (oldPass !== currentUser?.password) { setPassError("Current password is incorrect."); return; }
-    if (newPass.length < 8) { setPassError("New password must be at least 8 characters."); return; }
+    if (!currentUser?.email || !supabase) { setPassError("Your session is unavailable. Please sign in again."); return; }
+    const passwordError = validatePassword(newPass);
+    if (passwordError) { setPassError(passwordError); return; }
     if (newPass !== confirmPass) { setPassError("Passwords do not match."); return; }
-    if (currentUser) {
-      updateUser(currentUser.id, { password: newPass }).catch(console.error);
-    }
-    setCurrentUser((prev) => prev ? { ...prev, password: newPass } : prev);
+    const { error: verifyError } = await supabase.auth.signInWithPassword({ email: currentUser.email, password: oldPass });
+    if (verifyError) { setPassError("Current password is incorrect."); return; }
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPass });
+    if (updateError) { setPassError("Could not save the new password. Please try again."); return; }
+    setCurrentUser((prev) => prev ? { ...prev, password: "" } : prev);
     setOldPass(""); setNewPass(""); setConfirmPass("");
     setPassSaved(true);
     setTimeout(() => setPassSaved(false), 2500);
@@ -107,7 +113,7 @@ export function SettingsPage() {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
-      <PageHeader icon={Settings} iconColor="#1D6AE5" title="Settings" subtitle="Manage your profile, security, and preferences" />
+      <PageHeader icon={Settings} iconColor="#1D6AE5" title="Settings" subtitle="Manage your profile and security" />
 
       {/* Profile */}
       <Section title="Profile">
@@ -125,7 +131,7 @@ export function SettingsPage() {
             <div style={{ fontSize: 17, fontWeight: 700, color: textMain }}>{firstName} {lastName}</div>
             <div style={{ fontSize: 14, color: textSub, marginTop: 2 }}>{currentUser?.email}</div>
             <div style={{ marginTop: 6 }}>
-              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "#EBF2FF", color: "#1D6AE5" }}>{currentUser?.role}</span>
+              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: roleStyle.bg, color: roleStyle.color }}>{currentUser?.role}</span>
             </div>
           </div>
         </div>
@@ -156,31 +162,6 @@ export function SettingsPage() {
         </div>
       </Section>
 
-      {/* Preferences */}
-      <Section title="Notifications & Preferences">
-        <div style={{ display: "flex", flexDirection: "column", gap: 0, maxWidth: 500 }}>
-          {[
-            { key: "emailAlerts", icon: Bell, label: "Email Alerts", desc: "Receive alert notifications by email" },
-            { key: "pushAlerts", icon: Bell, label: "Push Notifications", desc: "In-app push alerts for critical events" },
-            { key: "weeklyReport", icon: Shield, label: "Weekly Summary Report", desc: "Get a weekly digest of driver behavior" },
-            { key: "darkModeAuto", icon: Moon, label: "Auto Dark Mode", desc: "Switch to dark mode based on system time" },
-            { key: "twoFactor", icon: Shield, label: "Two-Factor Authentication", desc: "Add an extra layer of login security" },
-          ].map(({ key, icon: Icon, label, desc }, i, arr) => (
-            <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 0", borderBottom: i < arr.length - 1 ? `1px solid ${borderColor}` : "none" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 34, height: 34, borderRadius: 9, background: dark ? "#374151" : "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon size={16} color={dark ? "#9CA3AF" : "#6B7280"} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: textMain }}>{label}</div>
-                  <div style={{ fontSize: 13, color: textSub, marginTop: 1 }}>{desc}</div>
-                </div>
-              </div>
-              <Toggle value={prefs[key as keyof typeof prefs]} onChange={(v) => setPrefs((p) => ({ ...p, [key]: v }))} />
-            </div>
-          ))}
-        </div>
-      </Section>
     </div>
   );
 }

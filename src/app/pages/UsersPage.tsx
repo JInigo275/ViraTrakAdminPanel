@@ -4,6 +4,7 @@ import { Plus, Search, MoreVertical, X, Eye, EyeOff, Copy, Check, Mail, Shield, 
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, AppUser, Role, genTempPassword, getAddableRoles, canManageUsers, getFullName } from "../context/AppContext";
+import { formatName, validateEmail, validateName, validatePassword } from "../../utils/validation";
 
 const roleColors: Record<Role, { bg: string; color: string }> = {
   Owner:         { bg: "#FEF3C7", color: "#D97706" },
@@ -72,7 +73,11 @@ function KebabMenu({ user, adderRole, onChangeRole, onResetPassword, onToggleSta
   function handleToggle() {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      const menuHeight = 240;
+      const top = rect.bottom + 4 + menuHeight <= window.innerHeight - 8
+        ? rect.bottom + 4
+        : Math.max(8, rect.top - menuHeight - 4);
+      setMenuPos({ top, right: window.innerWidth - rect.right });
     }
     setOpen((v) => !v);
   }
@@ -85,7 +90,7 @@ function KebabMenu({ user, adderRole, onChangeRole, onResetPassword, onToggleSta
         <MoreVertical size={15} />
       </button>
       {open && (
-        <div data-kebab-menu style={{ position: "fixed", top: menuPos.top, right: menuPos.right, background: menuBg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 9999, minWidth: 180, overflow: "hidden" }}>
+        <div data-kebab-menu style={{ position: "fixed", top: menuPos.top, right: menuPos.right, maxHeight: "calc(100vh - 16px)", overflowY: "auto", background: menuBg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 9999, minWidth: 180, overflowX: "hidden" }}>
           <div style={{ padding: "6px 0" }}>
             {changeableRoles.length > 0 && (
               <>
@@ -235,14 +240,15 @@ export function UsersPage() {
   function regeneratePass() { setGeneratedPass(genTempPassword()); }
 
   async function handleAdd() {
-    if (!newUser.firstName.trim() || !newUser.lastName.trim()) { setAddError("First and last name are required."); return; }
-    if (!newUser.email.trim()) { setAddError("Email is required."); return; }
-    if (users.some((u) => u.email === newUser.email)) { setAddError("Email already exists."); return; }
+    const validationError = validateName(newUser.firstName, "First name") || validateName(newUser.lastName, "Last name") || validateEmail(newUser.email) || validatePassword(generatedPass);
+    if (validationError) { setAddError(validationError); return; }
+    const email = newUser.email.trim().toLowerCase();
+    if (users.some((u) => u.email.toLowerCase() === email)) { setAddError("Email already exists."); return; }
     const user: AppUser = {
       id: Math.random().toString(36).slice(2, 10).toUpperCase(),
-      firstName: newUser.firstName.trim(),
-      lastName: newUser.lastName.trim(),
-      email: newUser.email.trim(),
+      firstName: formatName(newUser.firstName),
+      lastName: formatName(newUser.lastName),
+      email,
       role: newUser.role,
       status: "Active",
       lastLogin: "Never",
@@ -254,7 +260,10 @@ export function UsersPage() {
       setShowAdd(false);
       setReceipt({ user, password: generatedPass });
     } catch (e) {
-      setAddError("Failed to save user. Please try again.");
+      const message = e instanceof Error ? e.message : "Failed to save user. Please try again.";
+      setAddError(message.includes("row-level security") || message.includes("permission")
+        ? "You do not have permission to add users. Sign out and back in, then try again."
+        : message);
     }
   }
 
@@ -337,7 +346,7 @@ export function UsersPage() {
                 </td>
                 <td style={{ padding: "12px 18px", fontSize: 14, color: textSub }}>{u.lastLogin}</td>
                 <td style={{ padding: "12px 18px" }}>
-                  {canManageUser(u) && (
+                  {canAdd && u.role !== "Owner" && ( 
                     <KebabMenu
                       user={u}
                       adderRole={myRole}
@@ -363,7 +372,7 @@ export function UsersPage() {
               <FloatField label="First Name" value={newUser.firstName} onChange={(v) => setNewUser((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Last Name" value={newUser.lastName} onChange={(v) => setNewUser((p) => ({ ...p, lastName: v }))} />
             </div>
-            <FloatField label="Email Address" type="email" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v }))} />
+            <FloatField label="Email Address" type="email" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v.replace(/\s/g, "").toLowerCase() }))} />
             <div>
               <label style={{ fontSize: 13, fontWeight: 500, color: dark ? "#9CA3AF" : "#6B7280", display: "block", marginBottom: 6 }}>Role</label>
               <div style={{ display: "flex", gap: 8 }}>

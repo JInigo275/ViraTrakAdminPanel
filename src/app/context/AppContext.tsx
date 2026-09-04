@@ -1,7 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { usersApi, driversApi, DbUser, DbDriver, demoLoginUser } from "../../api/viratrak";
+import { supabase } from "../../api/supabaseClient";
 
 export type Role = "Owner" | "Administrator" | "Supervisor";
+
+function normalizeRole(role: string): Role {
+  return role as Role;
+}
 
 export interface AppUser {
   id: string;
@@ -22,7 +27,6 @@ export interface Driver {
   lastName: string;
   vehicle: string;
   contact: string;
-  safetyScore: number;
 }
 
 export interface AppSettings {
@@ -71,7 +75,7 @@ function mapUser(u: DbUser): AppUser {
     firstName: u.first_name,
     lastName: u.last_name,
     email: u.email,
-    role: u.role,
+    role: normalizeRole(String(u.role)),
     status: u.status,
     lastLogin: u.last_login,
     password: u.password,
@@ -86,7 +90,6 @@ function mapDriver(e: DbDriver): Driver {
     lastName: e.last_name,
     vehicle: e.vehicle,
     contact: e.contact,
-    safetyScore: e.safety_score,
   };
 }
 
@@ -128,22 +131,34 @@ const AppContext = createContext<AppContextType>({} as AppContextType);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<AppUser[]>(seedUsers);
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
-    try {
-      const sessionRaw = sessionStorage.getItem("currentUser");
-      if (sessionRaw) return JSON.parse(sessionRaw) as AppUser;
-      const stay = localStorage.getItem("stayLoggedIn");
-      if (stay === "true") {
-        const raw = localStorage.getItem("currentUser");
-        if (raw) return JSON.parse(raw) as AppUser;
-      }
-    } catch (e) {
-      // ignore
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [settings, setSettings] = useState<AppSettings>({ firstName: "Admin", lastName: "User" });
   const [dbReady, setDbReady] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    async function hydrateSession(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
+      if (!session?.user.email) return;
+      try {
+        const profile = await usersApi.getByEmail(session.user.email);
+        if (profile?.status === "Active") {
+          setCurrentUser(mapUser(profile));
+          setSettings((previous) => ({ ...previous, firstName: profile.first_name, lastName: profile.last_name, avatar: profile.avatar ?? previous.avatar }));
+        }
+      } catch (error) {
+        console.error("Could not restore the Supabase session profile:", error);
+      }
+    }
+
+    void supabase.auth.getSession().then(({ data: { session } }) => hydrateSession(session));
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) setCurrentUser(null);
+      else void hydrateSession(session);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   // Load persisted app data on mount
   useEffect(() => {
@@ -209,7 +224,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function addDriver(e: Driver) {
     const db: DbDriver = {
       id: e.id, first_name: e.firstName, last_name: e.lastName,
-      vehicle: e.vehicle, contact: e.contact, safety_score: e.safetyScore,
+      vehicle: e.vehicle, contact: e.contact,
     };
     const saved = await driversApi.create(db);
     setDrivers((prev) => [...prev, mapDriver(saved)]);
@@ -221,7 +236,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.lastName !== undefined) dbPatch.last_name = patch.lastName;
     if (patch.vehicle !== undefined) dbPatch.vehicle = patch.vehicle;
     if (patch.contact !== undefined) dbPatch.contact = patch.contact;
-    if (patch.safetyScore !== undefined) dbPatch.safety_score = patch.safetyScore;
     const saved = await driversApi.update(id, dbPatch);
     setDrivers((prev) => prev.map((e) => e.id === id ? mapDriver(saved) : e));
   }

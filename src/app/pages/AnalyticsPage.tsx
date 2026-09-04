@@ -21,6 +21,10 @@ import {
   Legend,
 } from "recharts";
 
+type JsPdfWithAutoTable = jsPDF & {
+  lastAutoTable?: { finalY: number };
+};
+
 type Period =
   | "Today"
   | "This Week"
@@ -59,7 +63,7 @@ type EventBreakdown = { event: string; count: number; color: string };
 type SeverityBreakdown = { label: string; count: number; color: string; bg: string };
 type KPI = { label: string; value: string; color: string; note: string };
 type RecentEvent = { event: string; driver: string; time: string; severity: string };
-type DriverComparisonRow = { driver: string; blink: number; perclos: number; ear: number; posture: number };
+type DriverComparisonRow = { driver: string; blink: number; perclos: number; ear: number };
 
 function parseAlertTimestamp(alert: DbAlert): Date | null {
   // Parse "MM/DD/YYYY" and "HH:MM" format
@@ -210,16 +214,15 @@ function buildKpis(alerts: DbAlert[], driversCount: number, period: Period): KPI
 }
 
 function buildDriverComparison(alerts: DbAlert[], driverNames: string[]): DriverComparisonRow[] {
-  const counts = new Map<string, { blink: number; perclos: number; ear: number; posture: number }>();
+  const counts = new Map<string, { blink: number; perclos: number; ear: number }>();
   const names = new Set<string>(driverNames);
   alerts.forEach((alert) => names.add(alert.driver));
-  names.forEach((name) => counts.set(name, { blink: 0, perclos: 0, ear: 0, posture: 0 }));
+  names.forEach((name) => counts.set(name, { blink: 0, perclos: 0, ear: 0 }));
   alerts.forEach((alert) => {
-    const current = counts.get(alert.driver) ?? { blink: 0, perclos: 0, ear: 0, posture: 0 };
+    const current = counts.get(alert.driver) ?? { blink: 0, perclos: 0, ear: 0 };
     current.blink += 1;
     if (alert.severity === "High") current.perclos += 1;
     if (alert.severity === "Moderate") current.ear += 1;
-    current.posture += severityScore(alert.severity) * 10;
     counts.set(alert.driver, current);
   });
   return [...counts.entries()]
@@ -228,7 +231,6 @@ function buildDriverComparison(alerts: DbAlert[], driverNames: string[]): Driver
       blink: metrics.blink,
       perclos: metrics.perclos,
       ear: metrics.ear,
-      posture: Math.min(100, metrics.posture),
     }))
     .sort((a, b) => b.blink - a.blink || a.driver.localeCompare(b.driver))
     .slice(0, 6);
@@ -357,7 +359,7 @@ export function AnalyticsPage() {
       alternateRowStyles: { fillColor: [248, 249, 250] },
       margin: { left: 14, right: 14 },
     });
-    y = (doc as any).lastAutoTable.finalY + 8;
+    y = ((doc as JsPdfWithAutoTable).lastAutoTable?.finalY ?? y) + 8;
 
     // Recent Events table
     doc
@@ -399,7 +401,7 @@ export function AnalyticsPage() {
       .write(`<!DOCTYPE html><html><head><title>Analytics Report — ${period}</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Inter, sans-serif; background: #fff; color: #111827; padding: 32px; }
+        body { font-family: 'Gelasio', sans-serif; background: #fff; color: #111827; padding: 32px; }
         h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
         p  { font-size: 13px; color: #6B7280; margin-bottom: 24px; }
         .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
@@ -971,11 +973,11 @@ export function AnalyticsPage() {
           {/* Driver comparison */}
           <Card
             title="Driver Alert Load"
-            subtitle="Alert counts and weighted safety scores by driver"
+            subtitle="Alert counts and severity by driver"
             span={isMobile ? undefined : "1 / -1"}
           >
             {/* On mobile: fixed-width scrollable chart so all drivers show clearly */}
-            <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch" as any }}>
+            <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch" as const }}>
               <div style={{ width: isMobile ? Math.max(320, driverComparison.length * 60) : "100%", height: isMobile ? 180 : 200 }}>
                 <ResponsiveContainer key={`bar-${period}`} width="100%" height="100%">
                   <BarChart data={driverComparison} margin={{ left: -10, right: 8 }}>
@@ -987,7 +989,6 @@ export function AnalyticsPage() {
                     <Bar dataKey="blink" name="Alerts" fill="#1D6AE5" radius={[3, 3, 0, 0]} />
                     <Bar dataKey="perclos" name="High severity" fill="#F59E0B" radius={[3, 3, 0, 0]} />
                     <Bar dataKey="ear" name="Moderate severity" fill="#EF4444" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="posture" name="Safety score" fill="#10B981" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1006,7 +1007,7 @@ export function AnalyticsPage() {
                 overflowY: "auto",
                 maxHeight: 280,
                 overflowX: "auto",
-                WebkitOverflowScrolling: "touch" as any,
+                WebkitOverflowScrolling: "touch" as const,
                 width: "100%",
               }}
             >

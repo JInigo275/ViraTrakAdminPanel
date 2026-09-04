@@ -5,6 +5,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { supabase } from "../../api/supabaseClient";
+import { formatName, formatPhone, formatPlate, validateEmail, validateName, validatePhone, validatePlate } from "../../utils/validation";
 
 type SubmitStatus = {
   kind: "idle" | "loading" | "success" | "error";
@@ -50,6 +51,10 @@ function normalizeMetric(value: string) {
   if (!trimmed) return null;
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export function TestPage() {
@@ -145,18 +150,20 @@ export function TestPage() {
 
     setUserStatus({ kind: "loading", message: "Creating user record..." });
     try {
+      const validationError = validateName(userFirstName, "First name") || validateName(userLastName, "Last name") || validateEmail(userEmail);
+      if (validationError) throw new Error(validationError);
       const uniqueSuffix = buildUniqueSuffix();
       const email = buildInsertEmail(userEmail);
       const isExplicitEmail = userEmail.trim().length > 0;
       const insertUser = async (insertEmail: string) => await supabase.from("users").insert({
         id: `test-user-${uniqueSuffix}`,
-        first_name: userFirstName.trim(),
-        last_name: userLastName.trim(),
-        email: insertEmail,
+        first_name: formatName(userFirstName),
+        last_name: formatName(userLastName),
+        email: buildUniqueEmail(userEmail, uniqueSuffix),
         role: userRole,
         status: "Active",
         last_login: new Date().toISOString(),
-        password: "test123",
+        password: "TestUser1!",
         must_change_password: false,
       });
 
@@ -172,8 +179,8 @@ export function TestPage() {
       if (error) throw error;
       setUserStatus({ kind: "success", message: "User inserted successfully." });
       resetUserForm();
-    } catch (error: any) {
-      setUserStatus({ kind: "error", message: error?.message || "User insert failed." });
+    } catch (error: unknown) {
+      setUserStatus({ kind: "error", message: getErrorMessage(error, "User insert failed.") });
     }
   }
 
@@ -185,6 +192,8 @@ export function TestPage() {
 
     setDriverStatus({ kind: "loading", message: "Creating driver and vehicle record..." });
     try {
+      const validationError = validateName(driverFirstName || "Test", "First name") || validateName(driverLastName || "Driver", "Last name") || validatePhone(contactInfo || "5550100000") || validatePlate(plateNumber || "TESTPLATE");
+      if (validationError) throw new Error(validationError);
       const uniqueSuffix = buildUniqueSuffix();
       const licenseValue = licenseNumber.trim() || `TEST-LICENSE-${uniqueSuffix}`;
       const plateValue = plateNumber.trim() || `TEST-PLATE-${uniqueSuffix}`;
@@ -200,8 +209,8 @@ export function TestPage() {
         .insert({
           first_name: driverFirstName.trim() || "Test",
           last_name: driverLastName.trim() || "Driver",
-          license_number,
-          contact_info: contactValue,
+          license_number: safeLicenseNumber,
+          contact_info: formatPhone(contactInfo || "5550100000"),
         })
         .select("driver_id")
         .single();
@@ -218,10 +227,9 @@ export function TestPage() {
       const driverId = driverData?.driver_id;
       if (!driverId) throw new Error("Driver insert did not return an id");
 
-      let vehiclePlate = plateValue;
-      let { error: vehicleError } = await supabase.from("vehicle").insert({
-        plate_number: vehiclePlate,
-        model: modelValue,
+      const { error: vehicleError } = await supabase.from("vehicle").insert({
+            plate_number: formatPlate(safePlateNumber),
+        model: vehicleModel.trim(),
         driver_id: driverId,
       });
       if (vehicleError && /duplicate key|unique constraint|already exists/i.test(vehicleError.message || "")) {
@@ -240,8 +248,8 @@ export function TestPage() {
 
       setDriverStatus({ kind: "success", message: "Driver and vehicle inserted successfully." });
       resetDriverForm();
-    } catch (error: any) {
-      setDriverStatus({ kind: "error", message: error?.message || "Driver insert failed." });
+    } catch (error: unknown) {
+      setDriverStatus({ kind: "error", message: getErrorMessage(error, "Driver insert failed.") });
     }
   }
 
@@ -387,8 +395,8 @@ export function TestPage() {
       setAlertStatus({ kind: "success", message: "Alert, detection, evidence, and driver-linked records inserted successfully." });
       resetAlertForm();
       await loadDriverOptions();
-    } catch (error: any) {
-      setAlertStatus({ kind: "error", message: error?.message || "Alert insert failed." });
+    } catch (error: unknown) {
+      setAlertStatus({ kind: "error", message: getErrorMessage(error, "Alert insert failed.") });
     }
   }
 
@@ -408,8 +416,8 @@ export function TestPage() {
       if (error) throw error;
       setLogStatus({ kind: "success", message: "System log inserted successfully." });
       resetLogForm();
-    } catch (error: any) {
-      setLogStatus({ kind: "error", message: error?.message || "Log insert failed." });
+    } catch (error: unknown) {
+      setLogStatus({ kind: "error", message: getErrorMessage(error, "Log insert failed.") });
     }
   }
 

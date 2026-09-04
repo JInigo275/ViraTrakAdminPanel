@@ -5,6 +5,8 @@ import Drowsiness from "../../imports/Drowsiness.png";
 import Analytics from "../../imports/Analytics.png";
 import Alert from "../../imports/Alert.png";
 import { useApp } from "../context/AppContext";
+import { supabase } from "../../api/supabaseClient";
+import { usersApi } from "../../api/viratrak";
 
 interface FloatingInputProps {
   label: string;
@@ -44,7 +46,7 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin }: LoginPageProps) {
-  const { users, setCurrentUser } = useApp();
+  const { setCurrentUser } = useApp();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -64,21 +66,48 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setError("");
     if (!email || !password) { setError("Please enter your email and password."); return; }
 
+    const normalizedEmail = email.trim().toLowerCase();
     setLoading(true);
-    setTimeout(() => {
-      const user = users.find((u) => u.email === email && u.password === password && u.status === "Active");
-      if (user) {
-        const updated = { ...user, lastLogin: new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }) };
-        try {
-          if (stayLoggedIn) localStorage.setItem("stayLoggedIn", "true"); else localStorage.removeItem("stayLoggedIn");
-        } catch (e) { }
+    void (async () => {
+      if (!supabase) {
+        setError("Supabase is not configured.");
+        setLoading(false);
+        return;
+      }
+
+      const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+      if (authError) {
+        console.error("Supabase login failed:", authError);
+        setError(authError.message === "Invalid login credentials"
+          ? "Invalid email or password. Check that this account exists in Supabase Auth."
+          : authError.message);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const user = await usersApi.getByEmail(normalizedEmail);
+        if (!user || user.status !== "Active") throw new Error("No active profile found.");
+        const updated = {
+          id: user.id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          email: user.email,
+          role: user.role,
+          status: user.status,
+          lastLogin: new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }),
+          password: "",
+          mustChangePassword: user.must_change_password,
+        };
+        if (stayLoggedIn) localStorage.setItem("stayLoggedIn", "true"); else localStorage.removeItem("stayLoggedIn");
         setCurrentUser(updated);
         onLogin();
-      } else {
-        setError("Invalid email or password. Please try again.");
+      } catch (profileError) {
+        await supabase.auth.signOut();
+        setError(profileError instanceof Error ? profileError.message : "Your account profile could not be loaded.");
         setLoading(false);
       }
-    }, 900);
+    })();
   }
 
   return (

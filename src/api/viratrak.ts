@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { assertValid, formatName, formatPlate, formatPhone, validateEmail, validateName, validatePassword, validatePhone, validatePlate } from "../utils/validation";
 
 // ---------- Users ----------
 export type DbUser = {
@@ -39,7 +40,7 @@ export const usersApi = {
       const client = requireSupabase();
       const { data, error } = await client
         .from("users")
-        .select("*")
+        .select("id, first_name, last_name, email, role, status, last_login, must_change_password, avatar")
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -49,22 +50,45 @@ export const usersApi = {
       return [demoLoginUser];
     }
   },
-  create: async (u: Omit<DbUser, "created_at">) => {
+  getByEmail: async (email: string) => {
     const client = requireSupabase();
     const { data, error } = await client
       .from("users")
-      .insert(u as DbUser)
-      .select("*")
-      .single();
-    
+      .select("id, first_name, last_name, email, role, status, last_login, must_change_password, avatar")
+      .eq("email", email)
+      .maybeSingle();
+
     if (error) throw error;
-    return data as DbUser;
+    return data as DbUser | null;
+  },
+  create: async (u: Omit<DbUser, "created_at">) => {
+    const client = requireSupabase();
+    assertValid(validateName(u.first_name, "First name"));
+    assertValid(validateName(u.last_name, "Last name"));
+    assertValid(validateEmail(u.email));
+    if (u.password) assertValid(validatePassword(u.password));
+    const { data, error } = await client.functions.invoke("create-user", {
+      body: {
+        firstName: formatName(u.first_name),
+        lastName: formatName(u.last_name),
+        email: u.email.trim().toLowerCase(),
+        role: u.role,
+        password: u.password,
+      },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return { ...data.profile, password: "" } as DbUser;
   },
   update: async (id: string, patch: Partial<DbUser>) => {
     const client = requireSupabase();
+    if (patch.first_name !== undefined) assertValid(validateName(patch.first_name, "First name"));
+    if (patch.last_name !== undefined) assertValid(validateName(patch.last_name, "Last name"));
+    if (patch.email !== undefined) assertValid(validateEmail(patch.email));
+    if (patch.password) assertValid(validatePassword(patch.password));
     const { data, error } = await client
       .from("users")
-      .update(patch)
+      .update({ ...patch, ...(patch.first_name !== undefined ? { first_name: formatName(patch.first_name) } : {}), ...(patch.last_name !== undefined ? { last_name: formatName(patch.last_name) } : {}), ...(patch.email !== undefined ? { email: patch.email.trim().toLowerCase() } : {}) })
       .eq("id", id)
       .select("*")
       .single();
@@ -90,7 +114,6 @@ export type DbDriver = {
   last_name: string;
   vehicle: string;
   contact: string;
-  safety_score: number;
 };
 
 type RawDriver = {
@@ -98,7 +121,24 @@ type RawDriver = {
   first_name: string;
   last_name: string;
   contact_info: string | null;
-  vehicle?: { plate_number: string; model: string | null };
+  vehicle?: { plate_number: string; model: string | null }[];
+};
+
+type DriverQueryVehicle = { plate_number: string; model: string | null };
+type DriverQueryRow = {
+  driver_id: number;
+  first_name: string;
+  last_name: string;
+  contact_info: string | null;
+  vehicle: DriverQueryVehicle[] | DriverQueryVehicle | null;
+};
+
+type RawDevice = {
+  device_id: number;
+  vehicle?: {
+    plate_number: string;
+    driver?: { first_name: string; last_name: string }[];
+  }[];
 };
 
 async function fetchDriversWithVehicles(): Promise<RawDriver[]> {
@@ -109,24 +149,21 @@ async function fetchDriversWithVehicles(): Promise<RawDriver[]> {
     .order("created_at", { ascending: false });
   
   if (error) throw error;
-  return (data ?? []) as RawDriver[];
-}
-
-async function calculateSafetyScore(driverId: number): Promise<number> {
-  // Query alerts related to this driver and calculate safety score
-  const client = requireSupabase();
-  const { data: alerts, error } = await client
-    .from("alert")
-    .select("alert_level, detection(event_id)")
-    .eq("detection.recorded_evidence.driver_id", driverId);
-  
-  if (error || !alerts) return 85; // Default safe score
-  
-  const total = alerts.length;
-  const highCount = alerts.filter((a) => a.alert_level === "High").length;
-  
-  // Score: 100 - (high_alerts * 10 + moderate_alerts * 3)
-  return Math.max(0, Math.min(100, 85 - (highCount * 10)));
+  const rows = (data ?? []) as unknown as DriverQueryRow[];
+  return rows.map((row): RawDriver => ({
+    driver_id: row.driver_id,
+    first_name: row.first_name,
+    last_name: row.last_name,
+    contact_info: row.contact_info,
+    vehicle: Array.isArray(row.vehicle)
+      ? row.vehicle.map((vehicle) => ({
+          plate_number: vehicle.plate_number,
+          model: vehicle.model,
+        }))
+      : row.vehicle
+        ? [{ plate_number: row.vehicle.plate_number, model: row.vehicle.model }]
+        : [],
+  }));
 }
 
 function mapRawDriverToDbDriver(raw: RawDriver): DbDriver {
@@ -136,7 +173,6 @@ function mapRawDriverToDbDriver(raw: RawDriver): DbDriver {
     last_name: raw.last_name,
     vehicle: raw.vehicle?.[0]?.plate_number || raw.vehicle?.[0]?.model || "Unassigned",
     contact: raw.contact_info || "",
-    safety_score: 85, // Will be updated with actual calculation
   };
 }
 
@@ -144,17 +180,7 @@ export const driversApi = {
   list: async () => {
     try {
       const rawDrivers = await fetchDriversWithVehicles();
-      const drivers = rawDrivers.map(mapRawDriverToDbDriver);
-      
-      // Calculate safety scores in parallel
-      const withScores = await Promise.all(
-        drivers.map(async (d) => ({
-          ...d,
-          safety_score: await calculateSafetyScore(parseInt(d.id)),
-        }))
-      );
-      
-      return withScores;
+      return rawDrivers.map(mapRawDriverToDbDriver);
     } catch (error) {
       console.error("Error fetching drivers from schema2:", error);
       return [];
@@ -162,36 +188,60 @@ export const driversApi = {
   },
   create: async (e: Omit<DbDriver, "created_at">) => {
     const client = requireSupabase();
+    assertValid(validateName(e.first_name, "First name"));
+    assertValid(validateName(e.last_name, "Last name"));
+    assertValid(validatePlate(e.vehicle));
+    assertValid(validatePhone(e.contact));
+    const plate = formatPlate(e.vehicle);
+    const { data: existingVehicle } = await client.from("vehicle").select("vehicle_id").eq("plate_number", plate).maybeSingle();
+    if (existingVehicle) throw new Error("Vehicle plate already exists.");
     const { data, error } = await client
       .from("driver")
       .insert({
-        first_name: e.first_name,
-        last_name: e.last_name,
+        first_name: formatName(e.first_name),
+        last_name: formatName(e.last_name),
         license_number: `LIC-${Date.now()}`, // Generate placeholder
-        contact_info: e.contact,
+        contact_info: formatPhone(e.contact),
       })
       .select("*")
       .single();
     
     if (error) throw error;
+    const { error: vehicleError } = await client.from("vehicle").insert({ plate_number: plate, driver_id: data.driver_id });
+    if (vehicleError) throw vehicleError;
     
     const raw = data as RawDriver;
     return mapRawDriverToDbDriver(raw);
   },
   update: async (id: string, patch: Partial<DbDriver>) => {
     const client = requireSupabase();
+    if (patch.first_name !== undefined) assertValid(validateName(patch.first_name, "First name"));
+    if (patch.last_name !== undefined) assertValid(validateName(patch.last_name, "Last name"));
+    if (patch.vehicle !== undefined) assertValid(validatePlate(patch.vehicle));
+    if (patch.contact !== undefined) assertValid(validatePhone(patch.contact));
     const { data, error } = await client
       .from("driver")
       .update({
-        first_name: patch.first_name,
-        last_name: patch.last_name,
-        contact_info: patch.contact,
+        first_name: patch.first_name === undefined ? undefined : formatName(patch.first_name),
+        last_name: patch.last_name === undefined ? undefined : formatName(patch.last_name),
+        contact_info: patch.contact === undefined ? undefined : formatPhone(patch.contact),
       })
       .eq("driver_id", parseInt(id))
       .select("*")
       .single();
     
     if (error) throw error;
+    if (patch.vehicle !== undefined) {
+      const plate = formatPlate(patch.vehicle);
+      const { data: duplicate } = await client.from("vehicle").select("vehicle_id").eq("plate_number", plate).neq("driver_id", parseInt(id)).maybeSingle();
+      if (duplicate) throw new Error("Vehicle plate already exists.");
+      const { data: vehicle, error: vehicleLookupError } = await client.from("vehicle").select("vehicle_id").eq("driver_id", parseInt(id)).maybeSingle();
+      if (vehicleLookupError) throw vehicleLookupError;
+      const vehicleResult = vehicle
+        ? await client.from("vehicle").update({ plate_number: plate }).eq("vehicle_id", vehicle.vehicle_id)
+        : await client.from("vehicle").insert({ plate_number: plate, driver_id: parseInt(id) });
+      if (vehicleResult.error) throw vehicleResult.error;
+    }
     
     const raw = data as RawDriver;
     return mapRawDriverToDbDriver(raw);
@@ -223,17 +273,17 @@ export type DbAlert = {
 
 type RawAlert = {
   alert_id: number;
-  alert_level: string;
-  alert_type: string;
-  timestamp: string;
+  alert_level?: string;
+  alert_type?: string;
+  timestamp?: string;
   detection?: {
     timestamp: string;
     event_id: string;
     recorded_evidence?: {
       timestamp: string;
       device_id: number;
-    };
-  };
+    }[];
+  }[];
   device?: {
     vehicle_id: number;
     vehicle?: {
@@ -244,6 +294,18 @@ type RawAlert = {
       };
     };
   };
+};
+
+type AlertQueryRow = {
+  alert_id: number;
+  alert_level?: string;
+  alert_type?: string;
+  timestamp?: string;
+  detection?: {
+    timestamp: string;
+    event_id: string;
+    recorded_evidence?: { timestamp: string; device_id: number }[];
+  }[];
 };
 
 const SEVERITY_MAP: Record<string, "High" | "Moderate" | "Low"> = {
@@ -288,11 +350,29 @@ async function fetchAlertsWithRelations(): Promise<RawAlert[]> {
     .order("alert_id", { ascending: false });
   
   if (error) throw error;
-  return (data ?? []) as RawAlert[];
+  const rows = (data ?? []) as unknown as AlertQueryRow[];
+  return rows.map((row): RawAlert => ({
+    alert_id: row.alert_id,
+    alert_level: row.alert_level,
+    alert_type: row.alert_type,
+    timestamp: row.timestamp,
+    detection: Array.isArray(row.detection)
+      ? row.detection.map((detection) => ({
+          timestamp: detection.timestamp,
+          event_id: detection.event_id,
+          recorded_evidence: Array.isArray(detection.recorded_evidence)
+            ? detection.recorded_evidence.map((evidence) => ({
+                timestamp: evidence.timestamp,
+                device_id: evidence.device_id,
+              }))
+            : [],
+        }))
+      : [],
+  }));
 }
 
 function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: string): DbAlert {
-  const timestamp = raw.detection?.timestamp || new Date().toISOString();
+  const timestamp = raw.timestamp || raw.detection?.[0]?.timestamp || raw.detection?.[0]?.recorded_evidence?.[0]?.timestamp || new Date().toISOString();
   const date = new Date(timestamp).toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
@@ -304,7 +384,7 @@ function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: st
     hour12: false,
   });
   
-  const severity = SEVERITY_MAP[raw.alert_level] || "Low";
+  const severity = raw.alert_level ? SEVERITY_MAP[raw.alert_level] || "Low" : "Low";
   const iconMap = EVENT_ICON_MAP[severity];
   
   return {
@@ -333,7 +413,7 @@ export const alertsApi = {
       if (devError) throw devError;
       
       const deviceMap = new Map<number, { driver: string; vehicle: string }>();
-      devices?.forEach((device: any) => {
+      devices?.forEach((device: RawDevice) => {
         const vehicleInfo = device.vehicle?.[0];
         const driverInfo = vehicleInfo?.driver?.[0];
         
@@ -364,8 +444,8 @@ export const alertsApi = {
       if (alertError) throw alertError;
       
       // Map alerts with driver/vehicle info
-      return (alerts ?? []).map((raw: any) => {
-        const deviceId = raw.detection?.recorded_evidence?.[0]?.device_id;
+      return (alerts ?? []).map((raw: RawAlert) => {
+        const deviceId = raw.detection?.[0]?.recorded_evidence?.[0]?.device_id;
         const deviceInfo = deviceId ? deviceMap.get(deviceId) : undefined;
         
         return mapRawAlertToDbAlert(
