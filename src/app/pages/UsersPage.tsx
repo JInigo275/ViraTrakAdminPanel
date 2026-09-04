@@ -220,6 +220,10 @@ export function UsersPage() {
   const myRole = currentUser?.role ?? "Supervisor";
   const canAdd = canManageUsers(myRole);
   const addableRoles = getAddableRoles(myRole);
+  const canManageUser = (user: AppUser) =>
+    canAdd &&
+    user.role !== "Owner" &&
+    (myRole === "Owner" || user.id === currentUser?.id || user.role !== "Administrator");
   const filtered = users.filter((u) =>
     getFullName(u).toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
@@ -276,7 +280,7 @@ export function UsersPage() {
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
       <PageHeader icon={Users} iconColor="#1D6AE5" title="Users" subtitle="Manage system user accounts and access roles">
-        {canAdd && (
+        {canAdd && addableRoles.length > 0 && (
           <button onClick={openAdd} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#1D6AE5", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
             <Plus size={14} /> Add User
           </button>
