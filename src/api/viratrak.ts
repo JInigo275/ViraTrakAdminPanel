@@ -67,17 +67,18 @@ export const usersApi = {
     assertValid(validateName(u.last_name, "Last name"));
     assertValid(validateEmail(u.email));
     if (u.password) assertValid(validatePassword(u.password));
-    const normalizedEmail = u.email.trim().toLowerCase();
-    const { data: existing } = await client.from("users").select("id").eq("email", normalizedEmail).maybeSingle();
-    if (existing) throw new Error("Email already exists.");
-    const { data, error } = await client
-      .from("users")
-      .insert({ ...u, first_name: formatName(u.first_name), last_name: formatName(u.last_name), email: normalizedEmail })
-      .select("*")
-      .single();
-    
+    const { data, error } = await client.functions.invoke("create-user", {
+      body: {
+        firstName: formatName(u.first_name),
+        lastName: formatName(u.last_name),
+        email: u.email.trim().toLowerCase(),
+        role: u.role,
+        password: u.password,
+      },
+    });
     if (error) throw error;
-    return data as DbUser;
+    if (data?.error) throw new Error(data.error);
+    return { ...data.profile, password: "" } as DbUser;
   },
   update: async (id: string, patch: Partial<DbUser>) => {
     const client = requireSupabase();

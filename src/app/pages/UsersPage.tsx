@@ -73,7 +73,11 @@ function KebabMenu({ user, adderRole, onChangeRole, onResetPassword, onToggleSta
   function handleToggle() {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
-      setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      const menuHeight = 240;
+      const top = rect.bottom + 4 + menuHeight <= window.innerHeight - 8
+        ? rect.bottom + 4
+        : Math.max(8, rect.top - menuHeight - 4);
+      setMenuPos({ top, right: window.innerWidth - rect.right });
     }
     setOpen((v) => !v);
   }
@@ -86,7 +90,7 @@ function KebabMenu({ user, adderRole, onChangeRole, onResetPassword, onToggleSta
         <MoreVertical size={15} />
       </button>
       {open && (
-        <div data-kebab-menu style={{ position: "fixed", top: menuPos.top, right: menuPos.right, background: menuBg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 9999, minWidth: 180, overflow: "hidden" }}>
+        <div data-kebab-menu style={{ position: "fixed", top: menuPos.top, right: menuPos.right, maxHeight: "calc(100vh - 16px)", overflowY: "auto", background: menuBg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 9999, minWidth: 180, overflowX: "hidden" }}>
           <div style={{ padding: "6px 0" }}>
             {changeableRoles.length > 0 && (
               <>
@@ -252,7 +256,10 @@ export function UsersPage() {
       setShowAdd(false);
       setReceipt({ user, password: generatedPass });
     } catch (e) {
-      setAddError("Failed to save user. Please try again.");
+      const message = e instanceof Error ? e.message : "Failed to save user. Please try again.";
+      setAddError(message.includes("row-level security") || message.includes("permission")
+        ? "You do not have permission to add users. Sign out and back in, then try again."
+        : message);
     }
   }
 
@@ -361,7 +368,7 @@ export function UsersPage() {
               <FloatField label="First Name" value={newUser.firstName} onChange={(v) => setNewUser((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Last Name" value={newUser.lastName} onChange={(v) => setNewUser((p) => ({ ...p, lastName: v }))} />
             </div>
-            <FloatField label="Email Address" type="email" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v.replace(/\s/g, "") }))} />
+            <FloatField label="Email Address" type="email" value={newUser.email} onChange={(v) => setNewUser((p) => ({ ...p, email: v.replace(/\s/g, "").toLowerCase() }))} />
             <div>
               <label style={{ fontSize: 13, fontWeight: 500, color: dark ? "#9CA3AF" : "#6B7280", display: "block", marginBottom: 6 }}>Role</label>
               <div style={{ display: "flex", gap: 8 }}>

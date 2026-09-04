@@ -1,9 +1,10 @@
 import { ArrowLeft, Wind, EyeOff, Navigation, User, Activity, Zap } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
 import { useApp } from "../context/AppContext";
+import { alertsApi } from "../../api/viratrak";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend,
@@ -132,8 +133,26 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
   const isMobile = useIsMobile();
   const { drivers } = useApp();
   const [period, setPeriod] = useState<PeriodKey>("Today");
+  const [liveAlerts, setLiveAlerts] = useState<typeof driverData["drv-001"]["alerts"] | null>(null);
   const emp = drivers.find((e) => e.id === driverId);
   const data = driverData[driverId] ?? defaultData;
+
+  useEffect(() => {
+    if (!emp) return;
+    alertsApi.list()
+      .then((alerts) => setLiveAlerts(alerts
+        .filter((alert) => alert.driver === `${emp.firstName} ${emp.lastName}` || alert.vehicle === emp.vehicle)
+        .map((alert) => ({
+          icon: Wind,
+          iconColor: alert.icon_color,
+          iconBg: alert.icon_bg,
+          type: alert.type,
+          date: alert.date,
+          time: alert.time,
+          severity: alert.severity,
+        }))))
+      .catch(() => setLiveAlerts([]));
+  }, [emp]);
 
   const bg = dark ? "#111827" : "#F4F5F7";
   const cardBg = dark ? "#1F2937" : "#fff";
@@ -149,6 +168,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
   const fullName = `${emp.firstName} ${emp.lastName}`;
   const summaries = periodSummaries[driverId] ?? defaultPeriodSummaries;
   const summary = summaries[period];
+  const alertHistory = liveAlerts ?? data.alerts;
 
   function Card({ title, subtitle, children, span }: { title: string; subtitle?: string; children: React.ReactNode; span?: string }) {
     return (
@@ -165,7 +185,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
       <PageHeader icon={Activity} iconColor="#F59E0B" title="Driver Analytics" subtitle={`Fatigue and behavior metrics for ${fullName}`}>
-        <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: cardBg, border: `1px solid ${borderColor}`, borderRadius: 8, fontSize: 14, color: textSub, cursor: "pointer", fontFamily: "Inter, sans-serif", boxShadow: shadow }}>
+        <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: dark ? "#374151" : "#F3F4F6", border: `1px solid ${dark ? "#4B5563" : "#D1D5DB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#F3F4F6" : "#4B5563", cursor: "pointer", fontFamily: "Inter, sans-serif", boxShadow: shadow }}>
           <ArrowLeft size={14} /> Back
         </button>
       </PageHeader>
@@ -345,7 +365,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 
         {/* Alerts history */}
         <Card title="Alert History" subtitle="All recorded events for this driver" span={isMobile ? undefined : "1 / -1"}>
-          {data.alerts.length === 0 ? (
+          {alertHistory.length === 0 ? (
             <div style={{ textAlign: "center", padding: "24px 0", fontSize: 14, color: textSub }}>No alerts recorded for this driver.</div>
           ) : (
             <div style={{ overflowX: "auto" }}>
@@ -358,11 +378,11 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
                 </tr>
               </thead>
               <tbody>
-                {data.alerts.map((a, i) => {
+                {alertHistory.map((a, i) => {
                   const Icon = a.icon;
                   const sev = sevMap[a.severity];
                   return (
-                    <tr key={i} style={{ borderBottom: i < data.alerts.length - 1 ? `1px solid ${borderColor}` : "none" }}>
+                    <tr key={i} style={{ borderBottom: i < alertHistory.length - 1 ? `1px solid ${borderColor}` : "none" }}>
                       <td style={{ padding: "10px 16px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <div style={{ width: 26, height: 26, borderRadius: 6, background: a.iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
 // Use URL import for image assets to avoid requiring a PNG module declaration
 const viraTrakLogo = new URL("../imports/ViraTrak_Logo.png", import.meta.url).href;
@@ -37,16 +37,10 @@ function AppInner() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { dark } = useTheme();
   const { currentUser, setCurrentUser } = useApp();
-  const hadUser = useRef(false);
 
   // Sync loggedIn state with persisted/current user
   useEffect(() => {
     setLoggedIn(!!currentUser);
-    if (currentUser && !hadUser.current) {
-      setCurrentPage("dashboard");
-      setDriverDetailId(null);
-    }
-    hadUser.current = !!currentUser;
   }, [currentUser]);
 
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);

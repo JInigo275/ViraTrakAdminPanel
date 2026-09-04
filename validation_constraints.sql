@@ -30,7 +30,7 @@ ALTER TABLE public.driver
   ADD CONSTRAINT driver_name_format_check CHECK (first_name ~ '^[A-Za-z][A-Za-z'' -]*$' AND last_name ~ '^[A-Za-z][A-Za-z'' -]*$'),
   ADD CONSTRAINT driver_phone_format_check CHECK (contact_info IS NULL OR contact_info ~ '^\+?[0-9]{7,15}$');
 ALTER TABLE public.vehicle
-  ADD CONSTRAINT vehicle_plate_format_check CHECK (plate_number = upper(plate_number) AND plate_number ~ '^[A-Z0-9]+$');
+  ADD CONSTRAINT vehicle_plate_format_check CHECK (length(plate_number) BETWEEN 1 AND 8 AND plate_number = upper(plate_number) AND plate_number ~ '^[A-Z0-9]+$');
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_unique ON public.users (lower(email));
 CREATE UNIQUE INDEX IF NOT EXISTS vehicle_plate_upper_unique ON public.vehicle (upper(plate_number));

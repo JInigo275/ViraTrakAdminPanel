@@ -9,7 +9,7 @@ export function formatName(value: string) {
 }
 
 export function formatPlate(value: string) {
-  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
 }
 
 export function formatPhone(value: string) {
@@ -56,8 +56,26 @@ export function validatePhone(value: string) {
 export function validatePlate(value: string) {
   const formatted = formatPlate(value);
   if (!formatted) return "Vehicle plate number is required.";
+  if (formatted.length > 8) return "Vehicle plate must be 8 characters or fewer.";
   if (!PLATE_PATTERN.test(formatted)) return "Vehicle plate must contain only letters and numbers.";
   return null;
+}
+
+export function formatPhoneDisplay(countryCode: string, value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+  const groups = digits.length > 6
+    ? `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
+    : digits.length > 3
+      ? `${digits.slice(0, 3)} ${digits.slice(3)}`
+      : digits;
+  return groups ? `(${countryCode}) ${groups}` : `(${countryCode})`;
+}
+
+export function formatLocalPhoneDisplay(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+  if (digits.length > 6) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  if (digits.length > 3) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+  return digits;
 }
 
 export function assertValid(condition: string | null): void {

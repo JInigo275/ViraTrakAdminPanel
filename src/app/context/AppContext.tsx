@@ -142,7 +142,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!session?.user.email) return;
       try {
         const profile = await usersApi.getByEmail(session.user.email);
-        if (profile?.status === "Active") setCurrentUser(mapUser(profile));
+        if (profile?.status === "Active") {
+          setCurrentUser(mapUser(profile));
+          setSettings((previous) => ({ ...previous, firstName: profile.first_name, lastName: profile.last_name, avatar: profile.avatar ?? previous.avatar }));
+        }
       } catch (error) {
         console.error("Could not restore the Supabase session profile:", error);
       }

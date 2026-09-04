@@ -63,6 +63,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     setError("");
     if (!email || !password) { setError("Please enter your email and password."); return; }
 
+    const normalizedEmail = email.trim().toLowerCase();
     setLoading(true);
     void (async () => {
       if (!supabase) {
@@ -71,15 +72,18 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         return;
       }
 
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
       if (authError) {
-        setError("Invalid email or password. Please try again.");
+        console.error("Supabase login failed:", authError);
+        setError(authError.message === "Invalid login credentials"
+          ? "Invalid email or password. Check that this account exists in Supabase Auth."
+          : authError.message);
         setLoading(false);
         return;
       }
 
       try {
-        const user = await usersApi.getByEmail(email);
+        const user = await usersApi.getByEmail(normalizedEmail);
         if (!user || user.status !== "Active") throw new Error("No active profile found.");
         const updated = {
           id: user.id,

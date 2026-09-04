@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   role text NOT NULL CHECK (role = ANY (ARRAY['Owner'::text, 'Administrator'::text, 'Supervisor'::text])),
   status text NOT NULL CHECK (status = ANY (ARRAY['Active'::text, 'Inactive'::text])),
   last_login text NOT NULL DEFAULT 'Never'::text,
-  password text NOT NULL,
+  password text,
   must_change_password boolean NOT NULL DEFAULT false,
   avatar text,
   created_at timestamptz NOT NULL DEFAULT now(),
