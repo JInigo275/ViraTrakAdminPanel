@@ -16,6 +16,7 @@ import { DriverDetailPage } from "./pages/DriverDetailPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TestPage } from "./pages/TestPage";
+import { supabase } from "../api/supabaseClient";
 
 function AppInner() {
   const [loggedIn, setLoggedIn] = useState(false);
@@ -91,6 +92,7 @@ function AppInner() {
   if (currentUser?.mustChangePassword) return <ChangePasswordPage onDone={() => {}} />;
 
   function handleLogout() {
+    void supabase?.auth.signOut();
     setCurrentUser(null);
     setLoggedIn(false);
     setCurrentPage("dashboard");

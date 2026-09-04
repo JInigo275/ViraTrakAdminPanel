@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { usersApi, driversApi, DbUser, DbDriver, demoLoginUser } from "../../api/viratrak";
+import { supabase } from "../../api/supabaseClient";
 
 export type Role = "Superadmin" | "Administrator" | "Supervisor";
 
@@ -27,7 +28,6 @@ export interface Driver {
   lastName: string;
   vehicle: string;
   contact: string;
-  safetyScore: number;
 }
 
 export interface AppSettings {
@@ -91,7 +91,6 @@ function mapDriver(e: DbDriver): Driver {
     lastName: e.last_name,
     vehicle: e.vehicle,
     contact: e.contact,
-    safetyScore: e.safety_score,
   };
 }
 
@@ -133,28 +132,28 @@ const AppContext = createContext<AppContextType>({} as AppContextType);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<AppUser[]>(seedUsers);
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
-    try {
-      const sessionRaw = sessionStorage.getItem("currentUser");
-      if (sessionRaw) {
-        const user = JSON.parse(sessionRaw) as AppUser;
-        return { ...user, role: normalizeRole(String(user.role)) };
-      }
-      const stay = localStorage.getItem("stayLoggedIn");
-      if (stay === "true") {
-        const raw = localStorage.getItem("currentUser");
-        if (raw) {
-          const user = JSON.parse(raw) as AppUser;
-          return { ...user, role: normalizeRole(String(user.role)) };
-        }
-      }
-    } catch (e) {
-      // ignore
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [settings, setSettings] = useState<AppSettings>({ firstName: "Admin", lastName: "User" });
   const [dbReady, setDbReady] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    void supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user.email) return;
+      try {
+        const profile = await usersApi.getByEmail(session.user.email);
+        if (profile?.status === "Active") setCurrentUser(mapUser(profile));
+      } catch (error) {
+        console.error("Could not restore the Supabase session profile:", error);
+      }
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) setCurrentUser(null);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   // Load persisted app data on mount
   useEffect(() => {
@@ -220,7 +219,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function addDriver(e: Driver) {
     const db: DbDriver = {
       id: e.id, first_name: e.firstName, last_name: e.lastName,
-      vehicle: e.vehicle, contact: e.contact, safety_score: e.safetyScore,
+      vehicle: e.vehicle, contact: e.contact,
     };
     const saved = await driversApi.create(db);
     setDrivers((prev) => [...prev, mapDriver(saved)]);
@@ -232,7 +231,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.lastName !== undefined) dbPatch.last_name = patch.lastName;
     if (patch.vehicle !== undefined) dbPatch.vehicle = patch.vehicle;
     if (patch.contact !== undefined) dbPatch.contact = patch.contact;
-    if (patch.safetyScore !== undefined) dbPatch.safety_score = patch.safetyScore;
     const saved = await driversApi.update(id, dbPatch);
     setDrivers((prev) => prev.map((e) => e.id === id ? mapDriver(saved) : e));
   }

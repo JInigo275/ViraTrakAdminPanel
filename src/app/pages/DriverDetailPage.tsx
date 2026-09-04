@@ -147,8 +147,6 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
   if (!emp) return null;
 
   const fullName = `${emp.firstName} ${emp.lastName}`;
-  const scoreColor = emp.safetyScore >= 85 ? "#10B981" : emp.safetyScore >= 70 ? "#F59E0B" : "#EF4444";
-
   const summaries = periodSummaries[driverId] ?? defaultPeriodSummaries;
   const summary = summaries[period];
 
@@ -263,17 +261,6 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
             })}
           </div>
 
-          {/* Dashed footer — Safety Score */}
-          <div style={{ marginTop: 14, paddingTop: 12, borderTop: `2px dashed ${dark ? "#374151" : "#E5E7EB"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 13, color: textSub }}>Safety Score</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ width: 7, height: 7, borderRadius: "50%", background: scoreColor, display: "inline-block" }} />
-              <span style={{ fontSize: 18, fontWeight: 800, color: scoreColor, fontFamily: "monospace" }}>{emp.safetyScore}</span>
-              <span style={{ fontSize: 13, color: scoreColor, fontWeight: 600 }}>
-                {emp.safetyScore >= 85 ? "Excellent" : emp.safetyScore >= 70 ? "Fair" : "At Risk"}
-              </span>
-            </div>
-          </div>
         </div>
       </div>
 

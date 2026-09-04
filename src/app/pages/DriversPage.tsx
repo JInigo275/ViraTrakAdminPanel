@@ -37,18 +37,6 @@ function FloatField({ label, value, onChange, type = "text" }: { label: string; 
   );
 }
 
-function ScoreBar({ score, dark }: { score: number; dark: boolean }) {
-  const color = score >= 85 ? "#10B981" : score >= 70 ? "#F59E0B" : "#EF4444";
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div style={{ flex: 1, height: 6, background: dark ? "#374151" : "#E5E7EB", borderRadius: 3, overflow: "hidden", minWidth: 60 }}>
-        <div style={{ width: `${score}%`, height: "100%", background: color, borderRadius: 3 }} />
-      </div>
-      <span style={{ fontSize: 13, fontWeight: 700, color, width: 28 }}>{score}</span>
-    </div>
-  );
-}
-
 function KebabMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -106,7 +94,7 @@ function ReceiptModal({ driver, onClose }: { driver: Driver; onClose: () => void
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-          {[["Full Name", fullName], ["Driver ID", driver.id], ["Vehicle", driver.vehicle], ["Contact", driver.contact], ["Safety Score", `${driver.safetyScore} / 100`]].map(([label, val]) => (
+                 {[["Full Name", fullName], ["Driver ID", driver.id], ["Vehicle", driver.vehicle], ["Contact", driver.contact]].map(([label, val]) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: rowBg, borderRadius: 8 }}>
               <span style={{ fontSize: 13, color: textSub }}>{label}</span>
               <span style={{ fontSize: 14, fontWeight: 600, color: label === "Driver ID" ? "#1D6AE5" : textMain, fontFamily: label === "Driver ID" ? "monospace" : "inherit" }}>{val}</span>
@@ -116,7 +104,7 @@ function ReceiptModal({ driver, onClose }: { driver: Driver; onClose: () => void
 
         <div style={{ borderTop: `2px dashed ${dark ? "#374151" : "#E5E7EB"}`, paddingTop: 14, marginBottom: 16 }}>
           <div style={{ fontSize: 13, color: "#10B981", background: "#ECFDF5", padding: "8px 12px", borderRadius: 8 }}>
-            ✓ Driver ID auto-generated. Safety score starts at 100.
+            ✓ Driver ID auto-generated.
           </div>
         </div>
 
@@ -176,7 +164,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
     if (!form.vehicle.trim() || !form.contact.trim()) { setFormError("Vehicle and contact are required."); return; }
 
     if (modal === "add") {
-      const newDriver: Driver = { id: genDriverId(drivers), firstName: form.firstName.trim(), lastName: form.lastName.trim(), vehicle: form.vehicle.trim(), contact: form.contact.trim(), safetyScore: 100 };
+      const newDriver: Driver = { id: genDriverId(drivers), firstName: form.firstName.trim(), lastName: form.lastName.trim(), vehicle: form.vehicle.trim(), contact: form.contact.trim() };
       try {
         await addDriver(newDriver);
         setModal(null);
@@ -233,7 +221,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                   {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
                 </div>
               </th>
-              {["Driver Name", "Driver ID", "Vehicle", "Contact", "Safety Score", "Actions"].map((h, i) => (
+              {["Driver Name", "Driver ID", "Vehicle", "Contact", "Actions"].map((h, i) => (
                 <th key={i} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
@@ -259,7 +247,6 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                 <td style={{ padding: "11px 14px", fontSize: 13, color: "#1D6AE5", fontFamily: "monospace", fontWeight: 600 }}>{e.id}</td>
                 <td style={{ padding: "11px 14px", fontSize: 14, color: textMain, fontWeight: 500 }}>{e.vehicle}</td>
                 <td style={{ padding: "11px 14px", fontSize: 13, color: textSub }}>{e.contact}</td>
-                <td style={{ padding: "11px 14px", minWidth: 130 }}><ScoreBar score={e.safetyScore} dark={dark} /></td>
                 <td style={{ padding: "11px 14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                     {onViewDetail && (
@@ -283,7 +270,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {modal === "add" && (
               <div style={{ padding: "8px 12px", background: dark ? "#374151" : "#F0F9FF", borderRadius: 8, fontSize: 13, color: dark ? "#93C5FD" : "#0369A1" }}>
-                Driver ID is auto-generated. Safety score starts at 100.
+                Driver ID is auto-generated.
               </div>
             )}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>

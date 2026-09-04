@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Shield, Eye, EyeOff, Lock, CheckCircle } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import { supabase } from "../../api/supabaseClient";
 
 interface Props {
   onDone: () => void;
@@ -31,8 +32,11 @@ export function ChangePasswordPage({ onDone }: Props) {
     if (newPass !== confirmPass) { setError("Passwords do not match."); return; }
 
     try {
-      await updateUser(currentUser.id, { password: newPass, mustChangePassword: false });
-      setCurrentUser((prev) => prev ? { ...prev, password: newPass, mustChangePassword: false } : prev);
+      if (!supabase) throw new Error("Supabase is not configured.");
+      const { error } = await supabase.auth.updateUser({ password: newPass });
+      if (error) throw error;
+      await updateUser(currentUser.id, { mustChangePassword: false });
+      setCurrentUser((prev) => prev ? { ...prev, password: "", mustChangePassword: false } : prev);
       onDone();
     } catch (err) {
       console.error(err);

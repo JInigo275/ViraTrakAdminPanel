@@ -39,7 +39,7 @@ export const usersApi = {
       const client = requireSupabase();
       const { data, error } = await client
         .from("users")
-        .select("*")
+        .select("id, first_name, last_name, email, role, status, last_login, must_change_password, avatar")
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -48,6 +48,17 @@ export const usersApi = {
       console.warn("Falling back to the built-in admin account because Supabase users could not be loaded.", error);
       return [demoLoginUser];
     }
+  },
+  getByEmail: async (email: string) => {
+    const client = requireSupabase();
+    const { data, error } = await client
+      .from("users")
+      .select("id, first_name, last_name, email, role, status, last_login, must_change_password, avatar")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data as DbUser | null;
   },
   create: async (u: Omit<DbUser, "created_at">) => {
     const client = requireSupabase();
@@ -90,7 +101,6 @@ export type DbDriver = {
   last_name: string;
   vehicle: string;
   contact: string;
-  safety_score: number;
 };
 
 type RawDriver = {
@@ -143,6 +153,7 @@ async function fetchDriversWithVehicles(): Promise<RawDriver[]> {
   }));
 }
 
+<<<<<<< Updated upstream
 async function calculateSafetyScore(driverId: number): Promise<number> {
   // Query alerts related to this driver and calculate safety score
   const client = requireSupabase();
@@ -159,6 +170,8 @@ async function calculateSafetyScore(driverId: number): Promise<number> {
   return Math.max(0, Math.min(100, 85 - (highCount * 10)));
 }
 
+=======
+>>>>>>> Stashed changes
 function mapRawDriverToDbDriver(raw: RawDriver): DbDriver {
   return {
     id: String(raw.driver_id),
@@ -166,7 +179,6 @@ function mapRawDriverToDbDriver(raw: RawDriver): DbDriver {
     last_name: raw.last_name,
     vehicle: raw.vehicle?.[0]?.plate_number || raw.vehicle?.[0]?.model || "Unassigned",
     contact: raw.contact_info || "",
-    safety_score: 85, // Will be updated with actual calculation
   };
 }
 
@@ -174,17 +186,7 @@ export const driversApi = {
   list: async () => {
     try {
       const rawDrivers = await fetchDriversWithVehicles();
-      const drivers = rawDrivers.map(mapRawDriverToDbDriver);
-      
-      // Calculate safety scores in parallel
-      const withScores = await Promise.all(
-        drivers.map(async (d) => ({
-          ...d,
-          safety_score: await calculateSafetyScore(parseInt(d.id)),
-        }))
-      );
-      
-      return withScores;
+      return rawDrivers.map(mapRawDriverToDbDriver);
     } catch (error) {
       console.error("Error fetching drivers from schema2:", error);
       return [];

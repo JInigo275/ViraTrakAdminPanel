@@ -4,6 +4,7 @@ import { Camera, Eye, EyeOff, Check, Save, Settings } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp } from "../context/AppContext";
+import { supabase } from "../../api/supabaseClient";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const { dark } = useTheme();
@@ -77,13 +78,14 @@ export function SettingsPage() {
   async function changePassword() {
     setPassError("");
     if (!oldPass) { setPassError("Enter your current password."); return; }
-    if (oldPass !== currentUser?.password) { setPassError("Current password is incorrect."); return; }
+    if (!currentUser?.email || !supabase) { setPassError("Your session is unavailable. Please sign in again."); return; }
     if (newPass.length < 8) { setPassError("New password must be at least 8 characters."); return; }
     if (newPass !== confirmPass) { setPassError("Passwords do not match."); return; }
-    if (currentUser) {
-      updateUser(currentUser.id, { password: newPass }).catch(console.error);
-    }
-    setCurrentUser((prev) => prev ? { ...prev, password: newPass } : prev);
+    const { error: verifyError } = await supabase.auth.signInWithPassword({ email: currentUser.email, password: oldPass });
+    if (verifyError) { setPassError("Current password is incorrect."); return; }
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPass });
+    if (updateError) { setPassError("Could not save the new password. Please try again."); return; }
+    setCurrentUser((prev) => prev ? { ...prev, password: "" } : prev);
     setOldPass(""); setNewPass(""); setConfirmPass("");
     setPassSaved(true);
     setTimeout(() => setPassSaved(false), 2500);
