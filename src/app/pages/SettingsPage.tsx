@@ -3,8 +3,15 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { Camera, Eye, EyeOff, Check, Save, Settings } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
-import { useApp } from "../context/AppContext";
+import { useApp, Role } from "../context/AppContext";
 import { supabase } from "../../api/supabaseClient";
+import { formatName, validateName, validatePassword } from "../../utils/validation";
+
+const roleColors: Record<Role, { bg: string; color: string }> = {
+  Owner: { bg: "#FEF3C7", color: "#D97706" },
+  Administrator: { bg: "#EBF2FF", color: "#1D6AE5" },
+  Supervisor: { bg: "#F5F3FF", color: "#8B5CF6" },
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   const { dark } = useTheme();
@@ -56,6 +63,7 @@ export function SettingsPage() {
   const textMain = dark ? "#F9FAFB" : "#111827";
   const textSub = dark ? "#9CA3AF" : "#6B7280";
   const borderColor = dark ? "#374151" : "#F3F4F6";
+  const roleStyle = currentUser ? roleColors[currentUser.role] : roleColors.Supervisor;
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -66,10 +74,15 @@ export function SettingsPage() {
   }
 
   async function saveProfile() {
-    setSettings((p) => ({ ...p, firstName, lastName, avatar: avatar || undefined }));
-    setCurrentUser((prev) => prev ? { ...prev, firstName, lastName } : prev);
+    const validationError = validateName(firstName, "First name") || validateName(lastName, "Last name");
+    if (validationError) return;
+    const normalizedFirstName = formatName(firstName);
+    const normalizedLastName = formatName(lastName);
+    setFirstName(normalizedFirstName); setLastName(normalizedLastName);
+    setSettings((p) => ({ ...p, firstName: normalizedFirstName, lastName: normalizedLastName, avatar: avatar || undefined }));
+    setCurrentUser((prev) => prev ? { ...prev, firstName: normalizedFirstName, lastName: normalizedLastName } : prev);
     if (currentUser) {
-      updateUser(currentUser.id, { firstName, lastName }).catch(console.error);
+      updateUser(currentUser.id, { firstName: normalizedFirstName, lastName: normalizedLastName }).catch(console.error);
     }
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 2500);
@@ -79,7 +92,8 @@ export function SettingsPage() {
     setPassError("");
     if (!oldPass) { setPassError("Enter your current password."); return; }
     if (!currentUser?.email || !supabase) { setPassError("Your session is unavailable. Please sign in again."); return; }
-    if (newPass.length < 8) { setPassError("New password must be at least 8 characters."); return; }
+    const passwordError = validatePassword(newPass);
+    if (passwordError) { setPassError(passwordError); return; }
     if (newPass !== confirmPass) { setPassError("Passwords do not match."); return; }
     const { error: verifyError } = await supabase.auth.signInWithPassword({ email: currentUser.email, password: oldPass });
     if (verifyError) { setPassError("Current password is incorrect."); return; }
@@ -117,7 +131,7 @@ export function SettingsPage() {
             <div style={{ fontSize: 17, fontWeight: 700, color: textMain }}>{firstName} {lastName}</div>
             <div style={{ fontSize: 14, color: textSub, marginTop: 2 }}>{currentUser?.email}</div>
             <div style={{ marginTop: 6 }}>
-              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "#EBF2FF", color: "#1D6AE5" }}>{currentUser?.role}</span>
+              <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: roleStyle.bg, color: roleStyle.color }}>{currentUser?.role}</span>
             </div>
           </div>
         </div>

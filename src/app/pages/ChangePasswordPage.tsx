@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Shield, Eye, EyeOff, Lock, CheckCircle } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { supabase } from "../../api/supabaseClient";
+import { validatePassword } from "../../utils/validation";
 
 interface Props {
   onDone: () => void;
@@ -28,7 +29,8 @@ export function ChangePasswordPage({ onDone }: Props) {
     e.preventDefault();
     setError("");
     if (!currentUser) { setError("No user is currently signed in."); return; }
-    if (newPass.length < 8) { setError("Password must be at least 8 characters."); return; }
+    const passwordError = validatePassword(newPass);
+    if (passwordError) { setError(passwordError); return; }
     if (newPass !== confirmPass) { setError("Passwords do not match."); return; }
 
     try {

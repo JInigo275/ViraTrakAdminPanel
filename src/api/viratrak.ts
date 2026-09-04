@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { assertValid, formatName, formatPlate, formatPhone, validateEmail, validateName, validatePassword, validatePhone, validatePlate } from "../utils/validation";
 
 // ---------- Users ----------
 export type DbUser = {
@@ -6,7 +7,7 @@ export type DbUser = {
   first_name: string;
   last_name: string;
   email: string;
-  role: "Superadmin" | "Administrator" | "Supervisor";
+  role: "Owner" | "Administrator" | "Supervisor";
   status: "Active" | "Inactive";
   last_login: string;
   password: string;
@@ -15,11 +16,11 @@ export type DbUser = {
 };
 
 export const demoLoginUser: DbUser = {
-  id: "usr-superadmin-001",
+  id: "usr-owner-001",
   first_name: "Admin",
   last_name: "User",
   email: "admin@viratrak.com",
-  role: "Superadmin",
+  role: "Owner",
   status: "Active",
   last_login: "Never",
   password: "admin123",
@@ -62,9 +63,16 @@ export const usersApi = {
   },
   create: async (u: Omit<DbUser, "created_at">) => {
     const client = requireSupabase();
+    assertValid(validateName(u.first_name, "First name"));
+    assertValid(validateName(u.last_name, "Last name"));
+    assertValid(validateEmail(u.email));
+    if (u.password) assertValid(validatePassword(u.password));
+    const normalizedEmail = u.email.trim().toLowerCase();
+    const { data: existing } = await client.from("users").select("id").eq("email", normalizedEmail).maybeSingle();
+    if (existing) throw new Error("Email already exists.");
     const { data, error } = await client
       .from("users")
-      .insert(u as DbUser)
+      .insert({ ...u, first_name: formatName(u.first_name), last_name: formatName(u.last_name), email: normalizedEmail })
       .select("*")
       .single();
     
@@ -73,9 +81,13 @@ export const usersApi = {
   },
   update: async (id: string, patch: Partial<DbUser>) => {
     const client = requireSupabase();
+    if (patch.first_name !== undefined) assertValid(validateName(patch.first_name, "First name"));
+    if (patch.last_name !== undefined) assertValid(validateName(patch.last_name, "Last name"));
+    if (patch.email !== undefined) assertValid(validateEmail(patch.email));
+    if (patch.password) assertValid(validatePassword(patch.password));
     const { data, error } = await client
       .from("users")
-      .update(patch)
+      .update({ ...patch, ...(patch.first_name !== undefined ? { first_name: formatName(patch.first_name) } : {}), ...(patch.last_name !== undefined ? { last_name: formatName(patch.last_name) } : {}), ...(patch.email !== undefined ? { email: patch.email.trim().toLowerCase() } : {}) })
       .eq("id", id)
       .select("*")
       .single();
@@ -175,36 +187,60 @@ export const driversApi = {
   },
   create: async (e: Omit<DbDriver, "created_at">) => {
     const client = requireSupabase();
+    assertValid(validateName(e.first_name, "First name"));
+    assertValid(validateName(e.last_name, "Last name"));
+    assertValid(validatePlate(e.vehicle));
+    assertValid(validatePhone(e.contact));
+    const plate = formatPlate(e.vehicle);
+    const { data: existingVehicle } = await client.from("vehicle").select("vehicle_id").eq("plate_number", plate).maybeSingle();
+    if (existingVehicle) throw new Error("Vehicle plate already exists.");
     const { data, error } = await client
       .from("driver")
       .insert({
-        first_name: e.first_name,
-        last_name: e.last_name,
+        first_name: formatName(e.first_name),
+        last_name: formatName(e.last_name),
         license_number: `LIC-${Date.now()}`, // Generate placeholder
-        contact_info: e.contact,
+        contact_info: formatPhone(e.contact),
       })
       .select("*")
       .single();
     
     if (error) throw error;
+    const { error: vehicleError } = await client.from("vehicle").insert({ plate_number: plate, driver_id: data.driver_id });
+    if (vehicleError) throw vehicleError;
     
     const raw = data as RawDriver;
     return mapRawDriverToDbDriver(raw);
   },
   update: async (id: string, patch: Partial<DbDriver>) => {
     const client = requireSupabase();
+    if (patch.first_name !== undefined) assertValid(validateName(patch.first_name, "First name"));
+    if (patch.last_name !== undefined) assertValid(validateName(patch.last_name, "Last name"));
+    if (patch.vehicle !== undefined) assertValid(validatePlate(patch.vehicle));
+    if (patch.contact !== undefined) assertValid(validatePhone(patch.contact));
     const { data, error } = await client
       .from("driver")
       .update({
-        first_name: patch.first_name,
-        last_name: patch.last_name,
-        contact_info: patch.contact,
+        first_name: patch.first_name === undefined ? undefined : formatName(patch.first_name),
+        last_name: patch.last_name === undefined ? undefined : formatName(patch.last_name),
+        contact_info: patch.contact === undefined ? undefined : formatPhone(patch.contact),
       })
       .eq("driver_id", parseInt(id))
       .select("*")
       .single();
     
     if (error) throw error;
+    if (patch.vehicle !== undefined) {
+      const plate = formatPlate(patch.vehicle);
+      const { data: duplicate } = await client.from("vehicle").select("vehicle_id").eq("plate_number", plate).neq("driver_id", parseInt(id)).maybeSingle();
+      if (duplicate) throw new Error("Vehicle plate already exists.");
+      const { data: vehicle, error: vehicleLookupError } = await client.from("vehicle").select("vehicle_id").eq("driver_id", parseInt(id)).maybeSingle();
+      if (vehicleLookupError) throw vehicleLookupError;
+      const vehicleResult = vehicle
+        ? await client.from("vehicle").update({ plate_number: plate }).eq("vehicle_id", vehicle.vehicle_id)
+        : await client.from("vehicle").insert({ plate_number: plate, driver_id: parseInt(id) });
+      if (vehicleResult.error) throw vehicleResult.error;
+    }
     
     const raw = data as RawDriver;
     return mapRawDriverToDbDriver(raw);

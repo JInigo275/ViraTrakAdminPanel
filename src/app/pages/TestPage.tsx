@@ -5,6 +5,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { supabase } from "../../api/supabaseClient";
+import { formatName, formatPhone, formatPlate, validateEmail, validateName, validatePhone, validatePlate } from "../../utils/validation";
 
 type SubmitStatus = {
   kind: "idle" | "loading" | "success" | "error";
@@ -142,16 +143,18 @@ export function TestPage() {
 
     setUserStatus({ kind: "loading", message: "Creating user record..." });
     try {
+      const validationError = validateName(userFirstName, "First name") || validateName(userLastName, "Last name") || validateEmail(userEmail);
+      if (validationError) throw new Error(validationError);
       const uniqueSuffix = buildUniqueSuffix();
       const { error } = await supabase.from("users").insert({
         id: `test-user-${uniqueSuffix}`,
-        first_name: userFirstName.trim(),
-        last_name: userLastName.trim(),
+        first_name: formatName(userFirstName),
+        last_name: formatName(userLastName),
         email: buildUniqueEmail(userEmail, uniqueSuffix),
         role: userRole,
         status: "Active",
         last_login: new Date().toISOString(),
-        password: "test123",
+        password: "TestUser1!",
         must_change_password: false,
       });
       if (error) throw error;
@@ -170,6 +173,8 @@ export function TestPage() {
 
     setDriverStatus({ kind: "loading", message: "Creating driver and vehicle record..." });
     try {
+      const validationError = validateName(driverFirstName || "Test", "First name") || validateName(driverLastName || "Driver", "Last name") || validatePhone(contactInfo || "5550100000") || validatePlate(plateNumber || "TESTPLATE");
+      if (validationError) throw new Error(validationError);
       const uniqueSuffix = buildUniqueSuffix();
       const safeLicenseNumber = licenseNumber.trim() ? `${licenseNumber.trim()}-${uniqueSuffix}` : `TEST-LICENSE-${uniqueSuffix}`;
       const safePlateNumber = plateNumber.trim() ? `${plateNumber.trim()}-${uniqueSuffix}` : `TEST-PLATE-${uniqueSuffix}`;
@@ -179,7 +184,7 @@ export function TestPage() {
           first_name: driverFirstName.trim() || "Test",
           last_name: driverLastName.trim() || "Driver",
           license_number: safeLicenseNumber,
-          contact_info: contactInfo.trim() || "test@example.com",
+          contact_info: formatPhone(contactInfo || "5550100000"),
         })
         .select("driver_id")
         .single();
@@ -189,7 +194,7 @@ export function TestPage() {
       if (!driverId) throw new Error("Driver insert did not return an id");
 
       const { error: vehicleError } = await supabase.from("vehicle").insert({
-        plate_number: safePlateNumber,
+            plate_number: formatPlate(safePlateNumber),
         model: vehicleModel.trim(),
         driver_id: driverId,
       });
@@ -388,7 +393,7 @@ export function TestPage() {
               <option value="">Select a role</option>
               <option value="Supervisor">Supervisor</option>
               <option value="Administrator">Administrator</option>
-              <option value="Superadmin">Superadmin</option>
+              <option value="Owner">Owner</option>
             </select>
             <button onClick={submitUserForm} style={buttonStyle}>Submit to users</button>
             <StatusBox status={userStatus} />

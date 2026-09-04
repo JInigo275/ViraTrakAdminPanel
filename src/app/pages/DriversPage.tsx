@@ -4,6 +4,7 @@ import { Search, Plus, MoreVertical, Trash2, X, Check, BarChart2, Contact } from
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, Driver, genDriverId } from "../context/AppContext";
+import { formatName, formatPhone, formatPlate, validateName, validatePhone, validatePlate } from "../../utils/validation";
 
 interface DriversPageProps {
   onViewDetail?: (driverId: string) => void;
@@ -160,11 +161,12 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
   }
 
   async function handleSave() {
-    if (!form.firstName.trim() || !form.lastName.trim()) { setFormError("First and last name are required."); return; }
-    if (!form.vehicle.trim() || !form.contact.trim()) { setFormError("Vehicle and contact are required."); return; }
+    const validationError = validateName(form.firstName, "First name") || validateName(form.lastName, "Last name") || validatePlate(form.vehicle) || validatePhone(form.contact);
+    if (validationError) { setFormError(validationError); return; }
+    const normalized = { firstName: formatName(form.firstName), lastName: formatName(form.lastName), vehicle: formatPlate(form.vehicle), contact: formatPhone(form.contact) };
 
     if (modal === "add") {
-      const newDriver: Driver = { id: genDriverId(drivers), firstName: form.firstName.trim(), lastName: form.lastName.trim(), vehicle: form.vehicle.trim(), contact: form.contact.trim() };
+      const newDriver: Driver = { id: genDriverId(drivers), ...normalized };
       try {
         await addDriver(newDriver);
         setModal(null);
@@ -174,7 +176,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
       }
     } else if (modal === "edit" && editTarget) {
       try {
-        await updateDriver(editTarget.id, { firstName: form.firstName.trim(), lastName: form.lastName.trim(), vehicle: form.vehicle.trim(), contact: form.contact.trim() });
+        await updateDriver(editTarget.id, normalized);
         setModal(null);
       } catch (e) {
         setFormError("Failed to save. Please try again.");
@@ -277,8 +279,8 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
               <FloatField label="Driver First Name" value={form.firstName} onChange={(v) => setForm((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Driver Last Name" value={form.lastName} onChange={(v) => setForm((p) => ({ ...p, lastName: v }))} />
             </div>
-            <FloatField label="Vehicle (e.g. TRK-110)" value={form.vehicle} onChange={(v) => setForm((p) => ({ ...p, vehicle: v }))} />
-            <FloatField label="Contact Number" value={form.contact} onChange={(v) => setForm((p) => ({ ...p, contact: v }))} />
+            <FloatField label="Vehicle (e.g. TRK110)" value={form.vehicle} onChange={(v) => setForm((p) => ({ ...p, vehicle: formatPlate(v) }))} />
+            <FloatField label="Contact Number" value={form.contact} onChange={(v) => setForm((p) => ({ ...p, contact: formatPhone(v) }))} />
             {formError && <div style={{ fontSize: 14, color: "#EF4444", background: "#FEF2F2", padding: "8px 12px", borderRadius: 8 }}>{formError}</div>}
             <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
               <button onClick={() => setModal(null)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>

@@ -2,10 +2,9 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { usersApi, driversApi, DbUser, DbDriver, demoLoginUser } from "../../api/viratrak";
 import { supabase } from "../../api/supabaseClient";
 
-export type Role = "Superadmin" | "Administrator" | "Supervisor";
+export type Role = "Owner" | "Administrator" | "Supervisor";
 
 function normalizeRole(role: string): Role {
-  if (role === "Owner") return "Superadmin";
   return role as Role;
 }
 
@@ -60,13 +59,13 @@ export function getFullName(u: { firstName: string; lastName: string }) {
 }
 
 export function getAddableRoles(adderRole: Role): Role[] {
-  if (adderRole === "Superadmin") return ["Administrator", "Supervisor"];
+  if (adderRole === "Owner") return ["Administrator", "Supervisor"];
   if (adderRole === "Administrator") return ["Supervisor"];
   return [];
 }
 
 export function canManageUsers(role: Role): boolean {
-  return role === "Superadmin" || role === "Administrator";
+  return role === "Owner" || role === "Administrator";
 }
 
 // Map DB snake_case → app camelCase
@@ -139,7 +138,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
 
-    void supabase.auth.getSession().then(async ({ data: { session } }) => {
+    async function hydrateSession(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
       if (!session?.user.email) return;
       try {
         const profile = await usersApi.getByEmail(session.user.email);
@@ -147,10 +146,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("Could not restore the Supabase session profile:", error);
       }
-    });
+    }
+
+    void supabase.auth.getSession().then(({ data: { session } }) => hydrateSession(session));
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) setCurrentUser(null);
+      else void hydrateSession(session);
     });
     return () => listener.subscription.unsubscribe();
   }, []);

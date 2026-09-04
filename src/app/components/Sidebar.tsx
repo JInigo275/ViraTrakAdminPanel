@@ -8,13 +8,13 @@ import { useTheme, ThemeMode } from "../context/ThemeContext";
 import { useApp } from "../context/AppContext";
 
 const allNavItems = [
-  { icon: LayoutDashboard, label: "Dashboard",           id: "dashboard",  roles: ["Superadmin", "Administrator", "Supervisor"] },
-  { icon: Bell,            label: "Alerts & Evidence",   id: "alerts",     roles: ["Superadmin", "Administrator", "Supervisor"] },
-  { icon: TrendingUp,      label: "Analytics",            id: "analytics",  roles: ["Superadmin", "Administrator", "Supervisor"] },
-  { icon: Users,           label: "Users",                id: "users",      roles: ["Superadmin", "Administrator"] },
-  { icon: Contact,         label: "Driver Info",          id: "employees",  roles: ["Superadmin", "Administrator", "Supervisor"] },
-  { icon: ScrollText,      label: "System Logs",          id: "logs",       roles: ["Superadmin", "Administrator"] },
-  { icon: FlaskConical,    label: "Test Page",            id: "test",       roles: ["Superadmin", "Administrator", "Supervisor"] },
+  { icon: LayoutDashboard, label: "Dashboard",           id: "dashboard",  roles: ["Owner", "Administrator", "Supervisor"] },
+  { icon: Bell,            label: "Alerts & Evidence",   id: "alerts",     roles: ["Owner", "Administrator", "Supervisor"] },
+  { icon: TrendingUp,     label: "Analytics",            id: "analytics",  roles: ["Owner", "Administrator", "Supervisor"] },
+  { icon: Users,           label: "Users",                id: "users",      roles: ["Owner", "Administrator"] },
+  { icon: Contact,         label: "Driver Info",          id: "employees",  roles: ["Owner", "Administrator", "Supervisor"] },
+  { icon: ScrollText,      label: "System Logs",          id: "logs",       roles: ["Owner", "Administrator"] },
+  //{ icon: FlaskConical,    label: "Test Page",            id: "test",       roles: ["Owner", "Administrator", "Supervisor"] },
 ];
 
 const themeOptions: { value: ThemeMode; label: string; icon: typeof Monitor }[] = [
