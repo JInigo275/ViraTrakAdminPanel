@@ -198,6 +198,9 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
   const summaries = periodSummaries[driverId] ?? defaultPeriodSummaries;
   const summary = summaries[period];
   const alertHistory = liveAlerts ?? data.alerts;
+  const averageYawn = data.mar.reduce((sum, point) => sum + point.value, 0) / data.mar.length;
+  const averageBodyPosture = data.posture.reduce((sum, point) => sum + point.score, 0) / data.posture.length;
+  const averageHeadPose = data.headPose.reduce((sum, point) => sum + point.value, 0) / data.headPose.length;
 
   function Card({ title, subtitle, children, span }: { title: string; subtitle?: string; children: React.ReactNode; span?: string }) {
     return (
@@ -301,22 +304,22 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
                 status: summary.avgPerclos > 12 ? "danger" : summary.avgPerclos > 8 ? "warn" : "ok",
               },
               {
-                label: "Avg EAR",
-                value: summary.avgEAR.toFixed(2),
-                note: "Alert below: 0.20",
-                status: summary.avgEAR < 0.20 ? "danger" : summary.avgEAR < 0.24 ? "warn" : "ok",
-              },
-              {
-                label: "Avg MAR",
-                value: summary.avgMAR.toFixed(2),
+                label: "Avg Yawn",
+                value: averageYawn.toFixed(2),
                 note: "Alert above: 0.70",
-                status: summary.avgMAR > 0.70 ? "danger" : summary.avgMAR > 0.55 ? "warn" : "ok",
+                status: averageYawn > 0.70 ? "danger" : averageYawn > 0.55 ? "warn" : "ok",
               },
               {
-                label: "Total Alerts",
-                value: String(summary.totalAlerts),
-                note: period,
-                status: summary.totalAlerts > 5 ? "danger" : summary.totalAlerts > 2 ? "warn" : "ok",
+                label: "Avg Body Posture",
+                value: `${Math.round(averageBodyPosture)}`,
+                note: "Postural score out of 100",
+                status: averageBodyPosture < 60 ? "danger" : averageBodyPosture < 75 ? "warn" : "ok",
+              },
+              {
+                label: "Avg Head Pose",
+                value: `${Math.round(averageHeadPose)}°`,
+                note: "Average deviation",
+                status: averageHeadPose > 15 ? "danger" : averageHeadPose > 8 ? "warn" : "ok",
               },
             ].map(({ label, value, note, status }, i, arr) => {
               const color = status === "danger" ? "#EF4444" : status === "warn" ? "#F59E0B" : "#10B981";
@@ -378,16 +381,16 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 
 
 {/* ============================================================ */}
-        {/* EAR */}
+  {/* Yawn */}
         {/* ============================================================ */}
-        <Card title="Micro Sleep — EAR" subtitle="Eye Aspect Ratio — alert below 0.2">
+        <Card title="Yawn" subtitle="Mouth opening score — alert above 0.7">
           <ResponsiveContainer width="100%" height={150}>
-            <LineChart data={data.ear}>
+            <LineChart data={data.mar}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
               <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 0.4]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 1.5]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="value" name="EAR" stroke="#EF4444" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="value" name="Yawn" stroke="#EF4444" strokeWidth={2.5} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
@@ -395,16 +398,16 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 
 
 {/* ============================================================ */}
-        {/* MAR */}
+  {/* Body Posture */}
         {/* ============================================================ */}
-        <Card title="Yawn Detection — MAR" subtitle="Mouth Aspect Ratio — alert above 0.7">
+        <Card title="Body Posture" subtitle="Postural score by time">
           <ResponsiveContainer width="100%" height={150}>
-            <LineChart data={data.mar}>
+            <LineChart data={data.posture.map((point) => ({ time: point.metric, value: point.score }))}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
               <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 1.5]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="value" name="MAR" stroke="#8B5CF6" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="value" name="Body Posture" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
@@ -421,7 +424,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
               <XAxis dataKey="axis" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="value" name="Degrees" fill="#1D6AE5" radius={[4,4,0,0]} />
+              <Bar dataKey="value" name="Head Pose" fill="#8B5CF6" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>

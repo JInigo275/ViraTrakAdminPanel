@@ -69,9 +69,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     return () => window.removeEventListener("resize", h);
   }, []);
 
+
+
   // ============================================================
   // Authenticate the user, load the profile, and record the login event.
-
   // ============================================================
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -87,7 +88,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         return;
       }
 
-      const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
       if (authError) {
         console.error("Supabase login failed:", authError);
         setError(authError.message === "Invalid login credentials"
@@ -98,17 +99,18 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       }
 
       try {
+        if (!authData.user) throw new Error("Authenticated user information is unavailable.");
         const user = await usersApi.getByEmail(normalizedEmail);
         if (!user || user.status !== "Active") throw new Error("No active profile found.");
         const { error: auditError } = await supabase.from("system_log").insert({
-          message: "User logged in",
+          message: `${user.first_name} ${user.last_name}`.trim() + " logged in",
           log_type: "AUTH_LOGIN",
           timestamp: new Date().toISOString(),
-          actor_id: user.id,
+          actor_id: authData.user.id,
           actor_role: user.role,
           actor_name: `${user.first_name} ${user.last_name}`.trim(),
           entity_type: "AUTH",
-          entity_id: user.id,
+          entity_id: authData.user.id,
           operation: "LOGIN",
         });
         if (auditError) console.warn("Could not record login audit event:", auditError);
@@ -135,9 +137,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     })();
   }
 
+
   // ============================================================
   // Request a password reset or show the administrator contact path.
-
   // ============================================================
   async function handleForgotPassword() {
     setError("");
@@ -172,9 +174,9 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
 
 
-{/* ============================================================ */}
-      {/* Branding panel */}
-      {/* ============================================================ */}
+      {/* ============================================================ */
+       /* Branding panel */
+       /* ============================================================ */}
       <div style={{ flex: isMobile ? "none" : "0 0 480px", height: isMobile ? "100vh" : undefined, minHeight: isMobile ? "100vh" : undefined, background: "linear-gradient(145deg, #0f4bbf 0%, #1D6AE5 50%, #2e7cf6 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: isMobile ? "48px 32px" : "48px 52px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -80, right: -80, width: 320, height: 320, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
         <div style={{ position: "absolute", bottom: -60, left: -60, width: 260, height: 260, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
@@ -209,7 +211,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
 
 
-{/* ============================================================ */}
+      {/* ============================================================ */}
       {/* Form panel */}
       {/* ============================================================ */}
       <div style={{ flex: isMobile ? "none" : 1, height: isMobile ? "100vh" : undefined, minHeight: isMobile ? "100vh" : undefined, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? "40px 28px" : 40, background: "#F4F5F7" }}>
@@ -275,17 +277,3 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     </div>
   );
 }
-
-// End of region comment
-
-
-
-// ============================================================
-
-
-
-// update to main
-
-
-
-// ============================================================

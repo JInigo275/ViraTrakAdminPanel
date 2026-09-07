@@ -160,15 +160,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Load persisted app data on mount
+  // Load protected lists after authentication is available.
   useEffect(() => {
+    if (!currentUser) return;
+
+    setDbReady(false);
     Promise.all([
       usersApi.list().then((rows) => setUsers(rows.map(mapUser))),
       driversApi.list().then((rows) => setDrivers(rows.map(mapDriver))),
     ])
       .catch((e) => console.warn("Data load failed, using available data:", e))
       .finally(() => setDbReady(true));
-  }, []);
+  }, [currentUser]);
 
   // Persist currentUser in session storage while logged in, and in local storage only when stayLoggedIn is true.
   useEffect(() => {

@@ -10,6 +10,10 @@ interface Props {
 
 
 
+
+
+
+
 // ============================================================
 // Page logic and UI
 // ============================================================
@@ -33,7 +37,6 @@ export function ChangePasswordPage({ onDone }: Props) {
 
   // ============================================================
   // Validate and save the required first-login password change.
-
   // ============================================================
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,7 +76,9 @@ export function ChangePasswordPage({ onDone }: Props) {
 
 
 
-{/* ============================================================ */}
+
+
+          {/* ============================================================ */}
           {/* New password */}
           {/* ============================================================ */}
           <div style={{ position: "relative" }} onClick={() => (document.getElementById("np") as HTMLInputElement)?.focus()}>
@@ -96,7 +101,10 @@ export function ChangePasswordPage({ onDone }: Props) {
 
 
 
-{/* ============================================================ */}
+
+
+
+          {/* ============================================================ */}
           {/* Password rules */}
           {/* ============================================================ */}
           {newPass.length > 0 && (
@@ -112,7 +120,10 @@ export function ChangePasswordPage({ onDone }: Props) {
 
 
 
-{/* ============================================================ */}
+
+
+
+          {/* ============================================================ */}
           {/* Confirm password */}
           {/* ============================================================ */}
           <div style={{ position: "relative" }} onClick={() => (document.getElementById("cp") as HTMLInputElement)?.focus()}>
@@ -145,5 +156,3 @@ export function ChangePasswordPage({ onDone }: Props) {
     </div>
   );
 }
-
-// End of region comment

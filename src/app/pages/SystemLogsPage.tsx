@@ -59,6 +59,7 @@ export function SystemLogsPage() {
   const [levelFilter, setLevelFilter] = useState("All");
   const [sourceFilter, setSourceFilter] = useState("All");
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [showDeselectAll, setShowDeselectAll] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
 
   useEffect(() => {
@@ -93,8 +94,8 @@ export function SystemLogsPage() {
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
-  function selectAll()   { setSelected((prev) => { const s = new Set(prev); filtered.forEach((l) => s.add(l.id)); return s; }); }
-  function deselectAll() { setSelected((prev) => { const s = new Set(prev); filtered.forEach((l) => s.delete(l.id)); return s; }); }
+  function selectAll()   { setSelected((prev) => { const s = new Set(prev); filtered.forEach((l) => s.add(l.id)); return s; }); setShowDeselectAll(true); }
+  function deselectAll() { setSelected((prev) => { const s = new Set(prev); filtered.forEach((l) => s.delete(l.id)); return s; }); setShowDeselectAll(false); }
 
   const printData = selected.size > 0 ? filtered.filter((l) => selected.has(l.id)) : filtered;
 
@@ -196,8 +197,10 @@ export function SystemLogsPage() {
       {filtered.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
           <button onClick={selectAll} style={{ fontSize: 13, color: "#1D6AE5", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Select All</button>
-          <span style={{ color: dark ? "#4B5563" : "#D1D5DB" }}>·</span>
-          <button onClick={deselectAll} style={{ fontSize: 13, color: textSub, background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Deselect All</button>
+          {showDeselectAll && <>
+            <span style={{ color: dark ? "#4B5563" : "#D1D5DB" }}>·</span>
+            <button onClick={deselectAll} style={{ fontSize: 13, color: textSub, background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Deselect All</button>
+          </>}
           {selected.size > 0 && <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for export</span>}
           <span style={{ fontSize: 13, color: textSub, marginLeft: "auto" }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""}</span>
         </div>

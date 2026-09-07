@@ -169,6 +169,7 @@ export function AlertsPage() {
   const [perPage, setPerPage] = useState<PageOption>(10);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [showDeselectAll, setShowDeselectAll] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [showPerPageMenu, setShowPerPageMenu] = useState(false);
   const perPageRef = useRef<HTMLDivElement>(null);
@@ -226,8 +227,8 @@ export function AlertsPage() {
   function clearFilters() { setFilterType(""); setFilterDriver(""); setFilterVehicle(""); setFilterDate(""); setFilterSeverity(""); setFilterEvidence(""); setPage(1); }
 
   function toggleOne(id: number) { setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
-  function selectAll() { setSelected(new Set(paginated.map((a) => a.id))); }
-  function deselectAll() { setSelected(new Set()); }
+  function selectAll() { setSelected(new Set(paginated.map((a) => a.id))); setShowDeselectAll(true); }
+  function deselectAll() { setSelected(new Set()); setShowDeselectAll(false); }
   const allChecked = paginated.length > 0 && paginated.every((a) => selected.has(a.id));
   const someChecked = paginated.some((a) => selected.has(a.id));
 
@@ -342,8 +343,10 @@ export function AlertsPage() {
       {paginated.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
           <button onClick={selectAll} style={{ fontSize: 13, color: "#1D6AE5", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Select All</button>
-          <span style={{ color: dark ? "#4B5563" : "#D1D5DB" }}>·</span>
-          <button onClick={deselectAll} style={{ fontSize: 13, color: textSub, background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Deselect All</button>
+          {showDeselectAll && <>
+            <span style={{ color: dark ? "#4B5563" : "#D1D5DB" }}>·</span>
+            <button onClick={deselectAll} style={{ fontSize: 13, color: textSub, background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Deselect All</button>
+          </>}
           {selected.size > 0 && <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for PDF</span>}
         </div>
       )}

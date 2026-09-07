@@ -110,13 +110,46 @@ DROP POLICY IF EXISTS "authenticated users can record own login" ON public.syste
 CREATE POLICY "role-scoped audit log read"
   ON public.system_log FOR SELECT TO authenticated
   USING (
-    (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Owner'
+    (
+      select coalesce(
+        (
+          select u.role
+          from public.users u
+          where u.id = auth.uid()::text
+             or lower(u.email) = lower((select auth.jwt() ->> 'email'))
+          limit 1
+        ),
+        auth.jwt() -> 'app_metadata' ->> 'role'
+      )
+    ) = 'Owner'
     OR (
-      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Administrator'
+      (
+        select coalesce(
+          (
+            select u.role
+            from public.users u
+            where u.id = auth.uid()::text
+               or lower(u.email) = lower((select auth.jwt() ->> 'email'))
+            limit 1
+          ),
+          auth.jwt() -> 'app_metadata' ->> 'role'
+        )
+      ) = 'Administrator'
       AND actor_role IN ('Administrator', 'Supervisor')
     )
     OR (
-      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Supervisor'
+      (
+        select coalesce(
+          (
+            select u.role
+            from public.users u
+            where u.id = auth.uid()::text
+               or lower(u.email) = lower((select auth.jwt() ->> 'email'))
+            limit 1
+          ),
+          auth.jwt() -> 'app_metadata' ->> 'role'
+        )
+      ) = 'Supervisor'
       AND actor_role = 'Supervisor'
     )
     -- Hardware/system diagnostics do not have an end-user actor.
@@ -127,7 +160,18 @@ CREATE POLICY "authenticated users can record own login"
   ON public.system_log FOR INSERT TO authenticated
   WITH CHECK (
     actor_id = (select auth.uid())::text
-    AND actor_role = (select auth.jwt() -> 'app_metadata' ->> 'role')
+    AND actor_role = (
+      select coalesce(
+        (
+          select u.role
+          from public.users u
+          where u.id = auth.uid()::text
+             or lower(u.email) = lower((select auth.jwt() ->> 'email'))
+          limit 1
+        ),
+        auth.jwt() -> 'app_metadata' ->> 'role'
+      )
+    )
     AND operation = 'LOGIN'
     AND entity_type = 'AUTH'
     AND log_type = 'AUTH_LOGIN'

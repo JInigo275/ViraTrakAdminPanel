@@ -134,7 +134,7 @@ type DriverQueryRow = {
 };
 
 type RawDevice = {
-  device_id: number;
+  device_id: string;
   vehicle?: {
     plate_number: string;
     driver?: { first_name: string; last_name: string }[];
@@ -267,6 +267,14 @@ export type DbAlert = {
   time: string;
   severity: "High" | "Moderate" | "Low";
   evidence: boolean;
+  evidenceDetails?: {
+    eventId: string;
+    timestamp: string;
+    deviceId: string | null;
+    imageUrl: string | null;
+    triggeredMetrics: string[];
+    driverState: string | null;
+  };
   icon_color: string;
   icon_bg: string;
 };
@@ -281,7 +289,14 @@ type RawAlert = {
     event_id: string;
     recorded_evidence?: {
       timestamp: string;
-      device_id: number;
+      device_id: string;
+    }[];
+    detection_events?: {
+      created_at: string;
+      device_id: string;
+      screenshot_url: string | null;
+      triggered_metrics: string[];
+      driver_state: string | null;
     }[];
   }[];
   device?: {
@@ -304,7 +319,14 @@ type AlertQueryRow = {
   detection?: {
     timestamp: string;
     event_id: string;
-    recorded_evidence?: { timestamp: string; device_id: number }[];
+    recorded_evidence?: { timestamp: string; device_id: string }[];
+    detection_events?: {
+      created_at: string;
+      device_id: string;
+      screenshot_url: string | null;
+      triggered_metrics: string[];
+      driver_state: string | null;
+    }[];
   }[];
 };
 
@@ -372,7 +394,10 @@ async function fetchAlertsWithRelations(): Promise<RawAlert[]> {
 }
 
 function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: string): DbAlert {
-  const timestamp = raw.timestamp || raw.detection?.[0]?.timestamp || raw.detection?.[0]?.recorded_evidence?.[0]?.timestamp || new Date().toISOString();
+  const detection = raw.detection?.[0];
+  const evidence = detection?.recorded_evidence?.[0];
+  const detectionEvent = detection?.detection_events?.[0];
+  const timestamp = raw.timestamp || detection?.timestamp || evidence?.timestamp || detectionEvent?.created_at || new Date().toISOString();
   const date = new Date(timestamp).toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
@@ -395,7 +420,17 @@ function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: st
     date,
     time,
     severity,
-    evidence: true,
+    evidence: Boolean(evidence || detectionEvent?.screenshot_url),
+    evidenceDetails: evidence || detectionEvent
+      ? {
+          eventId: detection?.event_id || "Unavailable",
+          timestamp,
+          deviceId: evidence?.device_id || detectionEvent?.device_id || null,
+          imageUrl: detectionEvent?.screenshot_url || null,
+          triggeredMetrics: detectionEvent?.triggered_metrics || [],
+          driverState: detectionEvent?.driver_state || null,
+        }
+      : undefined,
     icon_color: iconMap.color,
     icon_bg: iconMap.bg,
   };
@@ -436,6 +471,13 @@ export const alertsApi = {
             recorded_evidence(
               timestamp,
               device_id
+            ),
+            detection_events(
+              created_at,
+              device_id,
+              screenshot_url,
+              triggered_metrics,
+              driver_state
             )
           )
         `)
@@ -516,6 +558,30 @@ export const alertsApi = {
   },
 };
 
+// ---------- Detection Metrics ----------
+export type DbMetric = {
+  timestamp: string;
+  perclos: number | null;
+  blink_rate: number | null;
+  yawn: number | null;
+  body_posture: number | null;
+  head_pose: number | null;
+};
+
+export const metricsApi = {
+  list: async () => {
+    const client = requireSupabase();
+    const { data, error } = await client
+      .from("detection")
+      .select("timestamp, perclos, blink_rate, yawn, body_posture, head_pose")
+      .order("timestamp", { ascending: false })
+      .limit(30);
+
+    if (error) throw error;
+    return (data ?? []) as DbMetric[];
+  },
+};
+
 // ---------- System Logs ----------
 export type DbLog = {
   id: number;
@@ -565,6 +631,7 @@ function mapSystemLogToDbLog(raw: RawSystemLog): DbLog {
   const time = timestamp.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     hour12: false,
   });
   
@@ -590,6 +657,7 @@ function mapBehaviorLogToDbLog(raw: RawBehaviorLog): DbLog {
   const time = timestamp.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     hour12: false,
   });
   
