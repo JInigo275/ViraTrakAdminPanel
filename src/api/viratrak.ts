@@ -525,6 +525,7 @@ export type DbLog = {
   level: "INFO" | "WARNING" | "ERROR";
   ref: string;
   action: string;
+  actor: string;
 };
 
 type RawSystemLog = {
@@ -533,6 +534,9 @@ type RawSystemLog = {
   log_type: string;
   timestamp: string;
   device_id: number | null;
+  actor_role: string | null;
+  actor_name: string | null;
+  operation: string | null;
 };
 
 type RawBehaviorLog = {
@@ -572,6 +576,7 @@ function mapSystemLogToDbLog(raw: RawSystemLog): DbLog {
     level: determineLogLevel(raw.log_type),
     ref: raw.log_type || "SYSTEM",
     action: raw.message,
+    actor: raw.actor_name || raw.actor_role || "System",
   };
 }
 
@@ -596,6 +601,7 @@ function mapBehaviorLogToDbLog(raw: RawBehaviorLog): DbLog {
     level: "INFO",
     ref: raw.alert_id ? `ALERT_${raw.alert_id}` : "BEHAVIOR",
     action: raw.message,
+    actor: "System",
   };
 }
 
@@ -607,7 +613,7 @@ export const logsApi = {
       // Fetch system logs
       const { data: sysLogs, error: sysError } = await client
         .from("system_log")
-        .select("systemlog_id, message, log_type, timestamp, device_id")
+        .select("systemlog_id, message, log_type, timestamp, device_id, actor_role, actor_name, operation")
         .order("timestamp", { ascending: false });
       
       if (sysError) throw sysError;

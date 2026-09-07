@@ -7,6 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { supabase } from "../../api/supabaseClient";
 import { formatName, formatPhone, formatPlate, validateEmail, validateName, validatePhone, validatePlate } from "../../utils/validation";
 
+
+
+// ============================================================
+// Test helpers and types
+// ============================================================
+
 type SubmitStatus = {
   kind: "idle" | "loading" | "success" | "error";
   message: string;
@@ -57,6 +63,17 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// Database test controls for users, drivers, alerts, and system logs.
+// ============================================================
 export function TestPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -542,6 +559,15 @@ export function TestPage() {
   );
 }
 
+// End of region comment
+
+
+
+// ============================================================
+// Shared test UI
+// ============================================================
+
+
 function FormCard({ icon: Icon, title, subtitle, children, dark, textMain, textSub, border, cardBg }: { icon: ElementType; title: string; subtitle: string; children: ReactNode; dark: boolean; textMain: string; textSub: string; border: string; cardBg: string }) {
   return (
     <div style={{ background: cardBg, borderRadius: 16, padding: 20, border: `1px solid ${border}`, boxShadow: dark ? "0 1px 4px rgba(0,0,0,0.25)" : "0 1px 4px rgba(0,0,0,0.07)" }}>
@@ -584,4 +610,5 @@ const buttonStyle: CSSProperties = {
   cursor: "pointer",
 };
 
-//
+
+// End of region comment

@@ -7,6 +7,12 @@ import { useApp, Role } from "../context/AppContext";
 import { supabase } from "../../api/supabaseClient";
 import { formatName, validateName, validatePassword } from "../../utils/validation";
 
+
+
+// ============================================================
+// Form components
+// ============================================================
+
 const roleColors: Record<Role, { bg: string; color: string }> = {
   Owner: { bg: "#FEF3C7", color: "#D97706" },
   Administrator: { bg: "#EBF2FF", color: "#1D6AE5" },
@@ -39,6 +45,17 @@ function FloatField({ label, value, onChange, type = "text", suffix }: { label: 
   );
 }
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// Profile details, avatar updates, and password changes.
+// ============================================================
 export function SettingsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -115,7 +132,11 @@ export function SettingsPage() {
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
       <PageHeader icon={Settings} iconColor="#1D6AE5" title="Settings" subtitle="Manage your profile and security" />
 
+
+
+{/* ============================================================ */}
       {/* Profile */}
+      {/* ============================================================ */}
       <Section title="Profile">
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 20 }}>
           <div style={{ position: "relative" }}>
@@ -149,7 +170,11 @@ export function SettingsPage() {
         </div>
       </Section>
 
+
+
+{/* ============================================================ */}
       {/* Password */}
+      {/* ============================================================ */}
       <Section title="Change Password">
         <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: isMobile ? "100%" : 420 }}>
           <FloatField label="Current Password" type={showOld ? "text" : "password"} value={oldPass} onChange={setOldPass} suffix={eyeBtn(showOld, () => setShowOld((v) => !v))} />
@@ -165,3 +190,5 @@ export function SettingsPage() {
     </div>
   );
 }
+
+// End of region comment

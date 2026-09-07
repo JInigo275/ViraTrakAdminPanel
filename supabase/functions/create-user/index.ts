@@ -68,6 +68,23 @@ Deno.serve(async (request) => {
       throw profileError;
     }
 
+    const { error: auditError } = await adminClient.from("system_log").insert({
+      message: `users create ${authData.user.id}`,
+      log_type: "AUDIT_INSERT",
+      timestamp: new Date().toISOString(),
+      actor_id: caller.id,
+      actor_role: callerRole,
+      actor_name: caller.user_metadata?.full_name ?? caller.email ?? "",
+      entity_type: "users",
+      entity_id: authData.user.id,
+      operation: "INSERT",
+    });
+    if (auditError) {
+      await adminClient.from("users").delete().eq("id", authData.user.id);
+      await adminClient.auth.admin.deleteUser(authData.user.id);
+      throw auditError;
+    }
+
     return new Response(JSON.stringify({ profile, temporaryPassword: password }), { status: 201, headers });
   } catch (error) {
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Could not create user." }), { status: 400, headers });

@@ -10,6 +10,14 @@ interface DashboardPageProps {
   isMobile?: boolean;
 }
 
+
+
+// ============================================================
+// Page UI
+// ============================================================
+// ============================================================
+// Main dashboard layout and responsive panel placement.
+// ============================================================
 export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
   const { dark } = useTheme();
   const bg = dark ? "#111827" : "#F4F5F7";
@@ -19,13 +27,21 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
   return (
     <div style={{ display: "flex", flex: 1, overflow: "hidden", flexDirection: isMobile ? "column" : "row" }}>
 
+
+
+{/* ============================================================ */}
       {/* Main scrollable content */}
+      {/* ============================================================ */}
       <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 20, display: "flex", flexDirection: "column", gap: 16, background: bg, transition: "background 0.2s" }}>
         <PageHeader icon={LayoutDashboard} iconColor="#1D6AE5" title="Dashboard" subtitle="Overview of driver behavior and system status" />
         <StatCards />
         <RecentEvents onViewAll={onNavigate ? () => onNavigate("alerts") : undefined} />
 
+
+
+{/* ============================================================ */}
         {/* Right panel rendered inline below on mobile */}
+        {/* ============================================================ */}
         {isMobile && (
           <div style={{ background: rightBg, borderRadius: 12, padding: 16, transition: "background 0.2s" }}>
             <RightPanel />
@@ -33,7 +49,11 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
         )}
       </main>
 
+
+
+{/* ============================================================ */}
       {/* Right panel as sidebar on desktop only */}
+      {/* ============================================================ */}
       {!isMobile && (
         <aside style={{ width: 340, minWidth: 340, borderLeft: `1px solid ${rightBorder}`, background: rightBg, padding: 16, overflow: "hidden", display: "flex", flexDirection: "column", transition: "background 0.2s" }}>
           <RightPanel />
@@ -42,3 +62,5 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
     </div>
   );
 }
+
+// End of region comment

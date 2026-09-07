@@ -6,6 +6,12 @@ import { useTheme } from "../context/ThemeContext";
 import { useApp, Driver, genDriverId } from "../context/AppContext";
 import { formatName, formatPhone, formatLocalPhoneDisplay, formatPlate, validateName, validatePhone, validatePlate } from "../../utils/validation";
 
+
+
+// ============================================================
+// Helpers and form components
+// ============================================================
+
 interface DriversPageProps {
   onViewDetail?: (driverId: string) => void;
 }
@@ -327,6 +333,17 @@ Zimbabwe|+263`.split("\n").map((entry) => {
   return { name, code };
 });
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// Driver list, add/edit forms, deletion, and detail navigation.
+// ============================================================
 export function DriversPage({ onViewDetail }: DriversPageProps) {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -542,3 +559,5 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
     </div>
   );
 }
+
+// End of region comment

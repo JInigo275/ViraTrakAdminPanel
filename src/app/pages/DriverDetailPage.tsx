@@ -10,6 +10,14 @@ import {
   BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend,
 } from "recharts";
 
+
+
+// ============================================================
+// Driver data
+// ============================================================
+// ============================================================
+// Replace this dataset or connect it to the driver detail API here.
+// ============================================================
 const driverData: Record<string, {
   alerts: { icon: typeof Wind; iconColor: string; iconBg: string; type: string; date: string; time: string; severity: string }[];
   blink: { time: string; rate: number }[];
@@ -90,7 +98,9 @@ type PeriodSummary = {
   safetyTrend: "up" | "down" | "stable";
 };
 
+// ============================================================
 // Per-period summaries derived from time-stamped data
+// ============================================================
 const periodSummaries: Record<string, Record<PeriodKey, PeriodSummary>> = {
   "drv-001": {
     "Today":      { avgBlink: 11, avgPerclos: 10.2, avgEAR: 0.23, avgMAR: 0.67, totalAlerts: 1,  safetyTrend: "down"   },
@@ -126,8 +136,27 @@ const sevMap: Record<string, { bg: string; color: string }> = {
   Low:      { bg: "#ECFDF5", color: "#10B981" },
 };
 
+
+// End of region comment
+
+
+
+
+
+
+
+
+
 interface Props { driverId: string; onBack: () => void; }
 
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// Selected driver profile, alert history, and performance charts.
+// ============================================================
 export function DriverDetailPage({ driverId, onBack }: Props) {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -190,7 +219,11 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
         </button>
       </PageHeader>
 
+
+
+{/* ============================================================ */}
       {/* Profile card */}
+      {/* ============================================================ */}
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, padding: "18px 22px", marginBottom: 16, display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", gap: 16 }}>
         <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 19, fontWeight: 700, flexShrink: 0 }}>
           {(emp.firstName[0] ?? "") + (emp.lastName[0] ?? "")}
@@ -201,9 +234,18 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
         </div>
       </div>
 
+
+
+{/* ============================================================ */}
       {/* Metrics receipt card */}
+      {/* ============================================================ */}
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, marginBottom: 20, overflow: "hidden" }}>
+
+
+
+{/* ============================================================ */}
         {/* Period selector */}
+        {/* ============================================================ */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: `1px solid ${borderColor}` }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: textMain }}>Metrics Summary</span>
           <div style={{ display: "flex", gap: 4 }}>
@@ -216,9 +258,18 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
           </div>
         </div>
 
+
+
+{/* ============================================================ */}
         {/* Receipt body */}
+        {/* ============================================================ */}
         <div style={{ padding: "16px 18px" }}>
+
+
+
+{/* ============================================================ */}
           {/* Dashed header */}
+          {/* ============================================================ */}
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, paddingBottom: 12, borderBottom: `2px dashed ${dark ? "#374151" : "#E5E7EB"}` }}>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: textMain }}>{fullName}</div>
@@ -230,7 +281,11 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
             </div>
           </div>
 
+
+
+{/* ============================================================ */}
           {/* Metric rows */}
+          {/* ============================================================ */}
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {[
               {
@@ -285,7 +340,12 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 16 }}>
+
+
+
+{/* ============================================================ */}
         {/* Blink Rate */}
+        {/* ============================================================ */}
         <Card title="Blink Rate" subtitle="Blinks/min — normal: 15–20 bpm">
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.blink}>
@@ -298,7 +358,11 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
           </ResponsiveContainer>
         </Card>
 
+
+
+{/* ============================================================ */}
         {/* PERCLOS */}
+        {/* ============================================================ */}
         <Card title="Eye Closure — PERCLOS" subtitle="% time eyes closed — threshold: 10%">
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.perclos}>
@@ -311,7 +375,11 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
           </ResponsiveContainer>
         </Card>
 
+
+
+{/* ============================================================ */}
         {/* EAR */}
+        {/* ============================================================ */}
         <Card title="Micro Sleep — EAR" subtitle="Eye Aspect Ratio — alert below 0.2">
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.ear}>
@@ -324,7 +392,11 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
           </ResponsiveContainer>
         </Card>
 
+
+
+{/* ============================================================ */}
         {/* MAR */}
+        {/* ============================================================ */}
         <Card title="Yawn Detection — MAR" subtitle="Mouth Aspect Ratio — alert above 0.7">
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.mar}>
@@ -337,7 +409,11 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
           </ResponsiveContainer>
         </Card>
 
+
+
+{/* ============================================================ */}
         {/* Head Pose */}
+        {/* ============================================================ */}
         <Card title="Head Pose" subtitle="Pitch, Yaw, Roll deviation (degrees)">
           <ResponsiveContainer width="100%" height={150}>
             <BarChart data={data.headPose}>
@@ -350,7 +426,11 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
           </ResponsiveContainer>
         </Card>
 
+
+
+{/* ============================================================ */}
         {/* Body Posture */}
+        {/* ============================================================ */}
         <Card title="Body Posture" subtitle="Postural scoring by body zone">
           <ResponsiveContainer width="100%" height={150}>
             <RadarChart data={data.posture} cx="50%" cy="50%" outerRadius={55}>
@@ -363,7 +443,11 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
           </ResponsiveContainer>
         </Card>
 
+
+
+{/* ============================================================ */}
         {/* Alerts history */}
+        {/* ============================================================ */}
         <Card title="Alert History" subtitle="All recorded events for this driver" span={isMobile ? undefined : "1 / -1"}>
           {alertHistory.length === 0 ? (
             <div style={{ textAlign: "center", padding: "24px 0", fontSize: 14, color: textSub }}>No alerts recorded for this driver.</div>
@@ -408,3 +492,5 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
     </div>
   );
 }
+
+// End of region comment

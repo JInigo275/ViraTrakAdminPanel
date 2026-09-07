@@ -8,6 +8,12 @@ interface Props {
   onDone: () => void;
 }
 
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+
 export function ChangePasswordPage({ onDone }: Props) {
   const { currentUser, setCurrentUser, updateUser } = useApp();
   const [newPass, setNewPass] = useState("");
@@ -25,6 +31,10 @@ export function ChangePasswordPage({ onDone }: Props) {
     { label: "Contains a special character", ok: /[^A-Za-z0-9]/.test(newPass) },
   ];
 
+  // ============================================================
+  // Validate and save the required first-login password change.
+
+  // ============================================================
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -55,12 +65,17 @@ export function ChangePasswordPage({ onDone }: Props) {
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", marginBottom: 6, textAlign: "center" }}>Set Your Password</h1>
           <p style={{ fontSize: 14, color: "#6B7280", textAlign: "center", lineHeight: 1.5 }}>
-            Welcome, <strong>{currentUser?.name}</strong>! You're using a temporary password.<br />Please set a new one before continuing.
+            Welcome, <strong>{`${currentUser?.firstName ?? ""} ${currentUser?.lastName ?? ""}`.trim()}</strong>! You're using a temporary password.<br />Please set a new one before continuing.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+
+
+{/* ============================================================ */}
           {/* New password */}
+          {/* ============================================================ */}
           <div style={{ position: "relative" }} onClick={() => (document.getElementById("np") as HTMLInputElement)?.focus()}>
             <input
               id="np"
@@ -79,7 +94,11 @@ export function ChangePasswordPage({ onDone }: Props) {
             </button>
           </div>
 
+
+
+{/* ============================================================ */}
           {/* Password rules */}
+          {/* ============================================================ */}
           {newPass.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 5, padding: "10px 12px", background: "#F8F9FA", borderRadius: 8 }}>
               {rules.map((r) => (
@@ -91,7 +110,11 @@ export function ChangePasswordPage({ onDone }: Props) {
             </div>
           )}
 
+
+
+{/* ============================================================ */}
           {/* Confirm password */}
+          {/* ============================================================ */}
           <div style={{ position: "relative" }} onClick={() => (document.getElementById("cp") as HTMLInputElement)?.focus()}>
             <input
               id="cp"
@@ -122,3 +145,5 @@ export function ChangePasswordPage({ onDone }: Props) {
     </div>
   );
 }
+
+// End of region comment

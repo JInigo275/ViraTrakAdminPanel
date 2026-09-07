@@ -9,7 +9,18 @@ import autoTable from "jspdf-autotable";
 import { PDFPreviewModal } from "../components/PDFPreviewModal";
 import { alertsApi, DbAlert } from "../../api/viratrak";
 
+// ============================================================
 // Map alert type → icon component
+// ============================================================
+
+
+
+// ============================================================
+// Helpers and filters
+// ============================================================
+// ============================================================
+// Edit alert-type icons and labels here.
+// ============================================================
 const typeIconMap: Record<string, React.ElementType> = {
   "Yawning":      Wind,
   "Eyes Closed":  EyeOff,
@@ -131,6 +142,17 @@ function SimpleDropdown({ label, value, onChange, options, openKey, activeKey, s
   );
 }
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// Alert filters, pagination, selection, and report exports.
+// ============================================================
 export function AlertsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -192,7 +214,10 @@ export function AlertsPage() {
     return true;
   });
 
+  // ============================================================
   // Alphabetical sort by driver
+
+  // ============================================================
   filtered = [...filtered].sort((a, b) => a.driver.localeCompare(b.driver));
 
   const totalPages = perPage === "All" ? 1 : Math.ceil(filtered.length / (perPage as number));
@@ -251,7 +276,11 @@ export function AlertsPage() {
         </button>
       </PageHeader>
 
+
+
+{/* ============================================================ */}
       {/* Filter bar */}
+      {/* ============================================================ */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <button onClick={() => setShowFilters((v) => !v)}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: showFilters ? "#1D6AE5" : (dark ? "#374151" : "#fff"), color: showFilters ? "#fff" : textSub, border: `1px solid ${showFilters ? "#1D6AE5" : (dark ? "#4B5563" : "#E5E7EB")}`, borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
@@ -264,7 +293,11 @@ export function AlertsPage() {
         )}
         <span style={{ fontSize: 13, color: textSub, marginLeft: 4 }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""} · Sorted A–Z by driver</span>
 
+
+
+{/* ============================================================ */}
         {/* Per page */}
+        {/* ============================================================ */}
         <div ref={perPageRef} style={{ position: "relative", marginLeft: "auto" }}>
           <div onClick={() => setShowPerPageMenu((v) => !v)}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: dark ? "#374151" : "#fff", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 13, color: textSub, cursor: "pointer", userSelect: "none" }}>
@@ -301,7 +334,11 @@ export function AlertsPage() {
         </div>
       )}
 
+
+
+{/* ============================================================ */}
       {/* Select all / deselect */}
+      {/* ============================================================ */}
       {paginated.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
           <button onClick={selectAll} style={{ fontSize: 13, color: "#1D6AE5", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Select All</button>
@@ -371,7 +408,11 @@ export function AlertsPage() {
         </div>
       </div>
 
+
+
+{/* ============================================================ */}
       {/* Pagination */}
+      {/* ============================================================ */}
       {perPage !== "All" && totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14 }}>
           <span style={{ fontSize: 13, color: textSub }}>
@@ -401,3 +442,5 @@ export function AlertsPage() {
     </div>
   );
 }
+
+// End of region comment

@@ -9,6 +9,12 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { PDFPreviewModal } from "../components/PDFPreviewModal";
 
+
+
+// ============================================================
+// Log types and styles
+// ============================================================
+
 type LogSource = "System" | "Hardware";
 type LogLevel  = "INFO" | "WARNING" | "ERROR";
 
@@ -33,6 +39,17 @@ const sourceStyle: Record<LogSource, { bg: string; color: string }> = {
   Hardware: { bg: "#FFF7ED", color: "#D97706" },
 };
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// Log loading, filters, selection, and export actions.
+// ============================================================
 export function SystemLogsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -88,8 +105,8 @@ export function SystemLogsPage() {
     doc.text(`Exported: ${new Date().toLocaleString()}${selected.size > 0 ? ` | ${selected.size} selected` : ""}`, 14, 24);
     autoTable(doc, {
       startY: 30,
-      head: [["Date", "Time", "Type", "Source", "Reference", "Description"]],
-      body: printData.map((l) => [l.date, l.time, l.level, l.source, l.ref, l.action]),
+      head: [["Date", "Time", "Type", "Source", "Reference", "Actor", "Description"]],
+      body: printData.map((l) => [l.date, l.time, l.level, l.source, l.ref, l.actor, l.action]),
       styles: { fontSize: 7.5 },
       headStyles: { fillColor: [29, 106, 229] },
       margin: { left: 14, right: 14 },
@@ -111,6 +128,7 @@ export function SystemLogsPage() {
         Type:        l.level,
         Source:      l.source,
         Reference:   l.ref,
+        Actor:       l.actor,
         Description: l.action,
       }))),
       "System Logs"
@@ -138,7 +156,11 @@ export function SystemLogsPage() {
         </button>
       </PageHeader>
 
+
+
+{/* ============================================================ */}
       {/* Filters */}
+      {/* ============================================================ */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, borderRadius: 8, padding: "7px 12px", minWidth: 220 }}>
           <Search size={13} color={textSub} />
@@ -166,7 +188,11 @@ export function SystemLogsPage() {
         </div>
       </div>
 
+
+
+{/* ============================================================ */}
       {/* Select / Deselect */}
+      {/* ============================================================ */}
       {filtered.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
           <button onClick={selectAll} style={{ fontSize: 13, color: "#1D6AE5", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Select All</button>
@@ -177,7 +203,11 @@ export function SystemLogsPage() {
         </div>
       )}
 
+
+
+{/* ============================================================ */}
       {/* Table */}
+      {/* ============================================================ */}
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
@@ -190,16 +220,16 @@ export function SystemLogsPage() {
                     {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
                   </div>
                 </th>
-                {["Date", "Time", "Type", "Source", "Reference", "Description"].map((h) => (
+                {["Date", "Time", "Type", "Source", "Reference", "Actor", "Description"].map((h) => (
                   <th key={h} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>Loading logs…</td></tr>
+                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>Loading logs…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No logs match the current filters.</td></tr>
+                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No logs match the current filters.</td></tr>
               ) : filtered.map((l, i) => {
                 const checked = selected.has(l.id);
                 return (
@@ -221,6 +251,7 @@ export function SystemLogsPage() {
                       <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, background: sourceStyle[l.source].bg, color: sourceStyle[l.source].color }}>{l.source}</span>
                     </td>
                     <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap" }}>{l.ref}</td>
+                    <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap" }}>{l.actor}</td>
                     <td style={{ padding: "10px 14px", fontSize: 14, color: textMain }}>{l.action}</td>
                   </tr>
                 );
@@ -232,3 +263,5 @@ export function SystemLogsPage() {
     </div>
   );
 }
+
+// End of region comment

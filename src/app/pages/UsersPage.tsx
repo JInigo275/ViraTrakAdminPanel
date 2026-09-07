@@ -6,6 +6,12 @@ import { useTheme } from "../context/ThemeContext";
 import { useApp, AppUser, Role, genTempPassword, getAddableRoles, canManageUsers, getFullName } from "../context/AppContext";
 import { formatName, validateEmail, validateName, validatePassword } from "../../utils/validation";
 
+
+
+// ============================================================
+// Helpers and user components
+// ============================================================
+
 const roleColors: Record<Role, { bg: string; color: string }> = {
   Owner:         { bg: "#FEF3C7", color: "#D97706" },
   Administrator: { bg: "#EBF2FF", color: "#1D6AE5" },
@@ -150,7 +156,12 @@ function ReceiptModal({ user, password, onClose }: { user: AppUser; password: st
   return (
     <Modal title="User Created" onClose={onClose} width={400}>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+
+
+
+{/* ============================================================ */}
         {/* Receipt header */}
+        {/* ============================================================ */}
         <div style={{ textAlign: "center", paddingBottom: 16, borderBottom: `2px dashed ${dark ? "#374151" : "#E5E7EB"}`, marginBottom: 16 }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: "#EBF2FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
             <Check size={22} color="#1D6AE5" />
@@ -159,7 +170,11 @@ function ReceiptModal({ user, password, onClose }: { user: AppUser; password: st
           <div style={{ fontSize: 13, color: textSub, marginTop: 2 }}>{now}</div>
         </div>
 
+
+
+{/* ============================================================ */}
         {/* Details */}
+        {/* ============================================================ */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
           {[
             ["Full Name", getFullName(user)],
@@ -194,6 +209,17 @@ function ReceiptModal({ user, password, onClose }: { user: AppUser; password: st
   );
 }
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// User list, role permissions, account creation, and account actions.
+// ============================================================
 export function UsersPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -287,7 +313,11 @@ export function UsersPage() {
         )}
       </PageHeader>
 
+
+
+{/* ============================================================ */}
       {/* Role info cards at top */}
+      {/* ============================================================ */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
         {roleInfo.map(({ role, icon: Icon, color, bg: ibg, desc }) => (
           <div key={role} style={{ background: cardBg, borderRadius: 12, padding: "14px 16px", boxShadow: shadow, display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -302,7 +332,11 @@ export function UsersPage() {
         ))}
       </div>
 
+
+
+{/* ============================================================ */}
       {/* Search */}
+      {/* ============================================================ */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1px solid ${borderColor}`, borderRadius: 8, padding: "8px 12px", marginBottom: 16, width: isMobile ? "100%" : 280, boxSizing: "border-box" }}>
         <Search size={14} color={textSub} />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
@@ -364,7 +398,11 @@ export function UsersPage() {
         </div>
       </div>
 
+
+
+{/* ============================================================ */}
       {/* Add user modal */}
+      {/* ============================================================ */}
       {showAdd && (
         <Modal title="Add New User" onClose={() => setShowAdd(false)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -417,3 +455,5 @@ export function UsersPage() {
     </div>
   );
 }
+
+// End of region comment
