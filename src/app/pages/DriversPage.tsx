@@ -31,14 +31,14 @@ function Modal({ title, onClose, children, width }: { title: string; onClose: ()
   );
 }
 
-function FloatField({ label, value, onChange, type = "text", maxLength, placeholder }: { label: string; value: string; onChange: (v: string) => void; type?: string; maxLength?: number; placeholder?: string }) {
+function FloatField({ label, value, onChange, type = "text", maxLength, placeholder, disabled = false }: { label: string; value: string; onChange: (v: string) => void; type?: string; maxLength?: number; placeholder?: string; disabled?: boolean }) {
   const [focused, setFocused] = useState(false);
   const { dark } = useTheme();
   const lifted = focused || value.length > 0;
   return (
     <div style={{ position: "relative" }}>
-      <input type={type} value={value} maxLength={maxLength} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-        style={{ width: "100%", padding: lifted ? "22px 14px 8px" : "15px 14px", fontSize: 15, color: dark ? "#F9FAFB" : "#111827", background: dark ? "#374151" : "#fff", border: `1.5px solid ${focused ? "#1D6AE5" : dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none", boxSizing: "border-box", transition: "all 0.18s", fontFamily: "Inter, sans-serif" }} />
+      <input type={type} value={value} maxLength={maxLength} placeholder={placeholder} disabled={disabled} onChange={(e) => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+        style={{ width: "100%", padding: lifted ? "22px 14px 8px" : "15px 14px", fontSize: 15, color: disabled ? (dark ? "#6B7280" : "#9CA3AF") : dark ? "#F9FAFB" : "#111827", background: disabled ? (dark ? "#374151" : "#F3F4F6") : dark ? "#374151" : "#fff", border: `1.5px solid ${focused ? "#1D6AE5" : dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none", boxSizing: "border-box", transition: "all 0.18s", fontFamily: "Inter, sans-serif", cursor: disabled ? "not-allowed" : "text" }} />
       <label style={{ position: "absolute", left: 14, top: lifted ? 8 : "50%", transform: lifted ? "none" : "translateY(-50%)", fontSize: lifted ? 12 : 15, fontWeight: lifted ? 500 : 400, color: focused ? "#1D6AE5" : dark ? "#6B7280" : "#9CA3AF", pointerEvents: "none", transition: "all 0.18s ease", fontFamily: "Inter, sans-serif" }}>{label}</label>
     </div>
   );
@@ -400,9 +400,9 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
 
   async function handleSave() {
     const fullContact = `${countryCode}${form.contact.replace(/\D/g, "")}`;
-    const validationError = validateName(form.firstName, "First name") || validateName(form.lastName, "Last name") || validatePlate(form.vehicle) || validatePhone(fullContact);
+    const validationError = validateName(form.firstName, "First name") || validateName(form.lastName, "Last name") || (form.vehicle && form.vehicle !== "Unassigned" ? validatePlate(form.vehicle) : null) || validatePhone(fullContact);
     if (validationError) { setFormError(validationError); return; }
-    const normalized = { firstName: formatName(form.firstName), lastName: formatName(form.lastName), vehicle: formatPlate(form.vehicle), contact: formatPhone(fullContact) };
+    const normalized = { firstName: formatName(form.firstName), lastName: formatName(form.lastName), vehicle: form.vehicle && form.vehicle !== "Unassigned" ? formatPlate(form.vehicle) : "", contact: formatPhone(fullContact) };
 
     if (modal === "add") {
       const newDriver: Driver = { id: genDriverId(drivers), ...normalized };
@@ -412,15 +412,16 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
         setReceipt(newDriver);
         setSuccessMessage("New Driver Added!");
       } catch (e) {
-        setFormError("Failed to save. Please try again.");
+        setFormError(e instanceof Error ? e.message : "Failed to save. Please try again.");
       }
     } else if (modal === "edit" && editTarget) {
       try {
-        await updateDriver(editTarget.id, normalized);
+        const driverPatch = normalized.vehicle ? normalized : { firstName: normalized.firstName, lastName: normalized.lastName, contact: normalized.contact };
+        await updateDriver(editTarget.id, driverPatch);
         setModal(null);
         setSuccessMessage("Changes Saved");
       } catch (e) {
-        setFormError("Failed to save. Please try again.");
+        setFormError(e instanceof Error ? e.message : "Failed to save. Please try again.");
       }
     }
   }
@@ -534,7 +535,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
               <FloatField label="Driver First Name" value={form.firstName} onChange={(v) => setForm((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Driver Last Name" value={form.lastName} onChange={(v) => setForm((p) => ({ ...p, lastName: v }))} />
             </div>
-            <FloatField label="Vehicle (6-8 characters)" value={form.vehicle} maxLength={8} onChange={(v) => setForm((p) => ({ ...p, vehicle: formatPlate(v) }))} />
+            <FloatField label="Vehicle (6-8 characters)" value={form.vehicle === "Unassigned" ? "" : form.vehicle} maxLength={8} disabled={!form.vehicle || form.vehicle === "Unassigned"} onChange={(v) => setForm((p) => ({ ...p, vehicle: formatPlate(v) }))} />
             <div style={{ display: "grid", gridTemplateColumns: "minmax(145px, 0.9fr) 1.4fr", gap: 8 }}>
               <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} aria-label="Country code"
                 style={{ width: "100%", padding: "0 10px", fontSize: 14, color: dark ? "#F9FAFB" : "#111827", background: dark ? "#374151" : "#fff", border: `1.5px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none" }}>

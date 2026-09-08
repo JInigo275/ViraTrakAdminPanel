@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { usersApi, driversApi, vehiclesApi, DbUser, DbDriver, DbVehicle, demoLoginUser } from "../../api/viratrak";
+import type { Session } from "@supabase/supabase-js";
+import { usersApi, driversApi, vehiclesApi, logsApi, DbUser, DbDriver, DbVehicle, demoLoginUser } from "../../api/viratrak";
 import { supabase } from "../../api/supabaseClient";
 
 export type Role = "Owner" | "Administrator" | "Supervisor";
@@ -42,8 +43,41 @@ export interface AppSettings {
   avatar?: string;
 }
 
-const adjectives = ["Swift", "Bold", "Keen", "Iron", "Apex", "Nova", "Flux", "Echo", "Volt", "Peak"];
-const nouns = ["Tiger", "Falcon", "Hawk", "Storm", "Blaze", "Ridge", "Forge", "Crest", "Spark", "Wave"];
+const adjectives = [
+  "Advanced",
+  "Active",
+  "Secure",
+  "Reliable",
+  "Professional",
+  "Intelligent",
+  "Precision",
+  "Integrated",
+  "Enhanced",
+  "Optimal",
+  "Trusted",
+  "Responsive",
+  "Consistent",
+  "Efficient",
+  "Proactive"
+];
+
+const nouns = [
+  "Driver",
+  "Fleet",
+  "Safety",
+  "Monitor",
+  "Control",
+  "Insight",
+  "Vision",
+  "Analytics",
+  "Operations",
+  "Performance",
+  "Awareness",
+  "Management",
+  "Tracking",
+  "Command",
+  "System"
+];
 
 export function genTempPassword() {
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
@@ -117,7 +151,7 @@ const seedUsers: AppUser[] = [
     lastName: demoLoginUser.last_name,
     email: demoLoginUser.email,
     role: demoLoginUser.role,
-    status: demoLoginUser.status,
+    status: demoLoginUser.status === "Inactive" ? "Deactivated" : demoLoginUser.status,
     lastLogin: demoLoginUser.last_login,
     password: demoLoginUser.password,
     mustChangePassword: demoLoginUser.must_change_password,
@@ -160,7 +194,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
 
-    async function hydrateSession(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
+    async function hydrateSession(session: Session | null) {
       if (!session?.user.email) return;
       try {
         const profile = await usersApi.getByEmail(session.user.email);
@@ -254,6 +288,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   // --- Drivers write-through ---
+  function recordDriverAction(action: string, ref: string) {
+    void logsApi.create({ action, ref }).catch((error) => console.warn("Could not record driver audit log:", error));
+  }
+
   async function addDriver(e: Driver) {
     const db: DbDriver = {
       id: e.id, first_name: e.firstName, last_name: e.lastName,
@@ -261,6 +299,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     const saved = await driversApi.create(db);
     setDrivers((prev) => [...prev, mapDriver(saved)]);
+    recordDriverAction(`Driver ${saved.first_name} ${saved.last_name} was added with ID ${saved.id}${saved.vehicle !== "Unassigned" ? ` and assigned vehicle ${saved.vehicle}.` : ". No vehicle was assigned."}`, "DRIVER_CREATED");
   }
 
   async function updateDriver(id: string, patch: Partial<Driver>) {
@@ -271,11 +310,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.contact !== undefined) dbPatch.contact = patch.contact;
     const saved = await driversApi.update(id, dbPatch);
     setDrivers((prev) => prev.map((e) => e.id === id ? mapDriver(saved) : e));
+    recordDriverAction(`Driver ${saved.first_name} ${saved.last_name} (${saved.id}) was updated${saved.vehicle !== "Unassigned" ? `; assigned vehicle is now ${saved.vehicle}.` : "; no vehicle is assigned."}`, "DRIVER_UPDATED");
   }
 
   async function removeDriver(id: string) {
+    const removedDriver = drivers.find((driver) => driver.id === id);
     await driversApi.remove(id);
     setDrivers((prev) => prev.filter((e) => e.id !== id));
+    if (removedDriver) recordDriverAction(`Driver ${removedDriver.firstName} ${removedDriver.lastName} (${removedDriver.id}) was removed from the system.`, "DRIVER_DELETED");
   }
 
   async function addVehicle(vehicle: Omit<Vehicle, "id">) {

@@ -59,7 +59,6 @@ export function SystemLogsPage() {
   const [levelFilter, setLevelFilter] = useState("All");
   const [sourceFilter, setSourceFilter] = useState("All");
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [showDeselectAll, setShowDeselectAll] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
 
   useEffect(() => {
@@ -94,8 +93,7 @@ export function SystemLogsPage() {
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
-  function selectAll()   { setSelected((prev) => { const s = new Set(prev); filtered.forEach((l) => s.add(l.id)); return s; }); setShowDeselectAll(true); }
-  function deselectAll() { setSelected((prev) => { const s = new Set(prev); filtered.forEach((l) => s.delete(l.id)); return s; }); setShowDeselectAll(false); }
+  function toggleAll() { setSelected(allChecked ? new Set() : new Set(filtered.map((l) => l.id))); }
 
   const printData = selected.size > 0 ? filtered.filter((l) => selected.has(l.id)) : filtered;
 
@@ -162,13 +160,13 @@ export function SystemLogsPage() {
 {/* ============================================================ */}
       {/* Filters */}
       {/* ============================================================ */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 18, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", minWidth: 220, boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
           <Search size={13} color={textSub} />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search logs…" style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
         </div>
 
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Type:</span>
           {["All", "INFO", "WARNING", "ERROR"].map((f) => (
             <button key={f} onClick={() => setLevelFilter(f)}
@@ -178,7 +176,7 @@ export function SystemLogsPage() {
           ))}
         </div>
 
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Source:</span>
           {["All", "System", "Hardware"].map((f) => (
             <button key={f} onClick={() => setSourceFilter(f)}
@@ -187,22 +185,18 @@ export function SystemLogsPage() {
             </button>
           ))}
         </div>
+
+        <span style={{ fontSize: 13, color: textSub, marginLeft: "auto", whiteSpace: "nowrap" }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""}</span>
       </div>
 
 
 
 {/* ============================================================ */}
-      {/* Select / Deselect */}
+      {/* Selection summary */}
       {/* ============================================================ */}
       {filtered.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <button onClick={selectAll} style={{ fontSize: 13, color: "#1D6AE5", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Select All</button>
-          {showDeselectAll && <>
-            <span style={{ color: dark ? "#4B5563" : "#D1D5DB" }}>·</span>
-            <button onClick={deselectAll} style={{ fontSize: 13, color: textSub, background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Deselect All</button>
-          </>}
           {selected.size > 0 && <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for export</span>}
-          <span style={{ fontSize: 13, color: textSub, marginLeft: "auto" }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""}</span>
         </div>
       )}
 
@@ -217,8 +211,8 @@ export function SystemLogsPage() {
             <thead>
               <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
                 <th style={{ padding: "10px 14px", width: 40 }}>
-                  <div onClick={allChecked ? deselectAll : selectAll}
-                    style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${allChecked ? "#1D6AE5" : (dark ? "#4B5563" : "#D1D5DB")}`, background: allChecked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div onClick={toggleAll}
+                    style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${allChecked ? "#1D6AE5" : (dark ? "#4B5563" : "#D1D5DB")}`, background: allChecked ? "#1D6AE5" : "transparent", cursor: filtered.length ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {allChecked && <Check size={10} color="#fff" />}
                     {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
                   </div>

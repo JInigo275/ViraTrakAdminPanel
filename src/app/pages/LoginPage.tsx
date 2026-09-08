@@ -107,7 +107,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           const savedUser = await usersApi.update(user.id, { last_login: loginTimestamp });
           user.last_login = savedUser.last_login;
         } catch (lastLoginError) {
-          throw new Error("Your login succeeded, but the last login time could not be saved. Please try again.", { cause: lastLoginError });
+          console.warn("Could not save the last login time; continuing with authentication:", lastLoginError);
         }
         const { error: auditError } = await supabase.from("system_log").insert({
           message: `${user.first_name} ${user.last_name}`.trim() + " logged in",
@@ -275,11 +275,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             </button>
           </form>
 
-          {/*<div style={{ marginTop: 24, padding: "12px 14px", background: "#F0F9FF", borderRadius: 10, border: "1px solid #BAE6FD" }}>
-            <p style={{ fontSize: 12, color: "#0369A1", margin: 0, lineHeight: 1.5 }}>
-              <strong>Demo credentials:</strong><br />Email: admin@viratrak.com<br />Password: admin123
-            </p>
-          </div>*/}
         </div>
       </div>
 

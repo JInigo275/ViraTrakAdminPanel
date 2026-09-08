@@ -7,6 +7,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { PDFPreviewModal } from "../components/PDFPreviewModal";
+import { EvidencePreviewModal } from "../components/EvidencePreviewModal";
 import { alertsApi, DbAlert } from "../../api/viratrak";
 
 // ============================================================
@@ -24,10 +25,9 @@ import { alertsApi, DbAlert } from "../../api/viratrak";
 const typeIconMap: Record<string, React.ElementType> = {
   "Yawning":      Wind,
   "Eyes Closed":  EyeOff,
-  "Head Pose":    Zap,
-  "Body Posture": User,
-  "Micro Sleep":  Navigation,
-  "Blink Rate":   Navigation,
+  "Head Gaze":    Zap,
+  "Frequent Blinking": Navigation,
+  "Body Tilt":    User,
 };
 
 type AlertRow = DbAlert & { icon: React.ElementType };
@@ -172,6 +172,7 @@ export function AlertsPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [showDeselectAll, setShowDeselectAll] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [selectedEvidence, setSelectedEvidence] = useState<AlertRow | null>(null);
   const [showPerPageMenu, setShowPerPageMenu] = useState(false);
   const perPageRef = useRef<HTMLDivElement>(null);
 
@@ -270,6 +271,12 @@ export function AlertsPage() {
           buildDoc={buildPDF}
         />
       )}
+      {selectedEvidence && (
+        <EvidencePreviewModal
+          alert={selectedEvidence}
+          onClose={() => setSelectedEvidence(null)}
+        />
+      )}
 
       <PageHeader icon={Bell} iconColor="#EF4444" title="Alerts & Evidence" subtitle="All detected driver behavior events and evidence">
         <button onClick={exportExcel} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
@@ -347,14 +354,9 @@ export function AlertsPage() {
 {/* ============================================================ */}
       {/* Select all / deselect */}
       {/* ============================================================ */}
-      {paginated.length > 0 && (
+      {paginated.length > 0 && selected.size > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <button onClick={selectAll} style={{ fontSize: 13, color: "#1D6AE5", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Select All</button>
-          {showDeselectAll && <>
-            <span style={{ color: dark ? "#4B5563" : "#D1D5DB" }}>·</span>
-            <button onClick={deselectAll} style={{ fontSize: 13, color: textSub, background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Deselect All</button>
-          </>}
-          {selected.size > 0 && <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for PDF</span>}
+          <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for PDF</span>
         </div>
       )}
 
@@ -406,9 +408,7 @@ export function AlertsPage() {
                     <span style={{ display: "inline-block", padding: "2px 9px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: sevStyle[e.severity].bg, color: sevStyle[e.severity].color }}>{e.severity}</span>
                   </td>
                   <td style={{ padding: "10px 14px" }}>
-                    {e.evidence
-                      ? <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "#1D6AE5", fontWeight: 500 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "#EF4444", display: "inline-block" }} /> View</span>
-                      : <span style={{ fontSize: 13, color: textSub }}>—</span>}
+                    <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedEvidence(e); }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: 0, border: "none", background: "transparent", fontSize: 13, color: e.evidence ? "#1D6AE5" : textSub, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: e.evidence ? "#EF4444" : textSub, display: "inline-block" }} /> View</button>
                   </td>
                 </tr>
               );
