@@ -444,19 +444,23 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
         </div>
       )}
       <PageHeader icon={Contact} iconColor="#10B981" title="Driver Information" subtitle="Driver profiles and vehicle assignments">
-        {selected.size > 0 && (
-          <button onClick={massDelete} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#FEF2F2", color: "#EF4444", borderRadius: 8, border: "1px solid #FECACA", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-            <Trash2 size={14} /> Delete {selected.size} Selected
-          </button>
-        )}
-        <button onClick={openAdd} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-          <Plus size={14} /> Add Driver
-        </button>
       </PageHeader>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1px solid ${borderColor}`, borderRadius: 8, padding: "8px 12px", marginBottom: 16, width: isMobile ? "100%" : 280, boxSizing: "border-box" }}>
-        <Search size={14} color={textSub} />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search drivers..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 320, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
+          <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search drivers..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : "auto" }}>
+          {selected.size > 0 && (
+            <button onClick={massDelete} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", background: "#FEF2F2", color: "#EF4444", borderRadius: 8, border: "1px solid #FECACA", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", flex: isMobile ? 1 : undefined }}>
+              <Trash2 size={14} /> Delete {selected.size} Selected
+            </button>
+          )}
+          <button onClick={openAdd} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", flex: isMobile ? 1 : undefined }}>
+            <Plus size={14} /> Add Driver
+          </button>
+        </div>
       </div>
 
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
@@ -476,7 +480,11 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((e, i) => (
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ padding: 36, textAlign: "center", color: textSub }}>No drivers match your search.</td>
+              </tr>
+            ) : filtered.map((e, i) => (
               <tr key={e.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: selected.has(e.id) ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent" }}
                 onMouseEnter={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
                 onMouseLeave={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
@@ -526,7 +534,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
               <FloatField label="Driver First Name" value={form.firstName} onChange={(v) => setForm((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Driver Last Name" value={form.lastName} onChange={(v) => setForm((p) => ({ ...p, lastName: v }))} />
             </div>
-            <FloatField label="Vehicle (max 8 characters)" value={form.vehicle} maxLength={8} onChange={(v) => setForm((p) => ({ ...p, vehicle: formatPlate(v) }))} />
+            <FloatField label="Vehicle (6-8 characters)" value={form.vehicle} maxLength={8} onChange={(v) => setForm((p) => ({ ...p, vehicle: formatPlate(v) }))} />
             <div style={{ display: "grid", gridTemplateColumns: "minmax(145px, 0.9fr) 1.4fr", gap: 8 }}>
               <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} aria-label="Country code"
                 style={{ width: "100%", padding: "0 10px", fontSize: 14, color: dark ? "#F9FAFB" : "#111827", background: dark ? "#374151" : "#fff", border: `1.5px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none" }}>

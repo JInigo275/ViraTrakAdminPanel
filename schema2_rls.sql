@@ -36,20 +36,58 @@ CREATE POLICY "authenticated users can read users"
   );
 CREATE POLICY "managers can create users"
   ON public.users FOR INSERT TO authenticated
-  WITH CHECK ((select auth.jwt() -> 'app_metadata' ->> 'role') IN ('Owner', 'Administrator'));
+  WITH CHECK (
+    (
+      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Owner'
+      AND role IN ('Administrator', 'Supervisor')
+    )
+    OR (
+      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Administrator'
+      AND role = 'Supervisor'
+    )
+  );
 CREATE POLICY "users can update their profile"
   ON public.users FOR UPDATE TO authenticated
   USING (
-    email = (select auth.jwt() ->> 'email')
-    OR (select auth.jwt() -> 'app_metadata' ->> 'role') IN ('Owner', 'Administrator')
+    (
+      email = (select auth.jwt() ->> 'email')
+      AND role = (select auth.jwt() -> 'app_metadata' ->> 'role')
+    )
+    OR (
+      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Owner'
+      AND role <> 'Owner'
+    )
+    OR (
+      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Administrator'
+      AND role = 'Supervisor'
+    )
   )
   WITH CHECK (
-    email = (select auth.jwt() ->> 'email')
-    OR (select auth.jwt() -> 'app_metadata' ->> 'role') IN ('Owner', 'Administrator')
+    (
+      email = (select auth.jwt() ->> 'email')
+      AND role = (select auth.jwt() -> 'app_metadata' ->> 'role')
+    )
+    OR (
+      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Owner'
+      AND role <> 'Owner'
+    )
+    OR (
+      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Administrator'
+      AND role = 'Supervisor'
+    )
   );
 CREATE POLICY "managers can delete users"
   ON public.users FOR DELETE TO authenticated
-  USING ((select auth.jwt() -> 'app_metadata' ->> 'role') IN ('Owner', 'Administrator'));
+  USING (
+    (
+      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Owner'
+      AND role <> 'Owner'
+    )
+    OR (
+      (select auth.jwt() -> 'app_metadata' ->> 'role') = 'Administrator'
+      AND role = 'Supervisor'
+    )
+  );
 
 -- All operational data is readable by signed-in operators. Writes are kept
 -- behind Supabase Auth; device ingestion should use a server-side credential.

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Wind, EyeOff, Zap, User, Navigation, Download, X, Filter, Check, ChevronDown, ChevronUp, Bell } from "lucide-react";
+import { Wind, EyeOff, Zap, User, Navigation, Download, X, Filter, Check, ChevronDown, ChevronUp, Bell, Search } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import * as XLSX from "xlsx";
@@ -165,6 +165,7 @@ export function AlertsPage() {
   const [filterDate, setFilterDate] = useState("");
   const [filterSeverity, setFilterSeverity] = useState("");
   const [filterEvidence, setFilterEvidence] = useState("");
+  const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [perPage, setPerPage] = useState<PageOption>(10);
   const [page, setPage] = useState(1);
@@ -205,6 +206,8 @@ export function AlertsPage() {
   const activeFilters = [filterType, filterDriver, filterVehicle, filterDate, filterSeverity, filterEvidence].filter(Boolean).length;
 
   let filtered = allAlerts.filter((a) => {
+    const searchText = search.trim().toLowerCase();
+    if (searchText && !`${a.type} ${a.driver} ${a.vehicle} ${a.date} ${a.time} ${a.severity} ${a.evidence ? "yes" : "no"}`.toLowerCase().includes(searchText)) return false;
     if (filterType && a.type !== filterType) return false;
     if (filterDriver && a.driver !== filterDriver) return false;
     if (filterVehicle && a.vehicle !== filterVehicle) return false;
@@ -283,6 +286,10 @@ export function AlertsPage() {
       {/* Filter bar */}
       {/* ============================================================ */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#374151" : "#F8F9FA", border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 320, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
+          <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search alerts..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+        </div>
         <button onClick={() => setShowFilters((v) => !v)}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: showFilters ? "#1D6AE5" : (dark ? "#374151" : "#fff"), color: showFilters ? "#fff" : textSub, border: `1px solid ${showFilters ? "#1D6AE5" : (dark ? "#4B5563" : "#E5E7EB")}`, borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
           <Filter size={13} /> Filters {activeFilters > 0 && `(${activeFilters})`}
@@ -387,7 +394,7 @@ export function AlertsPage() {
                   </td>
                   <td style={{ padding: "10px 14px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: 6, background: e.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon size={12} color={e.iconColor} /></div>
+                      <div style={{ width: 26, height: 26, borderRadius: 6, background: e.icon_bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon size={12} color={e.icon_color} /></div>
                       <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.type}</span>
                     </div>
                   </td>

@@ -24,6 +24,19 @@ const roleInfo = [
   { role: "Supervisor" as Role, icon: UserCog, color: "#8B5CF6", bg: "#F5F3FF", desc: "Restricted access — Dashboard, Alerts & Recordings, Analytics, and Driver Info only. Cannot add users." },
 ];
 
+function formatLastLogin(value: string) {
+  if (!value || value === "Never") return "Never";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 function Modal({ title, onClose, children, width }: { title: string; onClose: () => void; children: React.ReactNode; width?: number }) {
   const { dark } = useTheme();
   return (
@@ -232,6 +245,7 @@ export function UsersPage() {
   const [showPass, setShowPass] = useState(false);
   const [generatedPass, setGeneratedPass] = useState("");
   const [addError, setAddError] = useState("");
+  const [actionError, setActionError] = useState("");
 
   const bg = dark ? "#111827" : "#F4F5F7";
   const cardBg = dark ? "#1F2937" : "#fff";
@@ -303,6 +317,15 @@ export function UsersPage() {
     }
   }
 
+  async function handleStatusToggle(u: AppUser) {
+    setActionError("");
+    try {
+      await updateUser(u.id, { status: u.status === "Active" ? "Deactivated" : "Active" });
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Could not update the user's status.");
+    }
+  }
+
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
       <PageHeader icon={Users} iconColor="#1D6AE5" title="Users" subtitle="Manage system user accounts and access roles">
@@ -312,6 +335,7 @@ export function UsersPage() {
           </button>
         )}
       </PageHeader>
+      {actionError && <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 8, background: dark ? "#451A1A" : "#FEF2F2", color: dark ? "#FCA5A5" : "#B91C1C", fontSize: 14 }}>{actionError}</div>}
 
 
 
@@ -378,15 +402,15 @@ export function UsersPage() {
                     {u.status}
                   </span>
                 </td>
-                <td style={{ padding: "12px 18px", fontSize: 14, color: textSub }}>{u.lastLogin}</td>
+                <td style={{ padding: "12px 18px", fontSize: 14, color: textSub }}>{formatLastLogin(u.lastLogin)}</td>
                 <td style={{ padding: "12px 18px" }}>
-                  {canAdd && u.role !== "Owner" && ( 
+                  {canManageUser(u) && (
                     <KebabMenu
                       user={u}
                       adderRole={myRole}
                       onChangeRole={(role) => updateUser(u.id, { role }).catch(console.error)}
                       onResetPassword={() => handleReset(u)}
-                      onToggleStatus={() => updateUser(u.id, { status: u.status === "Active" ? "Inactive" : "Active" }).catch(console.error)}
+                      onToggleStatus={() => handleStatusToggle(u)}
                       onDelete={() => removeUser(u.id).catch(console.error)}
                     />
                   )}

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { usersApi, driversApi, DbUser, DbDriver, demoLoginUser } from "../../api/viratrak";
+import { usersApi, driversApi, vehiclesApi, DbUser, DbDriver, DbVehicle, demoLoginUser } from "../../api/viratrak";
 import { supabase } from "../../api/supabaseClient";
 
 export type Role = "Owner" | "Administrator" | "Supervisor";
@@ -14,7 +14,7 @@ export interface AppUser {
   lastName: string;
   email: string;
   role: Role;
-  status: "Active" | "Inactive";
+  status: "Active" | "Deactivated";
   lastLogin: string;
   password: string;
   mustChangePassword: boolean;
@@ -27,6 +27,13 @@ export interface Driver {
   lastName: string;
   vehicle: string;
   contact: string;
+}
+
+export interface Vehicle {
+  id: number;
+  plateNumber: string;
+  model: string;
+  driverIds: string[];
 }
 
 export interface AppSettings {
@@ -76,7 +83,7 @@ function mapUser(u: DbUser): AppUser {
     lastName: u.last_name,
     email: u.email,
     role: normalizeRole(String(u.role)),
-    status: u.status,
+    status: u.status === "Inactive" ? "Deactivated" : u.status,
     lastLogin: u.last_login,
     password: u.password,
     mustChangePassword: u.must_change_password,
@@ -90,6 +97,15 @@ function mapDriver(e: DbDriver): Driver {
     lastName: e.last_name,
     vehicle: e.vehicle,
     contact: e.contact,
+  };
+}
+
+function mapVehicle(v: DbVehicle): Vehicle {
+  return {
+    id: v.vehicle_id,
+    plateNumber: v.plate_number,
+    model: v.model ?? "",
+    driverIds: [v.driver_id, v.secondary_driver_id].filter((id): id is number => id !== null).map(String),
   };
 }
 
@@ -112,6 +128,7 @@ interface AppContextType {
   setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
   drivers: Driver[];
   setDrivers: React.Dispatch<React.SetStateAction<Driver[]>>;
+  vehicles: Vehicle[];
   currentUser: AppUser | null;
   setCurrentUser: React.Dispatch<React.SetStateAction<AppUser | null>>;
   settings: AppSettings;
@@ -124,6 +141,9 @@ interface AppContextType {
   addDriver: (e: Driver) => Promise<void>;
   updateDriver: (id: string, patch: Partial<Driver>) => Promise<void>;
   removeDriver: (id: string) => Promise<void>;
+  addVehicle: (vehicle: Omit<Vehicle, "id">) => Promise<void>;
+  updateVehicle: (id: number, patch: Partial<Omit<Vehicle, "id">>) => Promise<void>;
+  removeVehicle: (id: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
@@ -131,6 +151,7 @@ const AppContext = createContext<AppContextType>({} as AppContextType);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<AppUser[]>(seedUsers);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [settings, setSettings] = useState<AppSettings>({ firstName: "Admin", lastName: "User" });
   const [dbReady, setDbReady] = useState(false);
@@ -143,7 +164,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const profile = await usersApi.getByEmail(session.user.email);
         if (profile?.status === "Active") {
-          setCurrentUser(mapUser(profile));
+          setCurrentUser((previous) => {
+            const mapped = mapUser(profile);
+            if (previous?.id === mapped.id && previous.lastLogin !== "Never" && mapped.lastLogin === "Never") {
+              return { ...mapped, lastLogin: previous.lastLogin };
+            }
+            return mapped;
+          });
           setSettings((previous) => ({ ...previous, firstName: profile.first_name, lastName: profile.last_name, avatar: profile.avatar ?? previous.avatar }));
         }
       } catch (error) {
@@ -168,6 +195,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     Promise.all([
       usersApi.list().then((rows) => setUsers(rows.map(mapUser))),
       driversApi.list().then((rows) => setDrivers(rows.map(mapDriver))),
+      vehiclesApi.list().then((rows) => setVehicles(rows.map(mapVehicle))),
     ])
       .catch((e) => console.warn("Data load failed, using available data:", e))
       .finally(() => setDbReady(true));
@@ -248,13 +276,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDrivers((prev) => prev.filter((e) => e.id !== id));
   }
 
+  async function addVehicle(vehicle: Omit<Vehicle, "id">) {
+    const saved = await vehiclesApi.create({
+      plate_number: vehicle.plateNumber,
+      model: vehicle.model,
+      driver_id: vehicle.driverIds[0] ? parseInt(vehicle.driverIds[0], 10) : null,
+      secondary_driver_id: vehicle.driverIds[1] ? parseInt(vehicle.driverIds[1], 10) : null,
+    });
+    setVehicles((prev) => [mapVehicle(saved), ...prev]);
+  }
+
+  async function updateVehicle(id: number, patch: Partial<Omit<Vehicle, "id">>) {
+    const saved = await vehiclesApi.update(id, {
+      ...(patch.plateNumber === undefined ? {} : { plate_number: patch.plateNumber }),
+      ...(patch.model === undefined ? {} : { model: patch.model }),
+      ...(patch.driverIds === undefined ? {} : {
+        driver_id: patch.driverIds[0] ? parseInt(patch.driverIds[0], 10) : null,
+        secondary_driver_id: patch.driverIds[1] ? parseInt(patch.driverIds[1], 10) : null,
+      }),
+    });
+    setVehicles((prev) => prev.map((vehicle) => vehicle.id === id ? mapVehicle(saved) : vehicle));
+  }
+
+  async function removeVehicle(id: number) {
+    await vehiclesApi.remove(id);
+    setVehicles((prev) => prev.filter((vehicle) => vehicle.id !== id));
+  }
+
   return (
     <AppContext.Provider value={{
-      users, setUsers, drivers, setDrivers,
+      users, setUsers, drivers, setDrivers, vehicles,
       currentUser, setCurrentUser, settings, setSettings,
       dbReady,
       addUser, updateUser, removeUser,
       addDriver, updateDriver, removeDriver,
+      addVehicle, updateVehicle, removeVehicle,
     }}>
       {children}
     </AppContext.Provider>

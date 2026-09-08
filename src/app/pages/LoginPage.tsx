@@ -102,6 +102,13 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         if (!authData.user) throw new Error("Authenticated user information is unavailable.");
         const user = await usersApi.getByEmail(normalizedEmail);
         if (!user || user.status !== "Active") throw new Error("No active profile found.");
+        const loginTimestamp = new Date().toISOString();
+        try {
+          const savedUser = await usersApi.update(user.id, { last_login: loginTimestamp });
+          user.last_login = savedUser.last_login;
+        } catch (lastLoginError) {
+          throw new Error("Your login succeeded, but the last login time could not be saved. Please try again.", { cause: lastLoginError });
+        }
         const { error: auditError } = await supabase.from("system_log").insert({
           message: `${user.first_name} ${user.last_name}`.trim() + " logged in",
           log_type: "AUTH_LOGIN",
@@ -121,7 +128,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           email: user.email,
           role: user.role,
           status: user.status,
-          lastLogin: new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }),
+          lastLogin: loginTimestamp,
           password: "",
           mustChangePassword: user.must_change_password,
           avatar: user.avatar ?? undefined,

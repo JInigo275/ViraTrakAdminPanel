@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   last_name text NOT NULL,
   email text NOT NULL UNIQUE,
   role text NOT NULL CHECK (role = ANY (ARRAY['Owner'::text, 'Administrator'::text, 'Supervisor'::text])),
-  status text NOT NULL CHECK (status = ANY (ARRAY['Active'::text, 'Inactive'::text])),
+  status text NOT NULL CHECK (status = ANY (ARRAY['Active'::text, 'Deactivated'::text])),
   last_login text NOT NULL DEFAULT 'Never'::text,
   password text,
   must_change_password boolean NOT NULL DEFAULT false,
@@ -36,11 +36,15 @@ CREATE TABLE IF NOT EXISTS public.vehicle (
   plate_number character varying NOT NULL UNIQUE,
   model character varying,
   driver_id integer,
+  secondary_driver_id integer,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT vehicle_pkey PRIMARY KEY (vehicle_id),
   CONSTRAINT vehicle_driver_id_fkey FOREIGN KEY (driver_id)
-    REFERENCES public.driver(driver_id) ON DELETE SET NULL
+    REFERENCES public.driver(driver_id) ON DELETE SET NULL,
+  CONSTRAINT vehicle_secondary_driver_id_fkey FOREIGN KEY (secondary_driver_id)
+    REFERENCES public.driver(driver_id) ON DELETE SET NULL,
+  CONSTRAINT vehicle_distinct_drivers CHECK (driver_id IS NULL OR secondary_driver_id IS NULL OR driver_id <> secondary_driver_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.device (
@@ -162,6 +166,7 @@ CREATE TABLE IF NOT EXISTS public.system_log (
 );
 
 CREATE INDEX IF NOT EXISTS idx_vehicle_driver_id ON public.vehicle(driver_id);
+CREATE INDEX IF NOT EXISTS idx_vehicle_secondary_driver_id ON public.vehicle(secondary_driver_id);
 CREATE INDEX IF NOT EXISTS idx_device_vehicle_id ON public.device(vehicle_id);
 CREATE INDEX IF NOT EXISTS idx_recorded_evidence_device_id ON public.recorded_evidence(device_id);
 CREATE INDEX IF NOT EXISTS idx_detection_events_created_at ON public.detection_events USING btree (created_at DESC);
@@ -238,13 +243,14 @@ INSERT INTO public.vehicle (
   vehicle_id,
   plate_number,
   model,
-  driver_id
+  driver_id,
+  secondary_driver_id
 )
 OVERRIDING SYSTEM VALUE
 VALUES
-  (1, 'PLT2847', 'Tesla Model 3', 1),
-  (2, 'PLT5634', 'Toyota Camry', 2),
-  (3, 'PLT8392', 'Ford Transit Van', 3)
+  (1, 'PLT2847', 'Tesla Model 3', 1, NULL),
+  (2, 'PLT5634', 'Toyota Camry', 2, NULL),
+  (3, 'PLT8392', 'Ford Transit Van', 3, NULL)
 ON CONFLICT (vehicle_id) DO NOTHING;
 
 INSERT INTO public.device (

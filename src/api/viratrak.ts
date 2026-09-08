@@ -8,7 +8,7 @@ export type DbUser = {
   last_name: string;
   email: string;
   role: "Owner" | "Administrator" | "Supervisor";
-  status: "Active" | "Inactive";
+  status: "Active" | "Deactivated" | "Inactive";
   last_login: string;
   password: string;
   must_change_password: boolean;
@@ -90,7 +90,7 @@ export const usersApi = {
       .from("users")
       .update({ ...patch, ...(patch.first_name !== undefined ? { first_name: formatName(patch.first_name) } : {}), ...(patch.last_name !== undefined ? { last_name: formatName(patch.last_name) } : {}), ...(patch.email !== undefined ? { email: patch.email.trim().toLowerCase() } : {}) })
       .eq("id", id)
-      .select("*")
+      .select("id, first_name, last_name, email, role, status, last_login, password, must_change_password, avatar")
       .single();
     
     if (error) throw error;
@@ -254,6 +254,136 @@ export const driversApi = {
       .eq("driver_id", parseInt(id));
     
     if (error) throw error;
+  },
+};
+
+// ---------- Vehicles ----------
+export type DbVehicle = {
+  vehicle_id: number;
+  plate_number: string;
+  model: string | null;
+  driver_id: number | null;
+  secondary_driver_id: number | null;
+};
+
+export const vehiclesApi = {
+  list: async () => {
+    const client = requireSupabase();
+    const { data, error } = await client
+      .from("vehicle")
+      .select("vehicle_id, plate_number, model, driver_id, secondary_driver_id")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as DbVehicle[];
+  },
+  create: async (vehicle: Pick<DbVehicle, "plate_number" | "model" | "driver_id" | "secondary_driver_id">) => {
+    const client = requireSupabase();
+    assertValid(validatePlate(vehicle.plate_number));
+    if (vehicle.driver_id !== null && vehicle.driver_id === vehicle.secondary_driver_id) throw new Error("Select two different drivers.");
+    const plate = formatPlate(vehicle.plate_number);
+    const { data: duplicate } = await client
+      .from("vehicle")
+      .select("vehicle_id")
+      .eq("plate_number", plate)
+      .maybeSingle();
+    if (duplicate) throw new Error("Vehicle plate already exists.");
+    const { data, error } = await client
+      .from("vehicle")
+      .insert({ plate_number: plate, model: vehicle.model?.trim() || null, driver_id: vehicle.driver_id, secondary_driver_id: vehicle.secondary_driver_id })
+      .select("vehicle_id, plate_number, model, driver_id, secondary_driver_id")
+      .single();
+    if (error) throw error;
+    return data as DbVehicle;
+  },
+  update: async (id: number, patch: Partial<Pick<DbVehicle, "plate_number" | "model" | "driver_id" | "secondary_driver_id">>) => {
+    const client = requireSupabase();
+    const dbPatch: Partial<Pick<DbVehicle, "plate_number" | "model" | "driver_id" | "secondary_driver_id">> = { ...patch };
+    if (patch.driver_id !== undefined && patch.secondary_driver_id !== undefined && patch.driver_id !== null && patch.driver_id === patch.secondary_driver_id) {
+      throw new Error("Select two different drivers.");
+    }
+    if (patch.plate_number !== undefined) {
+      assertValid(validatePlate(patch.plate_number));
+      dbPatch.plate_number = formatPlate(patch.plate_number);
+      const { data: duplicate } = await client
+        .from("vehicle")
+        .select("vehicle_id")
+        .eq("plate_number", dbPatch.plate_number)
+        .neq("vehicle_id", id)
+        .maybeSingle();
+      if (duplicate) throw new Error("Vehicle plate already exists.");
+    }
+    if (patch.model !== undefined) dbPatch.model = patch.model?.trim() || null;
+    const { data, error } = await client
+      .from("vehicle")
+      .update(dbPatch)
+      .eq("vehicle_id", id)
+      .select("vehicle_id, plate_number, model, driver_id, secondary_driver_id")
+      .single();
+    if (error) throw error;
+    return data as DbVehicle;
+  },
+  remove: async (id: number) => {
+    const client = requireSupabase();
+    const { error } = await client.from("vehicle").delete().eq("vehicle_id", id);
+    if (error) throw error;
+  },
+};
+
+export type DriverMetricReading = {
+  timestamp: string;
+  perclos: number | null;
+  blinkRate: number | null;
+  yawn: number | null;
+  bodyPosture: number | null;
+  headPose: number | null;
+};
+
+export const driverMetricsApi = {
+  list: async (driverId: string, startAt?: string, endAt?: string) => {
+    const client = requireSupabase();
+    const numericDriverId = parseInt(driverId, 10);
+    if (!Number.isFinite(numericDriverId)) return [] as DriverMetricReading[];
+
+    const { data: vehicles, error: vehicleError } = await client
+      .from("vehicle")
+      .select("vehicle_id")
+      .or(`driver_id.eq.${numericDriverId},secondary_driver_id.eq.${numericDriverId}`);
+    if (vehicleError) throw vehicleError;
+    const vehicleIds = (vehicles ?? []).map((vehicle) => vehicle.vehicle_id as number);
+    if (vehicleIds.length === 0) return [];
+
+    const { data: devices, error: deviceError } = await client
+      .from("device")
+      .select("device_id")
+      .in("vehicle_id", vehicleIds);
+    if (deviceError) throw deviceError;
+    const deviceIds = (devices ?? []).map((device) => device.device_id as string);
+    if (deviceIds.length === 0) return [];
+
+    const { data: events, error: eventError } = await client
+      .from("detection_events")
+      .select("id, device_id")
+      .in("device_id", deviceIds);
+    if (eventError) throw eventError;
+    const eventIds = (events ?? []).map((event) => event.id as number);
+    if (eventIds.length === 0) return [];
+
+    let detectionsQuery = client
+      .from("detection")
+      .select("timestamp, perclos, blink_rate, yawn, body_posture, head_pose")
+      .in("detection_event_id", eventIds);
+    if (startAt) detectionsQuery = detectionsQuery.gte("timestamp", startAt);
+    if (endAt) detectionsQuery = detectionsQuery.lte("timestamp", endAt);
+    const { data: detections, error: detectionError } = await detectionsQuery.order("timestamp", { ascending: true });
+    if (detectionError) throw detectionError;
+    return (detections ?? []).map((reading) => ({
+      timestamp: reading.timestamp,
+      perclos: reading.perclos,
+      blinkRate: reading.blink_rate,
+      yawn: reading.yawn,
+      bodyPosture: reading.body_posture,
+      headPose: reading.head_pose,
+    })) as DriverMetricReading[];
   },
 };
 

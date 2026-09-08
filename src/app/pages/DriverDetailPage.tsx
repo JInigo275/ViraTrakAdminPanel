@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
 import { useApp } from "../context/AppContext";
-import { alertsApi } from "../../api/viratrak";
+import { alertsApi, driverMetricsApi } from "../../api/viratrak";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend,
@@ -87,6 +87,16 @@ const defaultData = {
   posture: [{ metric: "Back", score: 80 },{ metric: "Neck", score: 72 },{ metric: "Shoulders", score: 84 },{ metric: "Arms", score: 90 },{ metric: "Lean", score: 65 }],
 };
 
+const emptyData = {
+  alerts: [],
+  blink: [],
+  perclos: [],
+  ear: [],
+  mar: [],
+  headPose: [],
+  posture: [],
+};
+
 type PeriodKey = "Today" | "This Week" | "This Month";
 
 type PeriodSummary = {
@@ -149,6 +159,18 @@ const sevMap: Record<string, { bg: string; color: string }> = {
 
 interface Props { driverId: string; onBack: () => void; }
 
+function getMetricPeriodStart(period: PeriodKey, now = new Date()) {
+  const start = new Date(now);
+  if (period === "Today") {
+    start.setTime(start.getTime() - 24 * 60 * 60 * 1000);
+  } else if (period === "This Week") {
+    start.setDate(start.getDate() - 7);
+  } else {
+    start.setDate(start.getDate() - 30);
+  }
+  return start.toISOString();
+}
+
 
 
 // ============================================================
@@ -163,25 +185,39 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
   const { drivers } = useApp();
   const [period, setPeriod] = useState<PeriodKey>("Today");
   const [liveAlerts, setLiveAlerts] = useState<typeof driverData["drv-001"]["alerts"] | null>(null);
+  const [liveData, setLiveData] = useState<typeof defaultData | null>(null);
   const emp = drivers.find((e) => e.id === driverId);
-  const data = driverData[driverId] ?? defaultData;
+  const data = liveData ?? emptyData;
 
   useEffect(() => {
     if (!emp) return;
-    alertsApi.list()
-      .then((alerts) => setLiveAlerts(alerts
-        .filter((alert) => alert.driver === `${emp.firstName} ${emp.lastName}` || alert.vehicle === emp.vehicle)
-        .map((alert) => ({
-          icon: Wind,
-          iconColor: alert.icon_color,
-          iconBg: alert.icon_bg,
-          type: alert.type,
-          date: alert.date,
-          time: alert.time,
-          severity: alert.severity,
-        }))))
-      .catch(() => setLiveAlerts([]));
-  }, [emp]);
+    setLiveData(null);
+    const periodEnd = new Date();
+    Promise.all([alertsApi.list(), driverMetricsApi.list(driverId, getMetricPeriodStart(period), periodEnd.toISOString())])
+      .then(([alerts, readings]) => {
+        setLiveAlerts(alerts
+          .filter((alert) => alert.driver === `${emp.firstName} ${emp.lastName}` || alert.vehicle === emp.vehicle)
+          .map((alert) => ({
+            icon: Wind,
+            iconColor: alert.icon_color,
+            iconBg: alert.icon_bg,
+            type: alert.type,
+            date: alert.date,
+            time: alert.time,
+            severity: alert.severity,
+          })));
+        setLiveData({
+          alerts: [],
+          blink: readings.filter((reading) => reading.blinkRate !== null).map((reading) => ({ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), rate: reading.blinkRate ?? 0 })),
+          perclos: readings.filter((reading) => reading.perclos !== null).map((reading) => ({ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), value: reading.perclos ?? 0 })),
+          ear: [],
+          mar: readings.filter((reading) => reading.yawn !== null).map((reading) => ({ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), value: reading.yawn ?? 0 })),
+          headPose: readings.filter((reading) => reading.headPose !== null).map((reading) => ({ axis: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), value: reading.headPose ?? 0 })),
+          posture: readings.filter((reading) => reading.bodyPosture !== null).map((reading) => ({ metric: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), score: reading.bodyPosture ?? 0 })),
+        });
+      })
+      .catch(() => { setLiveAlerts([]); setLiveData(emptyData); });
+  }, [emp, period]);
 
   const bg = dark ? "#111827" : "#F4F5F7";
   const cardBg = dark ? "#1F2937" : "#fff";
@@ -195,12 +231,15 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
   if (!emp) return null;
 
   const fullName = `${emp.firstName} ${emp.lastName}`;
-  const summaries = periodSummaries[driverId] ?? defaultPeriodSummaries;
-  const summary = summaries[period];
   const alertHistory = liveAlerts ?? data.alerts;
-  const averageYawn = data.mar.reduce((sum, point) => sum + point.value, 0) / data.mar.length;
-  const averageBodyPosture = data.posture.reduce((sum, point) => sum + point.score, 0) / data.posture.length;
-  const averageHeadPose = data.headPose.reduce((sum, point) => sum + point.value, 0) / data.headPose.length;
+  const average = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+  const summary = {
+    avgBlink: average(data.blink.map((point) => point.rate)),
+    avgPerclos: average(data.perclos.map((point) => point.value)),
+  };
+  const averageYawn = average(data.mar.map((point) => point.value));
+  const averageBodyPosture = average(data.posture.map((point) => point.score));
+  const averageHeadPose = average(data.headPose.map((point) => point.value));
 
   function Card({ title, subtitle, children, span }: { title: string; subtitle?: string; children: React.ReactNode; span?: string }) {
     return (
@@ -280,7 +319,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 12, color: textSub }}>Period</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: textMain }}>{period === "Today" ? "Last 6h" : period === "This Week" ? "7 days" : "30 days"}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: textMain }}>{period === "Today" ? "Last 24h" : period === "This Week" ? "7 days" : "30 days"}</div>
             </div>
           </div>
 
