@@ -337,7 +337,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
                 status: summary.avgBlink < 12 ? "danger" : summary.avgBlink < 15 ? "warn" : "ok",
               },
               {
-                label: "Avg PERCLOS",
+                label: "Avg Percentage of Eye Closure (PERCLOS)",
                 value: `${summary.avgPerclos}%`,
                 note: "Threshold: 10%",
                 status: summary.avgPerclos > 12 ? "danger" : summary.avgPerclos > 8 ? "warn" : "ok",
@@ -405,7 +405,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 {/* ============================================================ */}
         {/* PERCLOS */}
         {/* ============================================================ */}
-        <Card title="Eye Closure — PERCLOS" subtitle="% time eyes closed — threshold: 10%">
+        <Card title="Percentage of Eye Closure (PERCLOS)" subtitle="% time eyes closed — threshold: 10%">
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.perclos}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
