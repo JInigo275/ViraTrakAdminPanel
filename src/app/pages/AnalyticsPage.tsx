@@ -21,6 +21,12 @@ import {
   Legend,
 } from "recharts";
 
+
+
+// ============================================================
+// Helpers and chart data
+// ============================================================
+
 type JsPdfWithAutoTable = jsPDF & {
   lastAutoTable?: { finalY: number };
 };
@@ -66,7 +72,12 @@ type RecentEvent = { event: string; driver: string; time: string; severity: stri
 type DriverComparisonRow = { driver: string; blink: number; perclos: number; ear: number };
 
 function parseAlertTimestamp(alert: DbAlert): Date | null {
+
+
+
+// ============================================================
   // Parse "MM/DD/YYYY" and "HH:MM" format
+  // ============================================================
   const dateParts = alert.date.split('/').map(Number);
   const timeParts = alert.time.split(':').map(Number);
   
@@ -236,6 +247,17 @@ function buildDriverComparison(alerts: DbAlert[], driverNames: string[]): Driver
     .slice(0, 6);
 }
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// Analytics filters, database loading, charts, and report printing.
+// ============================================================
 export function AnalyticsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -294,7 +316,10 @@ export function AnalyticsPage() {
     const pageW = doc.internal.pageSize.getWidth();
     let y = 18;
 
+    // ============================================================
     // Title
+
+    // ============================================================
     doc.setFontSize(18).setFont("helvetica", "bold");
     doc.text("Analytics Report", 14, y);
     y += 8;
@@ -310,7 +335,10 @@ export function AnalyticsPage() {
     y += 10;
     doc.setTextColor(0);
 
+    // ============================================================
     // KPI grid (2 per row)
+
+    // ============================================================
     doc.setFontSize(12).setFont("helvetica", "bold");
     doc.text("Fleet Overview", 14, y);
     y += 6;
@@ -335,7 +363,10 @@ export function AnalyticsPage() {
     });
     y += 22;
 
+    // ============================================================
     // Events by Type table
+
+    // ============================================================
     doc
       .setFontSize(12)
       .setFont("helvetica", "bold")
@@ -361,7 +392,10 @@ export function AnalyticsPage() {
     });
     y = ((doc as JsPdfWithAutoTable).lastAutoTable?.finalY ?? y) + 8;
 
+    // ============================================================
     // Recent Events table
+
+    // ============================================================
     doc
       .setFontSize(12)
       .setFont("helvetica", "bold")
@@ -500,7 +534,12 @@ export function AnalyticsPage() {
       >
         {!isMobile && (
           <>
+
+
+
+{/* ============================================================ */}
             {/* Segmented period control — desktop only inside header */}
+            {/* ============================================================ */}
             <div
               style={{
                 position: "relative",
@@ -572,10 +611,19 @@ export function AnalyticsPage() {
         )}
       </PageHeader>
 
+
+
+{/* ============================================================ */}
       {/* Mobile-only controls row — period selector + action buttons */}
+      {/* ============================================================ */}
       {isMobile && (
         <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+
+
+
+{/* ============================================================ */}
           {/* Full-width period selector */}
+          {/* ============================================================ */}
           <div style={{ position: "relative", display: "flex", background: dark ? "#374151" : "#F3F4F6", borderRadius: 8, padding: 3, width: "100%" }}>
             <div
               style={{
@@ -620,7 +668,12 @@ export function AnalyticsPage() {
               </button>
             ))}
           </div>
+
+
+
+{/* ============================================================ */}
           {/* Export + Print row */}
+          {/* ============================================================ */}
           <div style={{ display: "flex", gap: 10 }}>
             <button
               onClick={() => setShowPDFPreview(true)}
@@ -651,9 +704,18 @@ export function AnalyticsPage() {
         />
       )}
 
+
+
+{/* ============================================================ */}
       {/* Content to print */}
+      {/* ============================================================ */}
       <div ref={printRef}>
+
+
+
+{/* ============================================================ */}
         {/* Fleet KPI row */}
+        {/* ============================================================ */}
         <div
           style={{
             display: "grid",
@@ -713,7 +775,12 @@ export function AnalyticsPage() {
             gap: 16,
           }}
         >
+
+
+
+{/* ============================================================ */}
           {/* Event type breakdown */}
+          {/* ============================================================ */}
           <Card
             title="Events by Type"
             subtitle={`Derived from alert records for ${period.toLowerCase()}`}
@@ -802,7 +869,11 @@ export function AnalyticsPage() {
             </div>
           </Card>
 
+
+
+{/* ============================================================ */}
           {/* Severity distribution */}
+          {/* ============================================================ */}
           <Card
             title="Severity Distribution"
             subtitle="Severity mix derived from the current alert set"
@@ -883,7 +954,11 @@ export function AnalyticsPage() {
             </div>
           </Card>
 
+
+
+{/* ============================================================ */}
           {/* Blink trend */}
+          {/* ============================================================ */}
           <Card
             title={`Alert Volume — ${period}`}
             subtitle="Alert counts grouped into time buckets"
@@ -925,7 +1000,11 @@ export function AnalyticsPage() {
             </ResponsiveContainer>
           </Card>
 
+
+
+{/* ============================================================ */}
           {/* PERCLOS trend */}
+          {/* ============================================================ */}
           <Card
             title={`Severity Index — ${period}`}
             subtitle="Average severity score derived from alerts"
@@ -970,13 +1049,22 @@ export function AnalyticsPage() {
             </ResponsiveContainer>
           </Card>
 
+
+
+{/* ============================================================ */}
           {/* Driver comparison */}
+          {/* ============================================================ */}
           <Card
             title="Driver Alert Load"
             subtitle="Alert counts and severity by driver"
             span={isMobile ? undefined : "1 / -1"}
           >
+
+
+
+{/* ============================================================ */}
             {/* On mobile: fixed-width scrollable chart so all drivers show clearly */}
+            {/* ============================================================ */}
             <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch" as const }}>
               <div style={{ width: isMobile ? Math.max(320, driverComparison.length * 60) : "100%", height: isMobile ? 180 : 200 }}>
                 <ResponsiveContainer key={`bar-${period}`} width="100%" height="100%">
@@ -995,7 +1083,11 @@ export function AnalyticsPage() {
             </div>
           </Card>
 
+
+
+{/* ============================================================ */}
           {/* Recent events */}
+          {/* ============================================================ */}
           <Card
             title="Recent Events"
             subtitle="Latest alert records from the current data set"
@@ -1109,3 +1201,5 @@ export function AnalyticsPage() {
     </div>
   );
 }
+
+// End of region comment

@@ -56,6 +56,7 @@ export function validatePhone(value: string) {
 export function validatePlate(value: string) {
   const formatted = formatPlate(value);
   if (!formatted) return "Vehicle plate number is required.";
+  if (formatted.length < 6) return "Vehicle plate must be 6 to 8 characters.";
   if (formatted.length > 8) return "Vehicle plate must be 8 characters or fewer.";
   if (!PLATE_PATTERN.test(formatted)) return "Vehicle plate must contain only letters and numbers.";
   return null;

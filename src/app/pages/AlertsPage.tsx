@@ -1,22 +1,33 @@
 import { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Wind, EyeOff, Zap, User, Navigation, Download, X, Filter, Check, ChevronDown, ChevronUp, Bell } from "lucide-react";
+import { Wind, EyeOff, Zap, User, Navigation, Download, X, Filter, Check, ChevronDown, ChevronUp, Bell, Search } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { PDFPreviewModal } from "../components/PDFPreviewModal";
+import { EvidencePreviewModal } from "../components/EvidencePreviewModal";
 import { alertsApi, DbAlert } from "../../api/viratrak";
 
+// ============================================================
 // Map alert type → icon component
+// ============================================================
+
+
+
+// ============================================================
+// Helpers and filters
+// ============================================================
+// ============================================================
+// Edit alert-type icons and labels here.
+// ============================================================
 const typeIconMap: Record<string, React.ElementType> = {
   "Yawning":      Wind,
   "Eyes Closed":  EyeOff,
-  "Head Pose":    Zap,
-  "Body Posture": User,
-  "Micro Sleep":  Navigation,
-  "Blink Rate":   Navigation,
+  "Head Gaze":    Zap,
+  "Frequent Blinking": Navigation,
+  "Body Tilt":    User,
 };
 
 type AlertRow = DbAlert & { icon: React.ElementType };
@@ -60,7 +71,7 @@ function SearchDropdown({ label, value, onChange, options, openKey, activeKey, s
 
   return (
     <div ref={ref} style={{ position: "relative", minWidth: 150 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: activeBg, border: `1px solid ${activeBorder}`, borderRadius: 8, cursor: "text" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: activeBg, border: `1.5px solid ${activeBorder}`, borderRadius: 8, cursor: "text", boxShadow: value ? "0 0 0 1px rgba(29,106,229,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
         <input
           value={query}
           onChange={(e) => { setQuery(e.target.value); onChange(""); }}
@@ -131,6 +142,17 @@ function SimpleDropdown({ label, value, onChange, options, openKey, activeKey, s
   );
 }
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// Alert filters, pagination, selection, and report exports.
+// ============================================================
 export function AlertsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -143,11 +165,14 @@ export function AlertsPage() {
   const [filterDate, setFilterDate] = useState("");
   const [filterSeverity, setFilterSeverity] = useState("");
   const [filterEvidence, setFilterEvidence] = useState("");
+  const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [perPage, setPerPage] = useState<PageOption>(10);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [showDeselectAll, setShowDeselectAll] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [selectedEvidence, setSelectedEvidence] = useState<AlertRow | null>(null);
   const [showPerPageMenu, setShowPerPageMenu] = useState(false);
   const perPageRef = useRef<HTMLDivElement>(null);
 
@@ -182,6 +207,8 @@ export function AlertsPage() {
   const activeFilters = [filterType, filterDriver, filterVehicle, filterDate, filterSeverity, filterEvidence].filter(Boolean).length;
 
   let filtered = allAlerts.filter((a) => {
+    const searchText = search.trim().toLowerCase();
+    if (searchText && !`${a.type} ${a.driver} ${a.vehicle} ${a.date} ${a.time} ${a.severity} ${a.evidence ? "yes" : "no"}`.toLowerCase().includes(searchText)) return false;
     if (filterType && a.type !== filterType) return false;
     if (filterDriver && a.driver !== filterDriver) return false;
     if (filterVehicle && a.vehicle !== filterVehicle) return false;
@@ -192,7 +219,10 @@ export function AlertsPage() {
     return true;
   });
 
+  // ============================================================
   // Alphabetical sort by driver
+
+  // ============================================================
   filtered = [...filtered].sort((a, b) => a.driver.localeCompare(b.driver));
 
   const totalPages = perPage === "All" ? 1 : Math.ceil(filtered.length / (perPage as number));
@@ -201,8 +231,8 @@ export function AlertsPage() {
   function clearFilters() { setFilterType(""); setFilterDriver(""); setFilterVehicle(""); setFilterDate(""); setFilterSeverity(""); setFilterEvidence(""); setPage(1); }
 
   function toggleOne(id: number) { setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
-  function selectAll() { setSelected(new Set(paginated.map((a) => a.id))); }
-  function deselectAll() { setSelected(new Set()); }
+  function selectAll() { setSelected(new Set(paginated.map((a) => a.id))); setShowDeselectAll(true); }
+  function deselectAll() { setSelected(new Set()); setShowDeselectAll(false); }
   const allChecked = paginated.length > 0 && paginated.every((a) => selected.has(a.id));
   const someChecked = paginated.some((a) => selected.has(a.id));
 
@@ -241,6 +271,12 @@ export function AlertsPage() {
           buildDoc={buildPDF}
         />
       )}
+      {selectedEvidence && (
+        <EvidencePreviewModal
+          alert={selectedEvidence}
+          onClose={() => setSelectedEvidence(null)}
+        />
+      )}
 
       <PageHeader icon={Bell} iconColor="#EF4444" title="Alerts & Evidence" subtitle="All detected driver behavior events and evidence">
         <button onClick={exportExcel} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
@@ -251,8 +287,16 @@ export function AlertsPage() {
         </button>
       </PageHeader>
 
+
+
+{/* ============================================================ */}
       {/* Filter bar */}
+      {/* ============================================================ */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#374151" : "#F8F9FA", border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 320, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
+          <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search alerts..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+        </div>
         <button onClick={() => setShowFilters((v) => !v)}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: showFilters ? "#1D6AE5" : (dark ? "#374151" : "#fff"), color: showFilters ? "#fff" : textSub, border: `1px solid ${showFilters ? "#1D6AE5" : (dark ? "#4B5563" : "#E5E7EB")}`, borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
           <Filter size={13} /> Filters {activeFilters > 0 && `(${activeFilters})`}
@@ -264,7 +308,11 @@ export function AlertsPage() {
         )}
         <span style={{ fontSize: 13, color: textSub, marginLeft: 4 }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""} · Sorted A–Z by driver</span>
 
+
+
+{/* ============================================================ */}
         {/* Per page */}
+        {/* ============================================================ */}
         <div ref={perPageRef} style={{ position: "relative", marginLeft: "auto" }}>
           <div onClick={() => setShowPerPageMenu((v) => !v)}
             style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: dark ? "#374151" : "#fff", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 13, color: textSub, cursor: "pointer", userSelect: "none" }}>
@@ -301,13 +349,14 @@ export function AlertsPage() {
         </div>
       )}
 
+
+
+{/* ============================================================ */}
       {/* Select all / deselect */}
-      {paginated.length > 0 && (
+      {/* ============================================================ */}
+      {paginated.length > 0 && selected.size > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <button onClick={selectAll} style={{ fontSize: 13, color: "#1D6AE5", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Select All</button>
-          <span style={{ color: dark ? "#4B5563" : "#D1D5DB" }}>·</span>
-          <button onClick={deselectAll} style={{ fontSize: 13, color: textSub, background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Deselect All</button>
-          {selected.size > 0 && <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for PDF</span>}
+          <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for PDF</span>
         </div>
       )}
 
@@ -347,7 +396,7 @@ export function AlertsPage() {
                   </td>
                   <td style={{ padding: "10px 14px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: 6, background: e.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon size={12} color={e.iconColor} /></div>
+                      <div style={{ width: 26, height: 26, borderRadius: 6, background: e.icon_bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon size={12} color={e.icon_color} /></div>
                       <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.type}</span>
                     </div>
                   </td>
@@ -359,9 +408,7 @@ export function AlertsPage() {
                     <span style={{ display: "inline-block", padding: "2px 9px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: sevStyle[e.severity].bg, color: sevStyle[e.severity].color }}>{e.severity}</span>
                   </td>
                   <td style={{ padding: "10px 14px" }}>
-                    {e.evidence
-                      ? <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "#1D6AE5", fontWeight: 500 }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: "#EF4444", display: "inline-block" }} /> View</span>
-                      : <span style={{ fontSize: 13, color: textSub }}>—</span>}
+                    <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedEvidence(e); }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: 0, border: "none", background: "transparent", fontSize: 13, color: e.evidence ? "#1D6AE5" : textSub, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: e.evidence ? "#EF4444" : textSub, display: "inline-block" }} /> View</button>
                   </td>
                 </tr>
               );
@@ -371,7 +418,11 @@ export function AlertsPage() {
         </div>
       </div>
 
+
+
+{/* ============================================================ */}
       {/* Pagination */}
+      {/* ============================================================ */}
       {perPage !== "All" && totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14 }}>
           <span style={{ fontSize: 13, color: textSub }}>
@@ -401,3 +452,5 @@ export function AlertsPage() {
     </div>
   );
 }
+
+// End of region comment

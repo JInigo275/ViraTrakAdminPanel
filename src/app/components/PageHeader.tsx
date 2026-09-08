@@ -3,7 +3,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useIsMobile } from "../hooks/useIsMobile";
 
 interface PageHeaderProps {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   iconColor?: string;
   title: string;
   subtitle: string;
@@ -53,20 +53,22 @@ export function PageHeader({ icon: Icon, iconColor = "#1D6AE5", title, subtitle,
         padding: isMobile ? "16px 16px 16px 20px" : "18px 20px 18px 24px",
       }}>
         {/* Icon + text */}
-        <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1 }}>
-          <div style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            background: iconBg,
-            border: `1.5px solid ${iconColor}28`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}>
-            <Icon size={20} color={iconColor} strokeWidth={2} />
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: Icon ? 14 : 0, flex: 1 }}>
+          {Icon && (
+            <div style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              background: iconBg,
+              border: `1.5px solid ${iconColor}28`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              <Icon size={20} color={iconColor} strokeWidth={2} />
+            </div>
+          )}
 
           <div>
             <div style={{

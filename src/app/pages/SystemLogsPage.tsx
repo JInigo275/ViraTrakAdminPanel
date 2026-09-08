@@ -9,6 +9,12 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { PDFPreviewModal } from "../components/PDFPreviewModal";
 
+
+
+// ============================================================
+// Log types and styles
+// ============================================================
+
 type LogSource = "System" | "Hardware";
 type LogLevel  = "INFO" | "WARNING" | "ERROR";
 
@@ -33,6 +39,17 @@ const sourceStyle: Record<LogSource, { bg: string; color: string }> = {
   Hardware: { bg: "#FFF7ED", color: "#D97706" },
 };
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// Log loading, filters, selection, and export actions.
+// ============================================================
 export function SystemLogsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -76,8 +93,7 @@ export function SystemLogsPage() {
   function toggleOne(id: number) {
     setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
   }
-  function selectAll()   { setSelected((prev) => { const s = new Set(prev); filtered.forEach((l) => s.add(l.id)); return s; }); }
-  function deselectAll() { setSelected((prev) => { const s = new Set(prev); filtered.forEach((l) => s.delete(l.id)); return s; }); }
+  function toggleAll() { setSelected(allChecked ? new Set() : new Set(filtered.map((l) => l.id))); }
 
   const printData = selected.size > 0 ? filtered.filter((l) => selected.has(l.id)) : filtered;
 
@@ -88,8 +104,8 @@ export function SystemLogsPage() {
     doc.text(`Exported: ${new Date().toLocaleString()}${selected.size > 0 ? ` | ${selected.size} selected` : ""}`, 14, 24);
     autoTable(doc, {
       startY: 30,
-      head: [["Date", "Time", "Type", "Source", "Reference", "Description"]],
-      body: printData.map((l) => [l.date, l.time, l.level, l.source, l.ref, l.action]),
+      head: [["Date", "Time", "Type", "Source", "Reference", "Actor", "Description"]],
+      body: printData.map((l) => [l.date, l.time, l.level, l.source, l.ref, l.actor, l.action]),
       styles: { fontSize: 7.5 },
       headStyles: { fillColor: [29, 106, 229] },
       margin: { left: 14, right: 14 },
@@ -111,6 +127,7 @@ export function SystemLogsPage() {
         Type:        l.level,
         Source:      l.source,
         Reference:   l.ref,
+        Actor:       l.actor,
         Description: l.action,
       }))),
       "System Logs"
@@ -138,14 +155,18 @@ export function SystemLogsPage() {
         </button>
       </PageHeader>
 
+
+
+{/* ============================================================ */}
       {/* Filters */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, borderRadius: 8, padding: "7px 12px", minWidth: 220 }}>
+      {/* ============================================================ */}
+      <div style={{ display: "flex", gap: 18, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", minWidth: 220, boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
           <Search size={13} color={textSub} />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search logs…" style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
         </div>
 
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Type:</span>
           {["All", "INFO", "WARNING", "ERROR"].map((f) => (
             <button key={f} onClick={() => setLevelFilter(f)}
@@ -155,7 +176,7 @@ export function SystemLogsPage() {
           ))}
         </div>
 
-        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Source:</span>
           {["All", "System", "Hardware"].map((f) => (
             <button key={f} onClick={() => setSourceFilter(f)}
@@ -164,42 +185,48 @@ export function SystemLogsPage() {
             </button>
           ))}
         </div>
+
+        <span style={{ fontSize: 13, color: textSub, marginLeft: "auto", whiteSpace: "nowrap" }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""}</span>
       </div>
 
-      {/* Select / Deselect */}
+
+
+{/* ============================================================ */}
+      {/* Selection summary */}
+      {/* ============================================================ */}
       {filtered.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <button onClick={selectAll} style={{ fontSize: 13, color: "#1D6AE5", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Select All</button>
-          <span style={{ color: dark ? "#4B5563" : "#D1D5DB" }}>·</span>
-          <button onClick={deselectAll} style={{ fontSize: 13, color: textSub, background: "none", border: "none", cursor: "pointer", fontFamily: "Inter, sans-serif", padding: 0 }}>Deselect All</button>
           {selected.size > 0 && <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for export</span>}
-          <span style={{ fontSize: 13, color: textSub, marginLeft: "auto" }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""}</span>
         </div>
       )}
 
+
+
+{/* ============================================================ */}
       {/* Table */}
+      {/* ============================================================ */}
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
                 <th style={{ padding: "10px 14px", width: 40 }}>
-                  <div onClick={allChecked ? deselectAll : selectAll}
-                    style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${allChecked ? "#1D6AE5" : (dark ? "#4B5563" : "#D1D5DB")}`, background: allChecked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div onClick={toggleAll}
+                    style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${allChecked ? "#1D6AE5" : (dark ? "#4B5563" : "#D1D5DB")}`, background: allChecked ? "#1D6AE5" : "transparent", cursor: filtered.length ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {allChecked && <Check size={10} color="#fff" />}
                     {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
                   </div>
                 </th>
-                {["Date", "Time", "Type", "Source", "Reference", "Description"].map((h) => (
+                {["Date", "Time", "Type", "Source", "Reference", "Actor", "Description"].map((h) => (
                   <th key={h} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>Loading logs…</td></tr>
+                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>Loading logs…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No logs match the current filters.</td></tr>
+                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No logs match the current filters.</td></tr>
               ) : filtered.map((l, i) => {
                 const checked = selected.has(l.id);
                 return (
@@ -221,6 +248,7 @@ export function SystemLogsPage() {
                       <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, background: sourceStyle[l.source].bg, color: sourceStyle[l.source].color }}>{l.source}</span>
                     </td>
                     <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap" }}>{l.ref}</td>
+                    <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap" }}>{l.actor}</td>
                     <td style={{ padding: "10px 14px", fontSize: 14, color: textMain }}>{l.action}</td>
                   </tr>
                 );
@@ -232,3 +260,5 @@ export function SystemLogsPage() {
     </div>
   );
 }
+
+// End of region comment

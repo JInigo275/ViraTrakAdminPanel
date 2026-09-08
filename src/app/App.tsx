@@ -3,7 +3,7 @@ import { Menu } from "lucide-react";
 // Use URL import for image assets to avoid requiring a PNG module declaration
 const viraTrakLogo = new URL("../imports/ViraTrak_Logo.png", import.meta.url).href;
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
-import { AppProvider, useApp } from "./context/AppContext";
+import { AppProvider, canManageUsers, useApp } from "./context/AppContext";
 import { Sidebar } from "./components/Sidebar";
 import { LoginPage } from "./pages/LoginPage";
 import { ChangePasswordPage } from "./pages/ChangePasswordPage";
@@ -12,6 +12,7 @@ import { AlertsPage } from "./pages/AlertsPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { DriversPage } from "./pages/DriversPage";
+import { VehiclesPage } from "./pages/VehiclesPage";
 import { DriverDetailPage } from "./pages/DriverDetailPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -118,8 +119,11 @@ function AppInner() {
       case "dashboard":  return <DashboardPage onNavigate={navigate} isMobile={isMobile} />;
       case "alerts":     return <AlertsPage />;
       case "analytics":  return <AnalyticsPage />;
-      case "users":      return <UsersPage />;
+      case "users":      return canManageUsers(currentUser?.role ?? "Supervisor")
+        ? <UsersPage />
+        : <DashboardPage onNavigate={navigate} isMobile={isMobile} />;
       case "employees":  return <DriversPage onViewDetail={(id) => setDriverDetailId(id)} />;
+      case "vehicles":   return <VehiclesPage />;
       case "logs":       return <SystemLogsPage />;
       case "settings":   return <SettingsPage />;
       case "test":       return <TestPage />;

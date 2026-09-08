@@ -3,6 +3,7 @@ import { Wind, EyeOff, Zap, User, Navigation } from "lucide-react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
 import { alertsApi, DbAlert } from "../../api/viratrak";
+import { EvidencePreviewModal } from "./EvidencePreviewModal";
 
 const typeIconMap: Record<string, typeof Wind> = {
   Yawning: Wind,
@@ -24,6 +25,7 @@ type EventRow = {
   vehicle: string;
   time: string;
   severity: DbAlert["severity"];
+  alert: DbAlert;
 };
 
 function toRow(alert: DbAlert): EventRow {
@@ -41,6 +43,7 @@ function toRow(alert: DbAlert): EventRow {
     vehicle: alert.vehicle,
     time: alert.time,
     severity: alert.severity,
+    alert,
   };
 }
 
@@ -66,6 +69,7 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
   const [events, setEvents] = useState<EventRow[]>([]);
+  const [selectedAlert, setSelectedAlert] = useState<DbAlert | null>(null);
   const cardBg = dark ? "#1F2937" : "#fff";
   const textMain = dark ? "#F9FAFB" : "#111827";
   const textSub = dark ? "#9CA3AF" : "#6B7280";
@@ -117,6 +121,7 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
                 <tr
                   key={i}
                   style={{ borderBottom: i < events.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", cursor: "pointer" }}
+                  onClick={() => e.alert.evidence && setSelectedAlert(e.alert)}
                   onMouseEnter={(el) => ((el.currentTarget as HTMLTableRowElement).style.background = rowHover)}
                   onMouseLeave={(el) => ((el.currentTarget as HTMLTableRowElement).style.background = "transparent")}
                 >
@@ -137,6 +142,7 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
           </tbody>
         </table>
       </div>
+      {selectedAlert && <EvidencePreviewModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />}
     </div>
   );
 }

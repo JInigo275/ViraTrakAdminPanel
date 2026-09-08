@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { usersApi, driversApi, DbUser, DbDriver, demoLoginUser } from "../../api/viratrak";
+import type { Session } from "@supabase/supabase-js";
+import { usersApi, driversApi, vehiclesApi, logsApi, DbUser, DbDriver, DbVehicle, demoLoginUser } from "../../api/viratrak";
 import { supabase } from "../../api/supabaseClient";
 
 export type Role = "Owner" | "Administrator" | "Supervisor";
@@ -14,11 +15,11 @@ export interface AppUser {
   lastName: string;
   email: string;
   role: Role;
-  status: "Active" | "Inactive";
+  status: "Active" | "Deactivated";
   lastLogin: string;
   password: string;
   mustChangePassword: boolean;
-  avatar?: string;
+  avatar?: string | null;
 }
 
 export interface Driver {
@@ -29,14 +30,54 @@ export interface Driver {
   contact: string;
 }
 
+export interface Vehicle {
+  id: number;
+  plateNumber: string;
+  model: string;
+  driverIds: string[];
+}
+
 export interface AppSettings {
   firstName: string;
   lastName: string;
   avatar?: string;
 }
 
-const adjectives = ["Swift", "Bold", "Keen", "Iron", "Apex", "Nova", "Flux", "Echo", "Volt", "Peak"];
-const nouns = ["Tiger", "Falcon", "Hawk", "Storm", "Blaze", "Ridge", "Forge", "Crest", "Spark", "Wave"];
+const adjectives = [
+  "Advanced",
+  "Active",
+  "Secure",
+  "Reliable",
+  "Professional",
+  "Intelligent",
+  "Precision",
+  "Integrated",
+  "Enhanced",
+  "Optimal",
+  "Trusted",
+  "Responsive",
+  "Consistent",
+  "Efficient",
+  "Proactive"
+];
+
+const nouns = [
+  "Driver",
+  "Fleet",
+  "Safety",
+  "Monitor",
+  "Control",
+  "Insight",
+  "Vision",
+  "Analytics",
+  "Operations",
+  "Performance",
+  "Awareness",
+  "Management",
+  "Tracking",
+  "Command",
+  "System"
+];
 
 export function genTempPassword() {
   const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
@@ -76,10 +117,11 @@ function mapUser(u: DbUser): AppUser {
     lastName: u.last_name,
     email: u.email,
     role: normalizeRole(String(u.role)),
-    status: u.status,
+    status: u.status === "Inactive" ? "Deactivated" : u.status,
     lastLogin: u.last_login,
     password: u.password,
     mustChangePassword: u.must_change_password,
+    avatar: u.avatar,
   };
 }
 
@@ -93,6 +135,15 @@ function mapDriver(e: DbDriver): Driver {
   };
 }
 
+function mapVehicle(v: DbVehicle): Vehicle {
+  return {
+    id: v.vehicle_id,
+    plateNumber: v.plate_number,
+    model: v.model ?? "",
+    driverIds: [v.driver_id, v.secondary_driver_id].filter((id): id is number => id !== null).map(String),
+  };
+}
+
 const seedUsers: AppUser[] = [
   {
     id: demoLoginUser.id,
@@ -100,7 +151,7 @@ const seedUsers: AppUser[] = [
     lastName: demoLoginUser.last_name,
     email: demoLoginUser.email,
     role: demoLoginUser.role,
-    status: demoLoginUser.status,
+    status: demoLoginUser.status === "Inactive" ? "Deactivated" : demoLoginUser.status,
     lastLogin: demoLoginUser.last_login,
     password: demoLoginUser.password,
     mustChangePassword: demoLoginUser.must_change_password,
@@ -112,6 +163,7 @@ interface AppContextType {
   setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
   drivers: Driver[];
   setDrivers: React.Dispatch<React.SetStateAction<Driver[]>>;
+  vehicles: Vehicle[];
   currentUser: AppUser | null;
   setCurrentUser: React.Dispatch<React.SetStateAction<AppUser | null>>;
   settings: AppSettings;
@@ -124,6 +176,9 @@ interface AppContextType {
   addDriver: (e: Driver) => Promise<void>;
   updateDriver: (id: string, patch: Partial<Driver>) => Promise<void>;
   removeDriver: (id: string) => Promise<void>;
+  addVehicle: (vehicle: Omit<Vehicle, "id">) => Promise<void>;
+  updateVehicle: (id: number, patch: Partial<Omit<Vehicle, "id">>) => Promise<void>;
+  removeVehicle: (id: number) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
@@ -131,6 +186,7 @@ const AppContext = createContext<AppContextType>({} as AppContextType);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<AppUser[]>(seedUsers);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [settings, setSettings] = useState<AppSettings>({ firstName: "Admin", lastName: "User" });
   const [dbReady, setDbReady] = useState(false);
@@ -138,12 +194,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
 
-    async function hydrateSession(session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"]) {
+    async function hydrateSession(session: Session | null) {
       if (!session?.user.email) return;
       try {
         const profile = await usersApi.getByEmail(session.user.email);
         if (profile?.status === "Active") {
-          setCurrentUser(mapUser(profile));
+          setCurrentUser((previous) => {
+            const mapped = mapUser(profile);
+            if (previous?.id === mapped.id && previous.lastLogin !== "Never" && mapped.lastLogin === "Never") {
+              return { ...mapped, lastLogin: previous.lastLogin };
+            }
+            return mapped;
+          });
           setSettings((previous) => ({ ...previous, firstName: profile.first_name, lastName: profile.last_name, avatar: profile.avatar ?? previous.avatar }));
         }
       } catch (error) {
@@ -160,15 +222,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Load persisted app data on mount
+  // Load protected lists after authentication is available.
   useEffect(() => {
+    if (!currentUser) return;
+
+    setDbReady(false);
     Promise.all([
       usersApi.list().then((rows) => setUsers(rows.map(mapUser))),
       driversApi.list().then((rows) => setDrivers(rows.map(mapDriver))),
+      vehiclesApi.list().then((rows) => setVehicles(rows.map(mapVehicle))),
     ])
       .catch((e) => console.warn("Data load failed, using available data:", e))
       .finally(() => setDbReady(true));
-  }, []);
+  }, [currentUser]);
 
   // Persist currentUser in session storage while logged in, and in local storage only when stayLoggedIn is true.
   useEffect(() => {
@@ -211,6 +277,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.lastLogin !== undefined) dbPatch.last_login = patch.lastLogin;
     if (patch.password !== undefined) dbPatch.password = patch.password;
     if (patch.mustChangePassword !== undefined) dbPatch.must_change_password = patch.mustChangePassword;
+    if (patch.avatar !== undefined) dbPatch.avatar = patch.avatar ?? null;
     const saved = await usersApi.update(id, dbPatch);
     setUsers((prev) => prev.map((u) => u.id === id ? mapUser(saved) : u));
   }
@@ -221,6 +288,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   // --- Drivers write-through ---
+  function recordDriverAction(action: string, ref: string) {
+    void logsApi.create({ action, ref }).catch((error) => console.warn("Could not record driver audit log:", error));
+  }
+
   async function addDriver(e: Driver) {
     const db: DbDriver = {
       id: e.id, first_name: e.firstName, last_name: e.lastName,
@@ -228,6 +299,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     const saved = await driversApi.create(db);
     setDrivers((prev) => [...prev, mapDriver(saved)]);
+    recordDriverAction(`Driver ${saved.first_name} ${saved.last_name} was added with ID ${saved.id}${saved.vehicle !== "Unassigned" ? ` and assigned vehicle ${saved.vehicle}.` : ". No vehicle was assigned."}`, "DRIVER_CREATED");
   }
 
   async function updateDriver(id: string, patch: Partial<Driver>) {
@@ -238,20 +310,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.contact !== undefined) dbPatch.contact = patch.contact;
     const saved = await driversApi.update(id, dbPatch);
     setDrivers((prev) => prev.map((e) => e.id === id ? mapDriver(saved) : e));
+    recordDriverAction(`Driver ${saved.first_name} ${saved.last_name} (${saved.id}) was updated${saved.vehicle !== "Unassigned" ? `; assigned vehicle is now ${saved.vehicle}.` : "; no vehicle is assigned."}`, "DRIVER_UPDATED");
   }
 
   async function removeDriver(id: string) {
+    const removedDriver = drivers.find((driver) => driver.id === id);
     await driversApi.remove(id);
     setDrivers((prev) => prev.filter((e) => e.id !== id));
+    if (removedDriver) recordDriverAction(`Driver ${removedDriver.firstName} ${removedDriver.lastName} (${removedDriver.id}) was removed from the system.`, "DRIVER_DELETED");
+  }
+
+  async function addVehicle(vehicle: Omit<Vehicle, "id">) {
+    const saved = await vehiclesApi.create({
+      plate_number: vehicle.plateNumber,
+      model: vehicle.model,
+      driver_id: vehicle.driverIds[0] ? parseInt(vehicle.driverIds[0], 10) : null,
+      secondary_driver_id: vehicle.driverIds[1] ? parseInt(vehicle.driverIds[1], 10) : null,
+    });
+    setVehicles((prev) => [mapVehicle(saved), ...prev]);
+  }
+
+  async function updateVehicle(id: number, patch: Partial<Omit<Vehicle, "id">>) {
+    const saved = await vehiclesApi.update(id, {
+      ...(patch.plateNumber === undefined ? {} : { plate_number: patch.plateNumber }),
+      ...(patch.model === undefined ? {} : { model: patch.model }),
+      ...(patch.driverIds === undefined ? {} : {
+        driver_id: patch.driverIds[0] ? parseInt(patch.driverIds[0], 10) : null,
+        secondary_driver_id: patch.driverIds[1] ? parseInt(patch.driverIds[1], 10) : null,
+      }),
+    });
+    setVehicles((prev) => prev.map((vehicle) => vehicle.id === id ? mapVehicle(saved) : vehicle));
+  }
+
+  async function removeVehicle(id: number) {
+    await vehiclesApi.remove(id);
+    setVehicles((prev) => prev.filter((vehicle) => vehicle.id !== id));
   }
 
   return (
     <AppContext.Provider value={{
-      users, setUsers, drivers, setDrivers,
+      users, setUsers, drivers, setDrivers, vehicles,
       currentUser, setCurrentUser, settings, setSettings,
       dbReady,
       addUser, updateUser, removeUser,
       addDriver, updateDriver, removeDriver,
+      addVehicle, updateVehicle, removeVehicle,
     }}>
       {children}
     </AppContext.Provider>

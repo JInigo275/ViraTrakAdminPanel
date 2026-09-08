@@ -5,6 +5,13 @@ import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, AppUser, Role, genTempPassword, getAddableRoles, canManageUsers, getFullName } from "../context/AppContext";
 import { formatName, validateEmail, validateName, validatePassword } from "../../utils/validation";
+import { supabase } from "../../api/supabaseClient";
+
+
+
+// ============================================================
+// Helpers and user components
+// ============================================================
 
 const roleColors: Record<Role, { bg: string; color: string }> = {
   Owner:         { bg: "#FEF3C7", color: "#D97706" },
@@ -17,6 +24,19 @@ const roleInfo = [
   { role: "Administrator" as Role, icon: Shield, color: "#1D6AE5", bg: "#EBF2FF", desc: "Full operational access. Can only add and manage Supervisors. Cannot manage other Administrators or Owners." },
   { role: "Supervisor" as Role, icon: UserCog, color: "#8B5CF6", bg: "#F5F3FF", desc: "Restricted access — Dashboard, Alerts & Recordings, Analytics, and Driver Info only. Cannot add users." },
 ];
+
+function formatLastLogin(value: string) {
+  if (!value || value === "Never") return "Never";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
 
 function Modal({ title, onClose, children, width }: { title: string; onClose: () => void; children: React.ReactNode; width?: number }) {
   const { dark } = useTheme();
@@ -44,6 +64,42 @@ function FloatField({ label, type = "text", value, onChange, disabled, suffix }:
       <label style={{ position: "absolute", left: 14, top: lifted ? 8 : "50%", transform: lifted ? "none" : "translateY(-50%)", fontSize: lifted ? 12 : 15, fontWeight: lifted ? 500 : 400, color: focused ? "#1D6AE5" : dark ? "#6B7280" : "#9CA3AF", pointerEvents: "none", transition: "all 0.18s ease", fontFamily: "Inter, sans-serif" }}>{label}</label>
       {suffix && <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }}>{suffix}</div>}
     </div>
+  );
+}
+
+function DeletePasswordModal({ user, onClose, onConfirm }: { user: AppUser; onClose: () => void; onConfirm: (password: string) => Promise<void> }) {
+  const { dark } = useTheme();
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!password) { setError("Enter your account password."); return; }
+    setSubmitting(true);
+    setError("");
+    try {
+      await onConfirm(password);
+    } catch (confirmationError) {
+      setError(confirmationError instanceof Error ? confirmationError.message : "Password verification failed.");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Confirm User Deletion" onClose={submitting ? () => undefined : onClose}>
+      <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ fontSize: 14, color: dark ? "#D1D5DB" : "#4B5563", lineHeight: 1.5 }}>
+          Enter your account password to permanently remove <strong>{getFullName(user)}</strong>.
+        </div>
+        <FloatField label="Your account password" type="password" value={password} onChange={setPassword} disabled={submitting} />
+        {error && <div style={{ fontSize: 14, color: "#B91C1C", background: dark ? "#451A1A" : "#FEF2F2", padding: "8px 12px", borderRadius: 8 }}>{error}</div>}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" onClick={onClose} disabled={submitting} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: submitting ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>
+          <button type="submit" disabled={submitting} style={{ flex: 1, padding: "11px", background: "#DC2626", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? "wait" : "pointer", fontFamily: "Inter, sans-serif" }}>{submitting ? "Verifying..." : "Delete User"}</button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -150,7 +206,12 @@ function ReceiptModal({ user, password, onClose }: { user: AppUser; password: st
   return (
     <Modal title="User Created" onClose={onClose} width={400}>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+
+
+
+{/* ============================================================ */}
         {/* Receipt header */}
+        {/* ============================================================ */}
         <div style={{ textAlign: "center", paddingBottom: 16, borderBottom: `2px dashed ${dark ? "#374151" : "#E5E7EB"}`, marginBottom: 16 }}>
           <div style={{ width: 44, height: 44, borderRadius: 12, background: "#EBF2FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
             <Check size={22} color="#1D6AE5" />
@@ -159,7 +220,11 @@ function ReceiptModal({ user, password, onClose }: { user: AppUser; password: st
           <div style={{ fontSize: 13, color: textSub, marginTop: 2 }}>{now}</div>
         </div>
 
+
+
+{/* ============================================================ */}
         {/* Details */}
+        {/* ============================================================ */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
           {[
             ["Full Name", getFullName(user)],
@@ -194,6 +259,17 @@ function ReceiptModal({ user, password, onClose }: { user: AppUser; password: st
   );
 }
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// User list, role permissions, account creation, and account actions.
+// ============================================================
 export function UsersPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -206,6 +282,8 @@ export function UsersPage() {
   const [showPass, setShowPass] = useState(false);
   const [generatedPass, setGeneratedPass] = useState("");
   const [addError, setAddError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null);
 
   const bg = dark ? "#111827" : "#F4F5F7";
   const cardBg = dark ? "#1F2937" : "#fff";
@@ -277,17 +355,34 @@ export function UsersPage() {
     }
   }
 
+  async function handleStatusToggle(u: AppUser) {
+    setActionError("");
+    try {
+      await updateUser(u.id, { status: u.status === "Active" ? "Deactivated" : "Active" });
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Could not update the user's status.");
+    }
+  }
+
+  async function confirmDelete(password: string) {
+    if (!supabase || !currentUser?.email) throw new Error("Authentication is unavailable. Please sign in again.");
+    const { error } = await supabase.auth.signInWithPassword({ email: currentUser.email, password });
+    if (error) throw new Error("Incorrect account password.");
+    if (!deleteTarget) return;
+    await removeUser(deleteTarget.id);
+    setDeleteTarget(null);
+  }
+
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
-      <PageHeader icon={Users} iconColor="#1D6AE5" title="Users" subtitle="Manage system user accounts and access roles">
-        {canAdd && addableRoles.length > 0 && (
-          <button onClick={openAdd} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#1D6AE5", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-            <Plus size={14} /> Add User
-          </button>
-        )}
-      </PageHeader>
+      <PageHeader icon={Users} iconColor="#1D6AE5" title="Users" subtitle="Manage system user accounts and access roles" />
+      {actionError && <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 8, background: dark ? "#451A1A" : "#FEF2F2", color: dark ? "#FCA5A5" : "#B91C1C", fontSize: 14 }}>{actionError}</div>}
 
+
+
+{/* ============================================================ */}
       {/* Role info cards at top */}
+      {/* ============================================================ */}
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
         {roleInfo.map(({ role, icon: Icon, color, bg: ibg, desc }) => (
           <div key={role} style={{ background: cardBg, borderRadius: 12, padding: "14px 16px", boxShadow: shadow, display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -302,10 +397,19 @@ export function UsersPage() {
         ))}
       </div>
 
+{/* ============================================================ */}
       {/* Search */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1px solid ${borderColor}`, borderRadius: 8, padding: "8px 12px", marginBottom: 16, width: isMobile ? "100%" : 280, boxSizing: "border-box" }}>
-        <Search size={14} color={textSub} />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+      {/* ============================================================ */}
+      <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: 12, marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 280, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
+          <Search size={14} color={textSub} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+        </div>
+        {canAdd && addableRoles.length > 0 && (
+          <button onClick={openAdd} style={{ alignSelf: isMobile ? "flex-end" : "auto", display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#1D6AE5", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+            <Plus size={14} /> Add User
+          </button>
+        )}
       </div>
 
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
@@ -344,16 +448,16 @@ export function UsersPage() {
                     {u.status}
                   </span>
                 </td>
-                <td style={{ padding: "12px 18px", fontSize: 14, color: textSub }}>{u.lastLogin}</td>
+                <td style={{ padding: "12px 18px", fontSize: 14, color: textSub }}>{formatLastLogin(u.lastLogin)}</td>
                 <td style={{ padding: "12px 18px" }}>
-                  {canAdd && u.role !== "Owner" && ( 
+                  {canManageUser(u) && (
                     <KebabMenu
                       user={u}
                       adderRole={myRole}
                       onChangeRole={(role) => updateUser(u.id, { role }).catch(console.error)}
                       onResetPassword={() => handleReset(u)}
-                      onToggleStatus={() => updateUser(u.id, { status: u.status === "Active" ? "Inactive" : "Active" }).catch(console.error)}
-                      onDelete={() => removeUser(u.id).catch(console.error)}
+                      onToggleStatus={() => handleStatusToggle(u)}
+                      onDelete={() => setDeleteTarget(u)}
                     />
                   )}
                 </td>
@@ -364,7 +468,11 @@ export function UsersPage() {
         </div>
       </div>
 
+
+
+{/* ============================================================ */}
       {/* Add user modal */}
+      {/* ============================================================ */}
       {showAdd && (
         <Modal title="Add New User" onClose={() => setShowAdd(false)}>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -414,6 +522,9 @@ export function UsersPage() {
 
       {receipt && <ReceiptModal user={receipt.user} password={receipt.password} onClose={() => setReceipt(null)} />}
       {resetReceipt && <ReceiptModal user={resetReceipt.user} password={resetReceipt.password} onClose={() => setResetReceipt(null)} />}
+      {deleteTarget && <DeletePasswordModal user={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
     </div>
   );
 }
+
+// End of region comment

@@ -7,6 +7,12 @@ import { useApp, Role } from "../context/AppContext";
 import { supabase } from "../../api/supabaseClient";
 import { formatName, validateName, validatePassword } from "../../utils/validation";
 
+
+
+// ============================================================
+// Form components
+// ============================================================
+
 const roleColors: Record<Role, { bg: string; color: string }> = {
   Owner: { bg: "#FEF3C7", color: "#D97706" },
   Administrator: { bg: "#EBF2FF", color: "#1D6AE5" },
@@ -39,6 +45,17 @@ function FloatField({ label, value, onChange, type = "text", suffix }: { label: 
   );
 }
 
+
+// End of region comment
+
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+// ============================================================
+// Profile details, avatar updates, and password changes.
+// ============================================================
 export function SettingsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
@@ -54,8 +71,11 @@ export function SettingsPage() {
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [passError, setPassError] = useState("");
+  const [profileError, setProfileError] = useState("");
   const [passSaved, setPassSaved] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [passSaving, setPassSaving] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -74,35 +94,49 @@ export function SettingsPage() {
   }
 
   async function saveProfile() {
+    setProfileError("");
     const validationError = validateName(firstName, "First name") || validateName(lastName, "Last name");
-    if (validationError) return;
+    if (validationError) { setProfileError(validationError); return; }
     const normalizedFirstName = formatName(firstName);
     const normalizedLastName = formatName(lastName);
-    setFirstName(normalizedFirstName); setLastName(normalizedLastName);
-    setSettings((p) => ({ ...p, firstName: normalizedFirstName, lastName: normalizedLastName, avatar: avatar || undefined }));
-    setCurrentUser((prev) => prev ? { ...prev, firstName: normalizedFirstName, lastName: normalizedLastName } : prev);
-    if (currentUser) {
-      updateUser(currentUser.id, { firstName: normalizedFirstName, lastName: normalizedLastName }).catch(console.error);
+    setProfileSaving(true);
+    try {
+      if (currentUser && supabase) {
+        await updateUser(currentUser.id, { firstName: normalizedFirstName, lastName: normalizedLastName, avatar: avatar || null });
+      }
+      setFirstName(normalizedFirstName); setLastName(normalizedLastName);
+      setSettings((p) => ({ ...p, firstName: normalizedFirstName, lastName: normalizedLastName, avatar: avatar || undefined }));
+      setCurrentUser((prev) => prev ? { ...prev, firstName: normalizedFirstName, lastName: normalizedLastName, avatar: avatar || null } : prev);
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 2500);
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : "Could not save your profile. Please try again.");
+    } finally {
+      setProfileSaving(false);
     }
-    setProfileSaved(true);
-    setTimeout(() => setProfileSaved(false), 2500);
   }
 
   async function changePassword() {
+    if (passSaving) return;
     setPassError("");
     if (!oldPass) { setPassError("Enter your current password."); return; }
     if (!currentUser?.email || !supabase) { setPassError("Your session is unavailable. Please sign in again."); return; }
     const passwordError = validatePassword(newPass);
     if (passwordError) { setPassError(passwordError); return; }
     if (newPass !== confirmPass) { setPassError("Passwords do not match."); return; }
-    const { error: verifyError } = await supabase.auth.signInWithPassword({ email: currentUser.email, password: oldPass });
-    if (verifyError) { setPassError("Current password is incorrect."); return; }
-    const { error: updateError } = await supabase.auth.updateUser({ password: newPass });
-    if (updateError) { setPassError("Could not save the new password. Please try again."); return; }
-    setCurrentUser((prev) => prev ? { ...prev, password: "" } : prev);
-    setOldPass(""); setNewPass(""); setConfirmPass("");
-    setPassSaved(true);
-    setTimeout(() => setPassSaved(false), 2500);
+    setPassSaving(true);
+    try {
+      const { error: verifyError } = await supabase.auth.signInWithPassword({ email: currentUser.email, password: oldPass });
+      if (verifyError) { setPassError("Current password is incorrect."); return; }
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPass });
+      if (updateError) { setPassError("Could not save the new password. Please try again."); return; }
+      setCurrentUser((prev) => prev ? { ...prev, password: "" } : prev);
+      setOldPass(""); setNewPass(""); setConfirmPass("");
+      setPassSaved(true);
+      setTimeout(() => setPassSaved(false), 2500);
+    } finally {
+      setPassSaving(false);
+    }
   }
 
   const eyeBtn = (show: boolean, toggle: () => void) => (
@@ -115,7 +149,11 @@ export function SettingsPage() {
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
       <PageHeader icon={Settings} iconColor="#1D6AE5" title="Settings" subtitle="Manage your profile and security" />
 
+
+
+{/* ============================================================ */}
       {/* Profile */}
+      {/* ============================================================ */}
       <Section title="Profile">
         <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 20 }}>
           <div style={{ position: "relative" }}>
@@ -141,23 +179,29 @@ export function SettingsPage() {
             <FloatField label="Last Name" value={lastName} onChange={setLastName} />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={saveProfile} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-              {profileSaved ? <><Check size={14} /> Saved</> : <><Save size={14} /> Save Profile</>}
+            <button onClick={saveProfile} disabled={profileSaving} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: profileSaving ? "wait" : "pointer", opacity: profileSaving ? 0.7 : 1, fontFamily: "Inter, sans-serif" }}>
+              {profileSaving ? "Saving..." : profileSaved ? <><Check size={14} /> Saved</> : <><Save size={14} /> Save Profile</>}
             </button>
             {avatar && <button onClick={() => setAvatar("")} style={{ padding: "10px 14px", background: "transparent", border: `1px solid ${borderColor}`, borderRadius: 8, fontSize: 14, color: textSub, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Remove Photo</button>}
           </div>
+          {profileError && <div role="alert" style={{ fontSize: 14, color: "#B91C1C", background: dark ? "#451A1A" : "#FEF2F2", padding: "8px 12px", borderRadius: 8 }}>{profileError}</div>}
         </div>
       </Section>
 
+
+
+{/* ============================================================ */}
       {/* Password */}
+      {/* ============================================================ */}
       <Section title="Change Password">
         <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: isMobile ? "100%" : 420 }}>
           <FloatField label="Current Password" type={showOld ? "text" : "password"} value={oldPass} onChange={setOldPass} suffix={eyeBtn(showOld, () => setShowOld((v) => !v))} />
           <FloatField label="New Password" type={showNew ? "text" : "password"} value={newPass} onChange={setNewPass} suffix={eyeBtn(showNew, () => setShowNew((v) => !v))} />
           <FloatField label="Confirm New Password" type={showConfirm ? "text" : "password"} value={confirmPass} onChange={setConfirmPass} suffix={eyeBtn(showConfirm, () => setShowConfirm((v) => !v))} />
+          <div style={{ fontSize: 12, color: textSub, marginTop: -4 }}>Use at least 8 characters with uppercase, lowercase, a number, and a special character.</div>
           {passError && <div style={{ fontSize: 14, color: "#EF4444", background: "#FEF2F2", padding: "8px 12px", borderRadius: 8 }}>{passError}</div>}
-          <button onClick={changePassword} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", width: "fit-content" }}>
-            {passSaved ? <><Check size={14} /> Password Updated</> : "Update Password"}
+          <button onClick={changePassword} disabled={passSaving} style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: passSaving ? "wait" : "pointer", opacity: passSaving ? 0.7 : 1, fontFamily: "Inter, sans-serif", width: "fit-content" }}>
+            {passSaving ? "Updating..." : passSaved ? <><Check size={14} /> Password Updated</> : "Update Password"}
           </button>
         </div>
       </Section>
@@ -165,3 +209,5 @@ export function SettingsPage() {
     </div>
   );
 }
+
+// End of region comment

@@ -45,6 +45,12 @@ interface LoginPageProps {
   onLogin: () => void;
 }
 
+
+
+// ============================================================
+// Page logic and UI
+// ============================================================
+
 export function LoginPage({ onLogin }: LoginPageProps) {
   const { setCurrentUser } = useApp();
   const [email, setEmail] = useState("");
@@ -63,6 +69,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     return () => window.removeEventListener("resize", h);
   }, []);
 
+
+
+  // ============================================================
+  // Authenticate the user, load the profile, and record the login event.
+  // ============================================================
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -77,7 +88,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         return;
       }
 
-      const { error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
       if (authError) {
         console.error("Supabase login failed:", authError);
         setError(authError.message === "Invalid login credentials"
@@ -88,8 +99,28 @@ export function LoginPage({ onLogin }: LoginPageProps) {
       }
 
       try {
+        if (!authData.user) throw new Error("Authenticated user information is unavailable.");
         const user = await usersApi.getByEmail(normalizedEmail);
         if (!user || user.status !== "Active") throw new Error("No active profile found.");
+        const loginTimestamp = new Date().toISOString();
+        try {
+          const savedUser = await usersApi.update(user.id, { last_login: loginTimestamp });
+          user.last_login = savedUser.last_login;
+        } catch (lastLoginError) {
+          console.warn("Could not save the last login time; continuing with authentication:", lastLoginError);
+        }
+        const { error: auditError } = await supabase.from("system_log").insert({
+          message: `${user.first_name} ${user.last_name}`.trim() + " logged in",
+          log_type: "AUTH_LOGIN",
+          timestamp: new Date().toISOString(),
+          actor_id: authData.user.id,
+          actor_role: user.role,
+          actor_name: `${user.first_name} ${user.last_name}`.trim(),
+          entity_type: "AUTH",
+          entity_id: authData.user.id,
+          operation: "LOGIN",
+        });
+        if (auditError) console.warn("Could not record login audit event:", auditError);
         const updated = {
           id: user.id,
           firstName: user.first_name,
@@ -97,7 +128,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
           email: user.email,
           role: user.role,
           status: user.status,
-          lastLogin: new Date().toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }),
+          lastLogin: loginTimestamp,
           password: "",
           mustChangePassword: user.must_change_password,
           avatar: user.avatar ?? undefined,
@@ -113,6 +144,10 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     })();
   }
 
+
+  // ============================================================
+  // Request a password reset or show the administrator contact path.
+  // ============================================================
   async function handleForgotPassword() {
     setError("");
     setForgotMessage("");
@@ -142,9 +177,17 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   }
 
   return (
+    /* ============================================================ */
+    /* Login layout split: fixed branding panel plus flexible form panel */
+    /* ============================================================ */
     <div style={{ minHeight: "100vh", width: "100%", display: "flex", flexDirection: isMobile ? "column" : "row", fontFamily: "Inter, sans-serif", background: "#F4F5F7", overflowY: isMobile ? "auto" : "hidden" }}>
-      {/* Branding panel */}
-      <div style={{ flex: isMobile ? "none" : "0 0 480px", height: isMobile ? "100vh" : undefined, minHeight: isMobile ? "100vh" : undefined, background: "linear-gradient(145deg, #0f4bbf 0%, #1D6AE5 50%, #2e7cf6 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: isMobile ? "48px 32px" : "48px 52px", position: "relative", overflow: "hidden" }}>
+
+
+
+      {/* ============================================================ */
+        /* Branding panel (500px   desktop width) */
+       /* ============================================================ */}
+      <div style={{ flex: isMobile ? "none" : "0 0 500px", height: isMobile ? "100vh" : undefined, minHeight: isMobile ? "100vh" : undefined, background: "linear-gradient(145deg, #0f4bbf 0%, #1D6AE5 50%, #2e7cf6 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: isMobile ? "48px 32px" : "48px 70px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -80, right: -80, width: 320, height: 320, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
         <div style={{ position: "absolute", bottom: -60, left: -60, width: 260, height: 260, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
 
@@ -176,7 +219,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", position: "relative", zIndex: 1 }}>© 2026 ViraTrak System. All rights reserved.</p>
       </div>
 
-      {/* Form panel */}
+
+
+      {/* ============================================================ */}
+      {/* Form panel (remaining desktop width) */}
+      {/* ============================================================ */}
       <div style={{ flex: isMobile ? "none" : 1, height: isMobile ? "100vh" : undefined, minHeight: isMobile ? "100vh" : undefined, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? "40px 28px" : 40, background: "#F4F5F7" }}>
         <div style={{ width: "100%", maxWidth: 400 }}>
           <div style={{ marginBottom: 36 }}>
@@ -228,11 +275,6 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             </button>
           </form>
 
-          {/*<div style={{ marginTop: 24, padding: "12px 14px", background: "#F0F9FF", borderRadius: 10, border: "1px solid #BAE6FD" }}>
-            <p style={{ fontSize: 12, color: "#0369A1", margin: 0, lineHeight: 1.5 }}>
-              <strong>Demo credentials:</strong><br />Email: admin@viratrak.com<br />Password: admin123
-            </p>
-          </div>/*/}
         </div>
       </div>
 
@@ -240,4 +282,3 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     </div>
   );
 }
-// update to main
