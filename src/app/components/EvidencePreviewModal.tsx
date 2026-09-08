@@ -122,8 +122,8 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
               <div
                 style={{
                   color: textSub,
-                  fontSize: 12,
-                  marginTop: isMobile ? 5 : 7,
+                  fontSize: 13,
+                  marginTop: isMobile ? 1 : 2,
                   overflowWrap: "anywhere",
                 }}
               >
