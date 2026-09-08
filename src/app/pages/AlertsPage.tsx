@@ -71,7 +71,7 @@ function SearchDropdown({ label, value, onChange, options, openKey, activeKey, s
 
   return (
     <div ref={ref} style={{ position: "relative", minWidth: 150 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: activeBg, border: `1px solid ${activeBorder}`, borderRadius: 8, cursor: "text" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: activeBg, border: `1.5px solid ${activeBorder}`, borderRadius: 8, cursor: "text", boxShadow: value ? "0 0 0 1px rgba(29,106,229,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
         <input
           value={query}
           onChange={(e) => { setQuery(e.target.value); onChange(""); }}

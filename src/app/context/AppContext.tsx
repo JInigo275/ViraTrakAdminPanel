@@ -18,7 +18,7 @@ export interface AppUser {
   lastLogin: string;
   password: string;
   mustChangePassword: boolean;
-  avatar?: string;
+  avatar?: string | null;
 }
 
 export interface Driver {
@@ -87,6 +87,7 @@ function mapUser(u: DbUser): AppUser {
     lastLogin: u.last_login,
     password: u.password,
     mustChangePassword: u.must_change_password,
+    avatar: u.avatar,
   };
 }
 
@@ -242,6 +243,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.lastLogin !== undefined) dbPatch.last_login = patch.lastLogin;
     if (patch.password !== undefined) dbPatch.password = patch.password;
     if (patch.mustChangePassword !== undefined) dbPatch.must_change_password = patch.mustChangePassword;
+    if (patch.avatar !== undefined) dbPatch.avatar = patch.avatar ?? null;
     const saved = await usersApi.update(id, dbPatch);
     setUsers((prev) => prev.map((u) => u.id === id ? mapUser(saved) : u));
   }

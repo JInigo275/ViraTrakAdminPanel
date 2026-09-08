@@ -35,7 +35,14 @@ OVERRIDING SYSTEM VALUE
 VALUES
   (1, 'Maya', 'Lopez', 'DL-1001', '+15550101'),
   (2, 'Jon', 'Patel', 'DL-1002', '+15550102'),
-  (3, 'Alicia', 'Nguyen', 'DL-1003', '+15550103');
+  (3, 'Alicia', 'Nguyen', 'DL-1003', '+15550103'),
+  (4, 'Carlos', 'Rivera', 'DL-1004', '+15550104'),
+  (5, 'Sofia', 'Kim', 'DL-1005', '+15550105'),
+  (6, 'Ethan', 'Brooks', 'DL-1006', '+15550106'),
+  (7, 'Nora', 'Williams', 'DL-1007', '+15550107'),
+  (8, 'Marcus', 'Green', 'DL-1008', '+15550108'),
+  (9, 'Priya', 'Shah', 'DL-1009', '+15550109'),
+  (10, 'Daniel', 'Carter', 'DL-1010', '+15550110');
 
 INSERT INTO public.vehicle (
   vehicle_id, plate_number, model, driver_id
@@ -44,7 +51,14 @@ OVERRIDING SYSTEM VALUE
 VALUES
   (1, 'PLT2847', 'Tesla Model 3', 1),
   (2, 'PLT5634', 'Toyota Camry', 2),
-  (3, 'PLT8392', 'Ford Transit Van', 3);
+  (3, 'PLT8392', 'Ford Transit Van', 3),
+  (4, 'PLT4178', 'Freightliner Cascadia', 4),
+  (5, 'PLT6921', 'Mercedes Sprinter', 5),
+  (6, 'PLT7350', 'Volvo VNL', 6),
+  (7, 'PLT2086', 'Ram ProMaster', 7),
+  (8, 'PLT9143', 'Kenworth T680', 8),
+  (9, 'PLT5269', 'Chevrolet Express', 9),
+  (10, 'PLT6804', 'Peterbilt 579', 10);
 
 INSERT INTO public.device (
   device_id, status, video_feed, vehicle_id
@@ -52,7 +66,14 @@ INSERT INTO public.device (
 VALUES
   ('pi-viratrak-01', 'Online', 'rtsp://cam/1', 1),
   ('pi-viratrak-02', 'Online', 'rtsp://cam/2', 2),
-  ('pi-viratrak-03', 'Offline', 'rtsp://cam/3', 3);
+  ('pi-viratrak-03', 'Offline', 'rtsp://cam/3', 3),
+  ('pi-viratrak-04', 'Online', 'rtsp://cam/4', 4),
+  ('pi-viratrak-05', 'Online', 'rtsp://cam/5', 5),
+  ('pi-viratrak-06', 'Maintenance', 'rtsp://cam/6', 6),
+  ('pi-viratrak-07', 'Online', 'rtsp://cam/7', 7),
+  ('pi-viratrak-08', 'Offline', 'rtsp://cam/8', 8),
+  ('pi-viratrak-09', 'Online', 'rtsp://cam/9', 9),
+  ('pi-viratrak-10', 'Online', 'rtsp://cam/10', 10);
 
 INSERT INTO public.recorded_evidence (
   event_id, timestamp, device_id
@@ -157,7 +178,15 @@ INSERT INTO public.device_action (
 OVERRIDING SYSTEM VALUE
 VALUES
   (1, 'Notify Supervisor', '00:00:05', '2026-09-07 14:33:00', 'pi-viratrak-01', 1),
-  (2, 'Log Event', '00:00:01', '2026-09-07 11:20:00', 'pi-viratrak-02', 2);
+  (2, 'Log Event', '00:00:01', '2026-09-07 11:20:00', 'pi-viratrak-02', 2),
+  (3, 'Notify Driver', '00:00:04', '2026-09-06 16:23:00', 'pi-viratrak-01', 4),
+  (4, 'Save Screenshot', '00:00:02', '2026-09-05 13:06:00', 'pi-viratrak-02', 5),
+  (5, 'Notify Supervisor', '00:00:05', '2026-09-03 10:21:00', 'pi-viratrak-03', 6),
+  (6, 'Log Event', '00:00:01', '2026-09-01 17:46:00', 'pi-viratrak-04', 7),
+  (7, 'Notify Driver', '00:00:04', '2026-08-28 12:16:00', 'pi-viratrak-05', 8),
+  (8, 'Save Screenshot', '00:00:02', '2026-08-20 15:31:00', 'pi-viratrak-06', 9),
+  (9, 'Notify Supervisor', '00:00:05', '2026-08-12 11:06:00', 'pi-viratrak-07', 10),
+  (10, 'Log Event', '00:00:01', '2026-08-12 11:07:00', 'pi-viratrak-07', 10);
 
 INSERT INTO public.behavior_log (
   log_id, message, timestamp, date, alert_id, device_id,
@@ -166,7 +195,15 @@ INSERT INTO public.behavior_log (
 OVERRIDING SYSTEM VALUE
 VALUES
   (1, 'Yawning metric exceeded threshold', '2026-09-07 14:33:00', '2026-09-07', 1, 'pi-viratrak-01', 1, 1, '20260907143200-1-A1B2C3'),
-  (2, 'Eyes Closed metric flagged by classifier', '2026-09-07 11:20:00', '2026-09-07', 2, 'pi-viratrak-02', 2, 2, '20260907111800-2-D4E5F6');
+  (2, 'Eyes Closed metric flagged by classifier', '2026-09-07 11:20:00', '2026-09-07', 2, 'pi-viratrak-02', 2, 2, '20260907111800-2-D4E5F6'),
+  (3, 'Head pose and yawning thresholds exceeded', '2026-09-06 16:23:00', '2026-09-06', 4, 'pi-viratrak-01', 1, 4, '20260906162200-4-J0K1L2'),
+  (4, 'Body posture classifier detected leaning', '2026-09-05 13:06:00', '2026-09-05', 5, 'pi-viratrak-02', 2, 5, '20260905130500-5-M3N4O5'),
+  (5, 'Blink rate fell below configured threshold', '2026-09-03 10:21:00', '2026-09-03', 6, 'pi-viratrak-03', 3, 6, '20260903102000-6-P6Q7R8'),
+  (6, 'Driver distraction event recorded', '2026-09-01 17:46:00', '2026-09-01', 7, 'pi-viratrak-04', 4, 7, '20260901174500-7-S9T0U1'),
+  (7, 'Lane drift detected during route segment', '2026-08-28 12:16:00', '2026-08-28', 8, 'pi-viratrak-05', 5, 8, '20260814121500-8-V2W3X4'),
+  (8, 'Hard braking event recorded by device', '2026-08-20 15:31:00', '2026-08-20', 9, 'pi-viratrak-06', 6, 9, '20260618153000-9-Y5Z6A7'),
+  (9, 'Drowsiness score exceeded alert threshold', '2026-08-12 11:06:00', '2026-08-12', 10, 'pi-viratrak-07', 7, 10, '20260409110500-10-B8C9D0'),
+  (10, 'Follow-up action logged by supervisor', '2026-08-12 11:08:00', '2026-08-12', 10, 'pi-viratrak-07', 7, 10, '20260409110500-10-B8C9D0');
 
 INSERT INTO public.system_log (
   systemlog_id, message, log_type, timestamp, device_id
@@ -175,6 +212,13 @@ OVERRIDING SYSTEM VALUE
 VALUES
   (1, 'Dashboard data synchronized', 'INFO', '2026-09-07 14:35:00', 'pi-viratrak-01'),
   (2, 'Camera calibration required', 'WARNING', '2026-09-07 10:15:00', 'pi-viratrak-02'),
-  (3, 'Device communication timeout', 'ERROR', '2026-09-07 09:50:00', 'pi-viratrak-03');
+  (3, 'Device communication timeout', 'ERROR', '2026-09-07 09:50:00', 'pi-viratrak-03'),
+  (4, 'Device firmware check completed', 'INFO', '2026-09-06 16:30:00', 'pi-viratrak-04'),
+  (5, 'High latency detected on video feed', 'WARNING', '2026-09-05 13:10:00', 'pi-viratrak-05'),
+  (6, 'Device entered maintenance mode', 'INFO', '2026-09-03 10:25:00', 'pi-viratrak-06'),
+  (7, 'Screenshot upload failed', 'ERROR', '2026-09-01 17:50:00', 'pi-viratrak-07'),
+  (8, 'Camera connection restored', 'INFO', '2026-08-28 12:25:00', 'pi-viratrak-08'),
+  (9, 'Storage capacity approaching limit', 'WARNING', '2026-08-20 15:40:00', 'pi-viratrak-09'),
+  (10, 'Scheduled device health check completed', 'INFO', '2026-08-12 11:15:00', 'pi-viratrak-10');
 
 COMMIT;

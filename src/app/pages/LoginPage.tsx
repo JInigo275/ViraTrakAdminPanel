@@ -177,14 +177,17 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   }
 
   return (
+    /* ============================================================ */
+    /* Login layout split: fixed branding panel plus flexible form panel */
+    /* ============================================================ */
     <div style={{ minHeight: "100vh", width: "100%", display: "flex", flexDirection: isMobile ? "column" : "row", fontFamily: "Inter, sans-serif", background: "#F4F5F7", overflowY: isMobile ? "auto" : "hidden" }}>
 
 
 
       {/* ============================================================ */
-       /* Branding panel */
+        /* Branding panel (500px   desktop width) */
        /* ============================================================ */}
-      <div style={{ flex: isMobile ? "none" : "0 0 480px", height: isMobile ? "100vh" : undefined, minHeight: isMobile ? "100vh" : undefined, background: "linear-gradient(145deg, #0f4bbf 0%, #1D6AE5 50%, #2e7cf6 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: isMobile ? "48px 32px" : "48px 52px", position: "relative", overflow: "hidden" }}>
+      <div style={{ flex: isMobile ? "none" : "0 0 500px", height: isMobile ? "100vh" : undefined, minHeight: isMobile ? "100vh" : undefined, background: "linear-gradient(145deg, #0f4bbf 0%, #1D6AE5 50%, #2e7cf6 100%)", display: "flex", flexDirection: "column", justifyContent: "space-between", padding: isMobile ? "48px 32px" : "48px 70px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: -80, right: -80, width: 320, height: 320, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
         <div style={{ position: "absolute", bottom: -60, left: -60, width: 260, height: 260, borderRadius: "50%", background: "rgba(255,255,255,0.05)" }} />
 
@@ -219,7 +222,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
 
       {/* ============================================================ */}
-      {/* Form panel */}
+      {/* Form panel (remaining desktop width) */}
       {/* ============================================================ */}
       <div style={{ flex: isMobile ? "none" : 1, height: isMobile ? "100vh" : undefined, minHeight: isMobile ? "100vh" : undefined, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? "40px 28px" : 40, background: "#F4F5F7" }}>
         <div style={{ width: "100%", maxWidth: 400 }}>

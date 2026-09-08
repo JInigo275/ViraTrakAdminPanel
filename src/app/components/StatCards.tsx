@@ -12,7 +12,7 @@ type MetricDefinition = {
 };
 
 const metricDefinitions: MetricDefinition[] = [
-  { title: "PERCLOS", key: "perclos", color: "#F59E0B", unit: "%" },
+  { title: "Percentage of Eye Closure (PERCLOS)", key: "perclos", color: "#F59E0B", unit: "%" },
   { title: "Blink Rate", key: "blink_rate", color: "#1D6AE5", unit: " bpm" },
   { title: "Yawn", key: "yawn", color: "#EF4444", unit: "" },
   { title: "Body Posture", key: "body_posture", color: "#10B981", unit: "" },

@@ -5,6 +5,7 @@ import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, AppUser, Role, genTempPassword, getAddableRoles, canManageUsers, getFullName } from "../context/AppContext";
 import { formatName, validateEmail, validateName, validatePassword } from "../../utils/validation";
+import { supabase } from "../../api/supabaseClient";
 
 
 
@@ -63,6 +64,42 @@ function FloatField({ label, type = "text", value, onChange, disabled, suffix }:
       <label style={{ position: "absolute", left: 14, top: lifted ? 8 : "50%", transform: lifted ? "none" : "translateY(-50%)", fontSize: lifted ? 12 : 15, fontWeight: lifted ? 500 : 400, color: focused ? "#1D6AE5" : dark ? "#6B7280" : "#9CA3AF", pointerEvents: "none", transition: "all 0.18s ease", fontFamily: "Inter, sans-serif" }}>{label}</label>
       {suffix && <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)" }}>{suffix}</div>}
     </div>
+  );
+}
+
+function DeletePasswordModal({ user, onClose, onConfirm }: { user: AppUser; onClose: () => void; onConfirm: (password: string) => Promise<void> }) {
+  const { dark } = useTheme();
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!password) { setError("Enter your account password."); return; }
+    setSubmitting(true);
+    setError("");
+    try {
+      await onConfirm(password);
+    } catch (confirmationError) {
+      setError(confirmationError instanceof Error ? confirmationError.message : "Password verification failed.");
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal title="Confirm User Deletion" onClose={submitting ? () => undefined : onClose}>
+      <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ fontSize: 14, color: dark ? "#D1D5DB" : "#4B5563", lineHeight: 1.5 }}>
+          Enter your account password to permanently remove <strong>{getFullName(user)}</strong>.
+        </div>
+        <FloatField label="Your account password" type="password" value={password} onChange={setPassword} disabled={submitting} />
+        {error && <div style={{ fontSize: 14, color: "#B91C1C", background: dark ? "#451A1A" : "#FEF2F2", padding: "8px 12px", borderRadius: 8 }}>{error}</div>}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" onClick={onClose} disabled={submitting} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: submitting ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>
+          <button type="submit" disabled={submitting} style={{ flex: 1, padding: "11px", background: "#DC2626", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: submitting ? "wait" : "pointer", fontFamily: "Inter, sans-serif" }}>{submitting ? "Verifying..." : "Delete User"}</button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
@@ -246,6 +283,7 @@ export function UsersPage() {
   const [generatedPass, setGeneratedPass] = useState("");
   const [addError, setAddError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<AppUser | null>(null);
 
   const bg = dark ? "#111827" : "#F4F5F7";
   const cardBg = dark ? "#1F2937" : "#fff";
@@ -326,15 +364,18 @@ export function UsersPage() {
     }
   }
 
+  async function confirmDelete(password: string) {
+    if (!supabase || !currentUser?.email) throw new Error("Authentication is unavailable. Please sign in again.");
+    const { error } = await supabase.auth.signInWithPassword({ email: currentUser.email, password });
+    if (error) throw new Error("Incorrect account password.");
+    if (!deleteTarget) return;
+    await removeUser(deleteTarget.id);
+    setDeleteTarget(null);
+  }
+
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
-      <PageHeader icon={Users} iconColor="#1D6AE5" title="Users" subtitle="Manage system user accounts and access roles">
-        {canAdd && addableRoles.length > 0 && (
-          <button onClick={openAdd} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#1D6AE5", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-            <Plus size={14} /> Add User
-          </button>
-        )}
-      </PageHeader>
+      <PageHeader icon={Users} iconColor="#1D6AE5" title="Users" subtitle="Manage system user accounts and access roles" />
       {actionError && <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 8, background: dark ? "#451A1A" : "#FEF2F2", color: dark ? "#FCA5A5" : "#B91C1C", fontSize: 14 }}>{actionError}</div>}
 
 
@@ -356,14 +397,19 @@ export function UsersPage() {
         ))}
       </div>
 
-
-
 {/* ============================================================ */}
       {/* Search */}
       {/* ============================================================ */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1px solid ${borderColor}`, borderRadius: 8, padding: "8px 12px", marginBottom: 16, width: isMobile ? "100%" : 280, boxSizing: "border-box" }}>
-        <Search size={14} color={textSub} />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+      <div style={{ display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: 12, marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 280, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
+          <Search size={14} color={textSub} />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search users..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+        </div>
+        {canAdd && addableRoles.length > 0 && (
+          <button onClick={openAdd} style={{ alignSelf: isMobile ? "flex-end" : "auto", display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#1D6AE5", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+            <Plus size={14} /> Add User
+          </button>
+        )}
       </div>
 
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
@@ -411,7 +457,7 @@ export function UsersPage() {
                       onChangeRole={(role) => updateUser(u.id, { role }).catch(console.error)}
                       onResetPassword={() => handleReset(u)}
                       onToggleStatus={() => handleStatusToggle(u)}
-                      onDelete={() => removeUser(u.id).catch(console.error)}
+                      onDelete={() => setDeleteTarget(u)}
                     />
                   )}
                 </td>
@@ -476,6 +522,7 @@ export function UsersPage() {
 
       {receipt && <ReceiptModal user={receipt.user} password={receipt.password} onClose={() => setReceipt(null)} />}
       {resetReceipt && <ReceiptModal user={resetReceipt.user} password={resetReceipt.password} onClose={() => setResetReceipt(null)} />}
+      {deleteTarget && <DeletePasswordModal user={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={confirmDelete} />}
     </div>
   );
 }
