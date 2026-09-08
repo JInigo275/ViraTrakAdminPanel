@@ -2,10 +2,9 @@
   ViraTrak demo seed data.
   Run schema2.sql first, then run this file whenever you want a clean demo dataset.
 
-  NOTE: Alert-related activity (recorded_evidence, detection_events, detection,
-  alert, device_action, behavior_log) is intentionally limited to 3 drivers
-  (Maya Lopez / vehicle 1 / pi-viratrak-01, Jon Patel / vehicle 2 / pi-viratrak-02,
-  Alicia Nguyen / vehicle 3 / pi-viratrak-03) so each of them has a populated alert
+  Dataset intentionally limited to 3 drivers/vehicles/devices:
+  Maya Lopez / vehicle 1 / pi-viratrak-01, Jon Patel / vehicle 2 / pi-viratrak-02,
+  Alicia Nguyen / vehicle 3 / pi-viratrak-03. Every driver has a populated alert
   history. Timestamps are spread from January through September 2026, rotating
   across different days of the week and months of the year for graphing.
 */
@@ -42,14 +41,7 @@ OVERRIDING SYSTEM VALUE
 VALUES
   (1, 'Maya', 'Lopez', 'DL-1001', '+639171010001'),
   (2, 'Jon', 'Patel', 'DL-1002', '+639171010002'),
-  (3, 'Alicia', 'Nguyen', 'DL-1003', '+639171010003'),
-  (4, 'Carlos', 'Rivera', 'DL-1004', '+639171010004'),
-  (5, 'Sofia', 'Kim', 'DL-1005', '+639171010005'),
-  (6, 'Ethan', 'Brooks', 'DL-1006', '+639171010006'),
-  (7, 'Nora', 'Williams', 'DL-1007', '+639171010007'),
-  (8, 'Marcus', 'Green', 'DL-1008', '+639171010008'),
-  (9, 'Priya', 'Shah', 'DL-1009', '+639171010009'),
-  (10, 'Daniel', 'Carter', 'DL-1010', '+639171010010');
+  (3, 'Alicia', 'Nguyen', 'DL-1003', '+639171010003');
 
 INSERT INTO public.vehicle (
   vehicle_id, plate_number, model, driver_id
@@ -58,14 +50,7 @@ OVERRIDING SYSTEM VALUE
 VALUES
   (1, 'PLT2847', 'Tesla Model 3', 1),
   (2, 'PLT5634', 'Toyota Camry', 2),
-  (3, 'PLT8392', 'Ford Transit Van', 3),
-  (4, 'PLT4178', 'Freightliner Cascadia', 4),
-  (5, 'PLT6921', 'Mercedes Sprinter', 5),
-  (6, 'PLT7350', 'Volvo VNL', 6),
-  (7, 'PLT2086', 'Ram ProMaster', 7),
-  (8, 'PLT9143', 'Kenworth T680', 8),
-  (9, 'PLT5269', 'Chevrolet Express', 9),
-  (10, 'PLT6804', 'Peterbilt 579', 10);
+  (3, 'PLT8392', 'Ford Transit Van', 3);
 
 INSERT INTO public.device (
   device_id, status, video_feed, vehicle_id
@@ -73,14 +58,7 @@ INSERT INTO public.device (
 VALUES
   ('pi-viratrak-01', 'Online', 'rtsp://cam/1', 1),
   ('pi-viratrak-02', 'Online', 'rtsp://cam/2', 2),
-  ('pi-viratrak-03', 'Offline', 'rtsp://cam/3', 3),
-  ('pi-viratrak-04', 'Online', 'rtsp://cam/4', 4),
-  ('pi-viratrak-05', 'Online', 'rtsp://cam/5', 5),
-  ('pi-viratrak-06', 'Maintenance', 'rtsp://cam/6', 6),
-  ('pi-viratrak-07', 'Online', 'rtsp://cam/7', 7),
-  ('pi-viratrak-08', 'Offline', 'rtsp://cam/8', 8),
-  ('pi-viratrak-09', 'Online', 'rtsp://cam/9', 9),
-  ('pi-viratrak-10', 'Online', 'rtsp://cam/10', 10);
+  ('pi-viratrak-03', 'Offline', 'rtsp://cam/3', 3);
 
 INSERT INTO public.recorded_evidence (
   event_id, timestamp, device_id
@@ -376,12 +354,12 @@ VALUES
   (1, 'Dashboard records synchronized successfully and the latest fleet data is available.', 'INFO', '2026-09-08 10:20:00', 'pi-viratrak-01'),
   (2, 'Camera calibration is required before the next monitoring session can begin.', 'WARNING', '2026-09-08 08:00:00', 'pi-viratrak-02'),
   (3, 'The monitoring device stopped responding and exceeded the configured communication timeout.', 'ERROR', '2026-09-07 09:50:00', 'pi-viratrak-03'),
-  (4, 'Device firmware verification completed successfully with no issues reported.', 'INFO', '2026-09-06 16:30:00', 'pi-viratrak-04'),
-  (5, 'The video feed is experiencing elevated latency that may delay behavior detection results.', 'WARNING', '2026-09-05 13:10:00', 'pi-viratrak-05'),
-  (6, 'The monitoring device entered maintenance mode for scheduled service and diagnostics.', 'INFO', '2026-09-03 10:25:00', 'pi-viratrak-06'),
-  (7, 'The event screenshot could not be uploaded, so visual evidence may be unavailable.', 'ERROR', '2026-09-02 17:50:00', 'pi-viratrak-07'),
-  (8, 'The camera connection was restored and live monitoring resumed normally.', 'INFO', '2026-08-31 12:25:00', 'pi-viratrak-08'),
-  (9, 'Device storage is nearing its configured limit; archived recordings should be reviewed.', 'WARNING', '2026-08-20 15:40:00', 'pi-viratrak-09'),
-  (10, 'Scheduled device health check completed successfully; all monitored components are operational.', 'INFO', '2026-08-10 11:15:00', 'pi-viratrak-10');
+  (4, 'Device firmware verification completed successfully with no issues reported.', 'INFO', '2026-07-15 09:00:00', 'pi-viratrak-01'),
+  (5, 'The video feed is experiencing elevated latency that may delay behavior detection results.', 'WARNING', '2026-06-05 13:10:00', 'pi-viratrak-02'),
+  (6, 'The monitoring device entered maintenance mode for scheduled service and diagnostics.', 'INFO', '2026-05-03 10:25:00', 'pi-viratrak-03'),
+  (7, 'The event screenshot could not be uploaded, so visual evidence may be unavailable.', 'ERROR', '2026-04-02 17:50:00', 'pi-viratrak-01'),
+  (8, 'The camera connection was restored and live monitoring resumed normally.', 'INFO', '2026-03-31 12:25:00', 'pi-viratrak-02'),
+  (9, 'Device storage is nearing its configured limit; archived recordings should be reviewed.', 'WARNING', '2026-02-20 15:40:00', 'pi-viratrak-03'),
+  (10, 'Scheduled device health check completed successfully; all monitored components are operational.', 'INFO', '2026-01-10 11:15:00', 'pi-viratrak-01');
 
 COMMIT;

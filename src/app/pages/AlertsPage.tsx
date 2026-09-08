@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Wind, EyeOff, Zap, User, Navigation, Download, X, Filter, Check, ChevronDown, ChevronUp, Search } from "lucide-react";
+import { Wind, EyeOff, Zap, User, Navigation, Download, X, Filter, Check, ChevronDown, ChevronUp, Bell, Search } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import * as XLSX from "xlsx";
@@ -278,7 +278,7 @@ export function AlertsPage() {
         />
       )}
 
-      <PageHeader title="Alerts & Evidence" subtitle="All detected driver behavior events and evidence">
+      <PageHeader icon={Bell} iconColor="#EF4444" title="Alerts & Evidence" subtitle="All detected driver behavior events and evidence">
         <button onClick={exportExcel} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
           <Download size={14} /> Excel
         </button>

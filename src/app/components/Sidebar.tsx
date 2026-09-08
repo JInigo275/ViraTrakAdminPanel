@@ -6,8 +6,6 @@ import {
 const viraTrakLogo = new URL("../../imports/ViraTrak_Logo.png", import.meta.url).href;
 import { useTheme, ThemeMode } from "../context/ThemeContext";
 import { useApp } from "../context/AppContext";
-import { alertsApi } from "../../api/viratrak";
-import { supabase } from "../../api/supabaseClient";
 
 const navSections = [
   {
@@ -47,7 +45,6 @@ export function Sidebar({ currentPage, onNavigate, onLogout, onClose }: SidebarP
   const { currentUser, settings } = useApp();
   const [showLogout, setShowLogout] = useState(false);
   const [showTheme, setShowTheme] = useState(false);
-  const [alertCount, setAlertCount] = useState(0);
   const themeRef = useRef<HTMLDivElement>(null);
   const logoutRef = useRef<HTMLDivElement>(null);
 
@@ -58,30 +55,6 @@ export function Sidebar({ currentPage, onNavigate, onLogout, onClose }: SidebarP
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function refreshAlertCount() {
-      try {
-        const alerts = await alertsApi.list();
-        if (mounted) setAlertCount(alerts.length);
-      } catch {
-        if (mounted) setAlertCount(0);
-      }
-    }
-
-    void refreshAlertCount();
-    const interval = window.setInterval(refreshAlertCount, 30000);
-    const channel = supabase?.channel("sidebar-alert-count")
-      .on("postgres_changes", { event: "*", schema: "public", table: "alert" }, () => { void refreshAlertCount(); })
-      .subscribe();
-    return () => {
-      mounted = false;
-      window.clearInterval(interval);
-      if (channel && supabase) void supabase.removeChannel(channel);
-    };
   }, []);
 
   const bg        = dark ? "#111827" : "#fff";
@@ -135,7 +108,6 @@ export function Sidebar({ currentPage, onNavigate, onLogout, onClose }: SidebarP
                   >
                     <Icon size={17} strokeWidth={active ? 2.5 : 1.7} />
                     <span style={{ flex: 1, fontSize: 14, fontWeight: active ? 600 : 400 }}>{label}</span>
-                    {id === "alerts" && alertCount > 0 && <span style={{ minWidth: 20, height: 20, padding: "0 5px", borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", background: active ? "rgba(255,255,255,.2)" : dark ? "#374151" : "#F3F4F6", color: active ? "#fff" : textMain, fontSize: 11, fontWeight: 700 }}>{alertCount > 99 ? "99+" : alertCount}</span>}
                   </div>
                 );
               })}
