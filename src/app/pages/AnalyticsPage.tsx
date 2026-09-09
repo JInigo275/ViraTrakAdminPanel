@@ -75,21 +75,21 @@ function parseAlertTimestamp(alert: DbAlert): Date | null {
 
 
 
-// ============================================================
+  // ============================================================
   // Parse "MM/DD/YYYY" and "HH:MM" format
   // ============================================================
   const dateParts = alert.date.split('/').map(Number);
   const timeParts = alert.time.split(':').map(Number);
-  
+
   if (dateParts.length !== 3 || timeParts.length < 2) return null;
-  
+
   const [month, day, year] = dateParts;
   const [hours, minutes] = timeParts;
-  
+
   if (isNaN(month) || isNaN(day) || isNaN(year) || isNaN(hours) || isNaN(minutes)) {
     return null;
   }
-  
+
   const timestamp = new Date(year, month - 1, day, hours, minutes, 0);
   return Number.isNaN(timestamp.getTime()) ? null : timestamp;
 }
@@ -454,11 +454,11 @@ export function AnalyticsPage() {
       <div class="grid">${kpis.map((k) => `<div class="kpi"><div class="kpi-label">${k.label}</div><div class="kpi-value" style="color:${k.color}">${k.value}</div><div class="kpi-note">${k.note}</div></div>`).join("")}</div>
       <table><thead><tr><th>Event</th><th>Driver</th><th>Time</th><th>Severity</th></tr></thead><tbody>
       ${recentEvents
-        .map((e) => {
-          const s = sevMap[e.severity];
-          return `<tr><td>${e.event}</td><td>${e.driver}</td><td>${e.time}</td><td><span class="badge" style="background:${s.bg};color:${s.color}">${e.severity}</span></td></tr>`;
-        })
-        .join("")}
+          .map((e) => {
+            const s = sevMap[e.severity];
+            return `<tr><td>${e.event}</td><td>${e.driver}</td><td>${e.time}</td><td><span class="badge" style="background:${s.bg};color:${s.color}">${e.severity}</span></td></tr>`;
+          })
+          .join("")}
       </tbody></table></body></html>`);
     win.document.close();
     win.focus();
@@ -537,7 +537,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+            {/* ============================================================ */}
             {/* Segmented period control — desktop only inside header */}
             {/* ============================================================ */}
             <div
@@ -613,7 +613,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+      {/* ============================================================ */}
       {/* Mobile-only controls row — period selector + action buttons */}
       {/* ============================================================ */}
       {isMobile && (
@@ -621,7 +621,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+          {/* ============================================================ */}
           {/* Full-width period selector */}
           {/* ============================================================ */}
           <div style={{ position: "relative", display: "flex", background: dark ? "#374151" : "#F3F4F6", borderRadius: 8, padding: 3, width: "100%" }}>
@@ -671,7 +671,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+          {/* ============================================================ */}
           {/* Export + Print row */}
           {/* ============================================================ */}
           <div style={{ display: "flex", gap: 10 }}>
@@ -706,14 +706,14 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+      {/* ============================================================ */}
       {/* Content to print */}
       {/* ============================================================ */}
       <div ref={printRef}>
 
 
 
-{/* ============================================================ */}
+        {/* ============================================================ */}
         {/* Fleet KPI row */}
         {/* ============================================================ */}
         <div
@@ -778,7 +778,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+          {/* ============================================================ */}
           {/* Event type breakdown */}
           {/* ============================================================ */}
           <Card
@@ -871,7 +871,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+          {/* ============================================================ */}
           {/* Severity distribution */}
           {/* ============================================================ */}
           <Card
@@ -956,7 +956,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+          {/* ============================================================ */}
           {/* Blink trend */}
           {/* ============================================================ */}
           <Card
@@ -1002,7 +1002,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+          {/* ============================================================ */}
           {/* PERCLOS trend */}
           {/* ============================================================ */}
           <Card
@@ -1051,7 +1051,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+          {/* ============================================================ */}
           {/* Driver comparison */}
           {/* ============================================================ */}
           <Card
@@ -1062,7 +1062,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+            {/* ============================================================ */}
             {/* On mobile: fixed-width scrollable chart so all drivers show clearly */}
             {/* ============================================================ */}
             <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch" as const }}>
@@ -1085,7 +1085,7 @@ export function AnalyticsPage() {
 
 
 
-{/* ============================================================ */}
+          {/* ============================================================ */}
           {/* Recent events */}
           {/* ============================================================ */}
           <Card

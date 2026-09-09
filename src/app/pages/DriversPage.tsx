@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Search, Plus, MoreVertical, Trash2, X, Check, BarChart2, Contact } from "lucide-react";
+import { Search, Plus, Trash2, X, Check, BarChart2, Contact, Edit3 } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, Driver, genDriverId } from "../context/AppContext";
@@ -44,57 +44,6 @@ function FloatField({ label, value, onChange, type = "text", maxLength, placehol
   );
 }
 
-function KebabMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
-  const ref = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const { dark } = useTheme();
-  const menuBg = dark ? "#1F2937" : "#fff";
-  const border = dark ? "#374151" : "#E5E7EB";
-  const textMain = dark ? "#F9FAFB" : "#111827";
-  const hoverBg = dark ? "#374151" : "#F9FAFB";
-
-  useEffect(() => {
-    function h(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  function handleToggle() {
-    if (!open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      const menuHeight = 100;
-      const top = rect.bottom + 4 + menuHeight <= window.innerHeight - 8
-        ? rect.bottom + 4
-        : Math.max(8, rect.top - menuHeight - 4);
-      setMenuPos({ top, right: window.innerWidth - rect.right });
-    }
-    setOpen((v) => !v);
-  }
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <button ref={btnRef} onClick={handleToggle} style={{ background: "none", border: "none", cursor: "pointer", color: dark ? "#6B7280" : "#9CA3AF", display: "flex", padding: 4, borderRadius: 6 }}>
-        <MoreVertical size={15} />
-      </button>
-      {open && (
-        <div style={{ position: "fixed", top: menuPos.top, right: menuPos.right, background: menuBg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 9999, minWidth: 140, overflow: "hidden" }}>
-          <div style={{ padding: "4px 0" }}>
-            <div onClick={() => { onEdit(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", cursor: "pointer", fontSize: 14, color: textMain }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = hoverBg)}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}>Edit Driver</div>
-            <div style={{ height: 1, background: border }} />
-            <div onClick={() => { onDelete(); setOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", cursor: "pointer", fontSize: 14, color: "#EF4444" }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = dark ? "#374151" : "#FEF2F2")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}>Delete</div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function ReceiptModal({ driver, onClose }: { driver: Driver; onClose: () => void }) {
   const { dark } = useTheme();
   const now = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
@@ -115,7 +64,7 @@ function ReceiptModal({ driver, onClose }: { driver: Driver; onClose: () => void
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-                 {[["Full Name", fullName], ["Driver ID", driver.id], ["Vehicle", driver.vehicle], ["Contact", driver.contact]].map(([label, val]) => (
+          {[["Full Name", fullName], ["Driver ID", driver.id], ["Vehicle", driver.vehicle], ["Contact", driver.contact]].map(([label, val]) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: rowBg, borderRadius: 8 }}>
               <span style={{ fontSize: 13, color: textSub }}>{label}</span>
               <span style={{ fontSize: 14, fontWeight: 600, color: label === "Driver ID" ? "#1D6AE5" : textMain, fontFamily: label === "Driver ID" ? "monospace" : "inherit" }}>{val}</span>
@@ -438,6 +387,9 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
+      {/* ============================================================ */}
+      {/* Driver page header and account actions */}
+      {/* ============================================================ */}
       {successMessage && (
         <div role="status" style={{ position: "fixed", top: 24, left: "50%", transform: "translateX(-50%)", zIndex: 1100, padding: "11px 18px", background: dark ? "#064E3B" : "#ECFDF5", border: `1px solid ${dark ? "#10B981" : "#A7F3D0"}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", color: dark ? "#D1FAE5" : "#047857", fontSize: 14, fontWeight: 600, animation: "driver-toast-in 180ms ease-out" }}>
           {successMessage}
@@ -448,6 +400,9 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
       </PageHeader>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+        {/* ============================================================ */}
+        {/* Driver search and create actions */}
+        {/* ============================================================ */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 320, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
           <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search drivers..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
@@ -465,61 +420,67 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
       </div>
 
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
+        {/* ============================================================ */}
+        {/* Driver directory table */}
+        {/* ============================================================ */}
         <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}>
-          <thead>
-            <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-              <th style={{ padding: "10px 16px", width: 40 }}>
-                <div onClick={toggleAll} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${allChecked ? "#1D6AE5" : checkBorder}`, background: allChecked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {allChecked && <Check size={10} color="#fff" />}
-                  {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
-                </div>
-              </th>
-              {["Driver Name", "Driver ID", "Vehicle", "Contact", "Actions"].map((h, i) => (
-                <th key={i} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={6} style={{ padding: 36, textAlign: "center", color: textSub }}>No drivers match your search.</td>
-              </tr>
-            ) : filtered.map((e, i) => (
-              <tr key={e.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: selected.has(e.id) ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent" }}
-                onMouseEnter={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
-                onMouseLeave={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
-                <td style={{ padding: "11px 16px" }}>
-                  <div onClick={() => toggleOne(e.id)} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${selected.has(e.id) ? "#1D6AE5" : checkBorder}`, background: selected.has(e.id) ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {selected.has(e.id) && <Check size={10} color="#fff" />}
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
+                <th style={{ padding: "10px 16px", width: 40 }}>
+                  <div onClick={toggleAll} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${allChecked ? "#1D6AE5" : checkBorder}`, background: allChecked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {allChecked && <Check size={10} color="#fff" />}
+                    {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
                   </div>
-                </td>
-                <td style={{ padding: "11px 14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                      {(e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
+                </th>
+                {["Driver Name", "Driver ID", "Vehicle", "Contact", "Actions"].map((h, i) => (
+                  <th key={i} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ padding: 36, textAlign: "center", color: textSub }}>No drivers match your search.</td>
+                </tr>
+              ) : filtered.map((e, i) => (
+                <tr key={e.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: selected.has(e.id) ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent" }}
+                  onMouseEnter={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
+                  onMouseLeave={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
+                  <td style={{ padding: "11px 16px" }}>
+                    <div onClick={() => toggleOne(e.id)} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${selected.has(e.id) ? "#1D6AE5" : checkBorder}`, background: selected.has(e.id) ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {selected.has(e.id) && <Check size={10} color="#fff" />}
                     </div>
-                    <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.firstName} {e.lastName}</span>
-                  </div>
-                </td>
-                <td style={{ padding: "11px 14px", fontSize: 13, color: "#1D6AE5", fontFamily: "monospace", fontWeight: 600 }}>{e.id}</td>
-                <td style={{ padding: "11px 14px", fontSize: 14, color: textMain, fontWeight: 500 }}>{e.vehicle}</td>
-                <td style={{ padding: "11px 14px", fontSize: 13, color: textSub }}>{e.contact}</td>
-                <td style={{ padding: "11px 14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 15 }}>
-                    {onViewDetail && (
-                      <button onClick={() => onViewDetail(e.id)}
-                        style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}>
-                        <BarChart2 size={12} /> View
+                  </td>
+                  <td style={{ padding: "11px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                        {(e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
+                      </div>
+                      <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.firstName} {e.lastName}</span>
+                    </div>
+                  </td>
+                  <td style={{ padding: "11px 14px", fontSize: 13, color: "#1D6AE5", fontFamily: "monospace", fontWeight: 600 }}>{e.id}</td>
+                  <td style={{ padding: "11px 14px", fontSize: 14, color: textMain, fontWeight: 500 }}>{e.vehicle}</td>
+                  <td style={{ padding: "11px 14px", fontSize: 13, color: textSub }}>{e.contact}</td>
+                  <td style={{ width: 235, padding: "11px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 207, whiteSpace: "nowrap" }}>
+                      <button onClick={() => openEdit(e)} aria-label={`Edit ${e.firstName} ${e.lastName}`}
+                        style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                        <Edit3 size={12} /> Edit
                       </button>
-                    )}
-                    <KebabMenu onEdit={() => openEdit(e)} onDelete={() => setConfirmDelete(e.id)} />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                      {onViewDetail && (
+                        <button onClick={() => onViewDetail(e.id)}
+                          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#ECFDF5", color: "#059669", border: "1px solid #A7F3D0", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                          <BarChart2 size={12} /> View
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -548,6 +509,16 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
               <button onClick={() => setModal(null)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>
               <button onClick={handleSave} style={{ flex: 1, padding: "11px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>{modal === "add" ? "Add Driver" : "Save Changes"}</button>
             </div>
+            {modal === "edit" && editTarget && <>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, marginBottom: 14, color: dark ? "#9CA3AF" : "#6B7280", fontSize: 12, fontWeight: 600, textTransform: "uppercase" }}>
+                <div style={{ flex: 1, borderTop: `1px dashed ${dark ? "#4B5563" : "#D1D5DB"}` }} />
+                <span>or</span>
+                <div style={{ flex: 1, borderTop: `1px dashed ${dark ? "#4B5563" : "#D1D5DB"}` }} />
+              </div>
+              <div>
+                <button onClick={() => { setModal(null); setConfirmDelete(editTarget.id); }} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, fontSize: 14, color: "#EF4444", cursor: "pointer", fontFamily: "Inter, sans-serif" }}><Trash2 size={14} />  Delete Driver Details</button>
+              </div>
+            </>}
           </div>
         </Modal>
       )}
