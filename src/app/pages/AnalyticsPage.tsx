@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Printer, TrendingUp, Download } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { PDFPreviewModal } from "../components/PDFPreviewModal";
+import { LoadingState } from "../components/LoadingState";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useTheme } from "../context/ThemeContext";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useApp } from "../context/AppContext";
-import { alertsApi, DbAlert } from "../../api/viratrak";
+import { alertsApi, DbAlert, metricsApi, DbMetric } from "../../api/viratrak";
 import {
   BarChart,
   Bar,
@@ -44,12 +45,8 @@ const sevMap: Record<string, { bg: string; color: string }> = {
 };
 
 const EVENT_COLORS: Record<string, string> = {
-  "Drowsiness": "#EF4444",
   "Lane Drift": "#F59E0B",
-  "Distraction": "#1D6AE5",
-  "Speeding": "#8B5CF6",
   "Yawning": "#EF4444",
-  "Hard Braking": "#10B981",
   "Eyes Closed": "#F59E0B",
   "Micro Sleep": "#8B5CF6",
   "Head Pose": "#1D6AE5",
@@ -70,6 +67,7 @@ type SeverityBreakdown = { label: string; count: number; color: string; bg: stri
 type KPI = { label: string; value: string; color: string; note: string };
 type RecentEvent = { event: string; driver: string; time: string; severity: string };
 type DriverComparisonRow = { driver: string; blink: number; perclos: number; ear: number };
+type MetricChartPoint = { time: string; value: number };
 
 function parseAlertTimestamp(alert: DbAlert): Date | null {
 
@@ -265,12 +263,19 @@ export function AnalyticsPage() {
   const [period, setPeriod] = useState<Period>("Today");
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [alerts, setAlerts] = useState<DbAlert[]>([]);
+  const [metricReadings, setMetricReadings] = useState<DbMetric[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    alertsApi.list()
-      .then((rows) => setAlerts(rows))
-      .catch(console.error);
+    setDataLoading(true);
+    Promise.all([alertsApi.list(), metricsApi.list()])
+      .then(([alertRows, metricRows]) => {
+        setAlerts(alertRows);
+        setMetricReadings(metricRows);
+      })
+      .catch(console.error)
+      .finally(() => setDataLoading(false));
   }, []);
 
   const bg = dark ? "#111827" : "#F4F5F7";
@@ -306,6 +311,25 @@ export function AnalyticsPage() {
   const blinkTrend = useMemo(() => ({ [period]: buildSeries(alerts, period, () => 1) } as Record<Period, AlertSeriesPoint[]>), [alerts, period]);
   const perclosTrend = useMemo(() => ({ [period]: buildSeries(alerts, period, (alert) => severityScore(alert.severity)) } as Record<Period, AlertSeriesPoint[]>), [alerts, period]);
   const driverComparison = useMemo(() => buildDriverComparison(periodAlerts, drivers.map((driver) => `${driver.firstName} ${driver.lastName}`.trim()).filter(Boolean)), [periodAlerts, drivers]);
+  const driverChartMax = Math.max(10, Math.ceil(Math.max(totalEvents, ...driverComparison.flatMap((row) => [row.blink, row.perclos, row.ear])) / 10) * 10);
+  const periodMetrics = useMemo(() => metricReadings
+    .filter((reading) => {
+      const timestamp = new Date(reading.timestamp);
+      return !Number.isNaN(timestamp.getTime()) && timestamp >= getPeriodStart(period);
+    })
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()), [metricReadings, period]);
+  const metricSeries = (selector: (reading: DbMetric) => number | null): MetricChartPoint[] => periodMetrics.flatMap((reading) => {
+    const value = selector(reading);
+    if (value === null) return [];
+    return [{ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), value }];
+  });
+  const fleetBlink = metricSeries((reading) => reading.blink_rate);
+  const fleetPerclos = metricSeries((reading) => reading.perclos);
+  const fleetYawn = metricSeries((reading) => reading.yawn);
+  const fleetPosture = metricSeries((reading) => reading.body_posture);
+  const fleetHeadPose = metricSeries((reading) => reading.head_pose);
+
+  if (dataLoading) return <LoadingState label="Loading analytics data..." />;
 
   function buildPDF(): jsPDF {
     const doc = new jsPDF({
@@ -1052,11 +1076,76 @@ export function AnalyticsPage() {
 
 
           {/* ============================================================ */}
+          {/* Fleet metric charts */}
+          {/* ============================================================ */}
+          <Card title={`Blink Rate — ${period}`} subtitle="General driver fleet · blinks per minute">
+            <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
+              <LineChart data={fleetBlink} margin={{ left: -10, right: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 25]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value.toFixed(2)} bpm`, "Blink Rate"]} />
+                <Line type="monotone" dataKey="value" name="Blink Rate" stroke="#1D6AE5" strokeWidth={2.5} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+
+          <Card title={`PERCLOS — ${period}`} subtitle="General driver fleet · percentage of time eyes closed">
+            <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
+              <LineChart data={fleetPerclos} margin={{ left: -10, right: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 35]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value.toFixed(2)}%`, "PERCLOS"]} />
+                <Line type="monotone" dataKey="value" name="PERCLOS" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+
+          <Card title={`Yawn — ${period}`} subtitle="General driver fleet · mouth opening score">
+            <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
+              <LineChart data={fleetYawn} margin={{ left: -10, right: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 1.5]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [value.toFixed(2), "Yawn"]} />
+                <Line type="monotone" dataKey="value" name="Yawn" stroke="#EF4444" strokeWidth={2.5} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+
+          <Card title={`Body Posture — ${period}`} subtitle="General driver fleet · posture score out of 100">
+            <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
+              <LineChart data={fleetPosture} margin={{ left: -10, right: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [value.toFixed(2), "Body Posture"]} />
+                <Line type="monotone" dataKey="value" name="Body Posture" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+
+          <Card title={`Head Pose — ${period}`} subtitle="General driver fleet · deviation in degrees">
+            <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
+              <LineChart data={fleetHeadPose} margin={{ left: -10, right: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 1]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value.toFixed(2)}°`, "Head Pose"]} />
+                <Line type="monotone" dataKey="value" name="Head Pose" stroke="#8B5CF6" strokeWidth={2.5} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+
+
+
+          {/* ============================================================ */}
           {/* Driver comparison */}
           {/* ============================================================ */}
           <Card
             title="Driver Alert Load"
-            subtitle="Alert counts and severity by driver"
+            subtitle={`Alert counts and severity by driver · ${totalEvents} total for ${period.toLowerCase()}`}
             span={isMobile ? undefined : "1 / -1"}
           >
 
@@ -1071,7 +1160,7 @@ export function AnalyticsPage() {
                   <BarChart data={driverComparison} margin={{ left: -10, right: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis dataKey="driver" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
+                    <YAxis domain={[0, driverChartMax]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
                     <Tooltip contentStyle={tooltipStyle} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                     <Bar dataKey="blink" name="Alerts" fill="#1D6AE5" radius={[3, 3, 0, 0]} />

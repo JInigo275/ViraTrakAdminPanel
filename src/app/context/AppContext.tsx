@@ -225,12 +225,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Load protected lists after authentication is available.
   useEffect(() => {
     if (!currentUser) return;
+    if (!supabase) {
+      setDbReady(true);
+      return;
+    }
 
     setDbReady(false);
+    const minimumLoadingTime = new Promise((resolve) => window.setTimeout(resolve, 2000));
     Promise.all([
       usersApi.list().then((rows) => setUsers(rows.map(mapUser))),
       driversApi.list().then((rows) => setDrivers(rows.map(mapDriver))),
       vehiclesApi.list().then((rows) => setVehicles(rows.map(mapVehicle))),
+      minimumLoadingTime,
     ])
       .catch((e) => console.warn("Data load failed, using available data:", e))
       .finally(() => setDbReady(true));
