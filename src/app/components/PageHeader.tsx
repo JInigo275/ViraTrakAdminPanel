@@ -32,6 +32,7 @@ export function PageHeader({ icon: Icon, iconColor = "#1D6AE5", title, subtitle,
       border: `1px solid ${borderColor}`,
       marginBottom: 20,
       position: "relative",
+      overflow: "hidden",
     }}>
       {/* Left accent stripe */}
       <div style={{
@@ -75,7 +76,7 @@ export function PageHeader({ icon: Icon, iconColor = "#1D6AE5", title, subtitle,
               fontSize: isMobile ? 16 : 18,
               fontWeight: 700,
               color: textMain,
-              letterSpacing: "0.03em",
+              letterSpacing: "0.02em",
               textTransform: "uppercase",
               lineHeight: 1.2,
             }}>

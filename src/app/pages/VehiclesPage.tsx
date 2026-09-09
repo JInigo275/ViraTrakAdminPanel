@@ -103,9 +103,15 @@ export function VehiclesPage() {
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif" }}>
+      {/* ============================================================ */}
+      {/* Vehicle page header and management actions */}
+      {/* ============================================================ */}
       <PageHeader icon={Truck} iconColor="#1D6AE5" title="Vehicle Information" subtitle="Vehicle profiles and driver assignments" />
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        {/* ============================================================ */}
+        {/* Vehicle search, bulk actions, and create action */}
+        {/* ============================================================ */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 320, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
           <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search vehicles..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: text, width: "100%", fontFamily: "Inter, sans-serif" }} />
@@ -125,6 +131,9 @@ export function VehiclesPage() {
       {error && !modal && <div style={{ marginBottom: 14, padding: "10px 12px", color: "#B91C1C", background: dark ? "#451A1A" : "#FEF2F2", borderRadius: 8, fontSize: 14 }}>{error}</div>}
 
       <div style={{ background: card, borderRadius: 12, boxShadow: dark ? "0 1px 4px rgba(0,0,0,.3)" : "0 1px 4px rgba(0,0,0,.07)", overflow: "hidden" }}>
+        {/* ============================================================ */}
+        {/* Vehicle directory table */}
+        {/* ============================================================ */}
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
             <thead>
@@ -146,7 +155,7 @@ export function VehiclesPage() {
                   <td style={{ padding: "11px 14px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 30, height: 30, borderRadius: 8, background: dark ? "#243B63" : "#EBF2FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#1D6AE5", flexShrink: 0 }}><Truck size={15} /></div><span style={{ fontSize: 14, color: text, fontWeight: 500 }}>{vehicle.plateNumber}</span></div></td>
                   <td style={{ padding: "11px 14px", fontSize: 14, color: muted }}>{vehicle.model || "Model not specified"}</td>
                   <td style={{ padding: "11px 14px", fontSize: 14, color: vehicle.driverIds.length ? text : muted, fontWeight: 500 }}><div style={{ display: "flex", alignItems: "center", gap: 7 }}><UserRound size={14} color={vehicle.driverIds.length ? "#10B981" : muted} />{driverName(vehicle.driverIds)}</div></td>
-                  <td style={{ padding: "11px 14px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><button onClick={() => openEdit(vehicle)} aria-label={`Edit ${vehicle.plateNumber}`} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}><Edit3 size={12} /> Edit</button>{vehicle.driverIds.length > 0 && <button onClick={() => void unassign(vehicle)} style={{ padding: "5px 10px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>Select Driver</button>}</div></td>
+                  <td style={{ width: 190, padding: "11px 14px" }}><div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 162 }}><button onClick={() => openEdit(vehicle)} aria-label={`Edit ${vehicle.plateNumber}`} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}><Edit3 size={12} /> Edit</button>{vehicle.driverIds.length > 0 ? <button onClick={() => void unassign(vehicle)} style={{ padding: "5px 10px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>Remove driver</button> : <button onClick={() => openEdit(vehicle)} style={{ padding: "5px 10px", background: "#ECFDF5", color: "#059669", border: "1px solid #A7F3D0", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>Select driver</button>}</div></td>
                 </tr>;
               })}
             </tbody>
@@ -163,7 +172,7 @@ export function VehiclesPage() {
             <div style={{ display: "grid", gap: 8, marginTop: 6 }}>
               {[0, 1].map((index) => (
                 <select key={index} value={driverIds[index] ?? ""} onChange={(event) => setDriverIds((current) => { const next = [...current]; if (event.target.value) next[index] = event.target.value; else next.splice(index, 1); return next.filter(Boolean); })} style={{ width: "100%", padding: "11px 12px", border: `1px solid ${border}`, borderRadius: 8, background: dark ? "#374151" : "#fff", color: text }}>
-                  <option value="">{index === 0 ? "Unassigned" : "Second driver (optional)"}</option>
+                  <option value="">{index === 0 ? "Select a driver" : "Second driver (optional)"}</option>
                   {drivers.filter((driver) => driver.id === driverIds[index] || !driverIds.includes(driver.id)).map((driver) => <option key={driver.id} value={driver.id}>{driver.firstName} {driver.lastName}</option>)}
                 </select>
               ))}
