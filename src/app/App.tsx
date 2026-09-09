@@ -17,6 +17,7 @@ import { DriverDetailPage } from "./pages/DriverDetailPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TestPage } from "./pages/TestPage";
+import { LoadingState } from "./components/LoadingState";
 import { supabase } from "../api/supabaseClient";
 
 function AppInner() {
@@ -37,7 +38,7 @@ function AppInner() {
   });
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { dark } = useTheme();
-  const { currentUser, setCurrentUser } = useApp();
+  const { currentUser, setCurrentUser, dbReady } = useApp();
 
   // Sync loggedIn state with persisted/current user
   useEffect(() => {
@@ -91,6 +92,7 @@ function AppInner() {
 
   if (!loggedIn) return <LoginPage onLogin={() => { setCurrentPage("dashboard"); setDriverDetailId(null); setLoggedIn(true); }} />;
   if (currentUser?.mustChangePassword) return <ChangePasswordPage onDone={() => {}} />;
+  if (!dbReady) return <LoadingState label="Connecting to ViraTrak..." />;
 
   function handleLogout() {
     void supabase?.auth.signOut();

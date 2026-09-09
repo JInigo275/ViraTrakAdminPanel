@@ -1,5 +1,6 @@
 import { ArrowLeft, Wind, Activity } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
+import { LoadingState } from "../components/LoadingState";
 import { useState, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
@@ -7,7 +8,7 @@ import { useApp } from "../context/AppContext";
 import { alertsApi, driverMetricsApi } from "../../api/viratrak";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  BarChart, Bar,
 } from "recharts";
 
 
@@ -40,7 +41,7 @@ const emptyData: DriverChartData = {
   posture: [],
 };
 
-type PeriodKey = "Today" | "This Week" | "This Month";
+type PeriodKey = "Today" | "This Week" | "This Month" | "This Year";
 
 const sevMap: Record<string, { bg: string; color: string }> = {
   High:     { bg: "#FEF2F2", color: "#EF4444" },
@@ -67,8 +68,10 @@ function getMetricPeriodStart(period: PeriodKey, now = new Date()) {
     start.setTime(start.getTime() - 24 * 60 * 60 * 1000);
   } else if (period === "This Week") {
     start.setDate(start.getDate() - 7);
-  } else {
+  } else if (period === "This Month") {
     start.setDate(start.getDate() - 30);
+  } else {
+    start.setDate(start.getDate() - 365);
   }
   return start.toISOString();
 }
@@ -131,6 +134,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
   const tooltipStyle = { fontSize: 13, borderRadius: 8, border: `1px solid ${borderColor}`, background: cardBg, color: textMain };
 
   if (!emp) return null;
+  if (liveData === null) return <LoadingState label="Loading driver analytics..." />;
 
   const fullName = `${emp.firstName} ${emp.lastName}`;
   const alertHistory = liveAlerts ?? data.alerts;
@@ -194,7 +198,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: `1px solid ${borderColor}` }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: textMain }}>Metrics Summary</span>
           <div style={{ display: "flex", gap: 4 }}>
-            {(["Today", "This Week", "This Month"] as PeriodKey[]).map((p) => (
+            {(["Today", "This Week", "This Month", "This Year"] as PeriodKey[]).map((p) => (
               <button key={p} onClick={() => setPeriod(p)}
                 style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${period === p ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, background: period === p ? "#1D6AE5" : "transparent", color: period === p ? "#fff" : textSub, fontSize: 12, fontWeight: period === p ? 600 : 400, cursor: "pointer", fontFamily: "Inter, sans-serif", transition: "all 0.15s", whiteSpace: "nowrap" }}>
                 {p}
@@ -222,7 +226,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 12, color: textSub }}>Period</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: textMain }}>{period === "Today" ? "Last 24h" : period === "This Week" ? "7 days" : "30 days"}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: textMain }}>{period === "Today" ? "Last 24h" : period === "This Week" ? "7 days" : period === "This Month" ? "30 days" : "365 days"}</div>
             </div>
           </div>
 
@@ -368,23 +372,6 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
               <Tooltip contentStyle={tooltipStyle} />
               <Bar dataKey="value" name="Head Pose" fill="#8B5CF6" radius={[4,4,0,0]} />
             </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-
-
-{/* ============================================================ */}
-        {/* Body Posture */}
-        {/* ============================================================ */}
-        <Card title="Body Posture" subtitle="Postural scoring by body zone">
-          <ResponsiveContainer width="100%" height={150}>
-            <RadarChart data={data.posture} cx="50%" cy="50%" outerRadius={55}>
-              <PolarGrid stroke={gridColor} />
-              <PolarAngleAxis dataKey="metric" tick={{ fontSize: 12, fill: textSub }} />
-              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} />
-              <Radar name="Score" dataKey="score" stroke="#10B981" fill="#10B981" fillOpacity={0.25} />
-              <Tooltip contentStyle={tooltipStyle} />
-            </RadarChart>
           </ResponsiveContainer>
         </Card>
 
