@@ -209,33 +209,32 @@ export const driversApi = {
     assertValid(validateName(e.last_name, "Last name"));
     if (e.vehicle) assertValid(validatePlate(e.vehicle));
     assertValid(validatePhone(e.contact));
-    const normalizedId = normalizeDriverId(e.id);
     const plate = e.vehicle ? formatPlate(e.vehicle) : "";
     if (plate) {
       const { data: existingVehicle } = await client.from("vehicle").select("vehicle_id").eq("plate_number", plate).maybeSingle();
       if (existingVehicle) throw new Error("Vehicle plate already exists.");
     }
-    await assertDriverIdAvailable(client, normalizedId);
+
     const { data, error } = await client
       .from("driver")
       .insert({
-        driver_id: normalizedId,
         first_name: formatName(e.first_name),
         last_name: formatName(e.last_name),
-        license_number: `LIC-${Date.now()}`, // Generate placeholder
+        license_number: `LIC-${Date.now()}`,
         contact_info: formatPhone(e.contact),
       })
-      .select("*")
+      .select("driver_id, first_name, last_name, contact_info")
       .single();
-    
+
     if (error) throw error;
+
     if (plate) {
       const { error: vehicleError } = await client.from("vehicle").insert({ plate_number: plate, driver_id: data.driver_id });
       if (vehicleError) throw vehicleError;
     }
-    
+
     const raw = data as RawDriver;
-    return { ...mapRawDriverToDbDriver(raw), vehicle: plate || "Unassigned" };
+    return { ...mapRawDriverToDbDriver(raw), id: String(data.driver_id), vehicle: plate || "Unassigned" };
   },
   update: async (id: string, patch: Partial<DbDriver>) => {
     const client = requireSupabase();
@@ -244,22 +243,17 @@ export const driversApi = {
     if (patch.vehicle !== undefined) assertValid(validatePlate(patch.vehicle));
     if (patch.contact !== undefined) assertValid(validatePhone(patch.contact));
     const numericId = parseInt(id, 10);
-    const nextDriverId = patch.id !== undefined ? normalizeDriverId(patch.id) : undefined;
-    if (nextDriverId !== undefined) {
-      await assertDriverIdAvailable(client, nextDriverId, numericId);
-    }
     const { data, error } = await client
       .from("driver")
       .update({
-        ...(nextDriverId !== undefined ? { driver_id: nextDriverId } : {}),
         first_name: patch.first_name === undefined ? undefined : formatName(patch.first_name),
         last_name: patch.last_name === undefined ? undefined : formatName(patch.last_name),
         contact_info: patch.contact === undefined ? undefined : formatPhone(patch.contact),
       })
       .eq("driver_id", numericId)
-      .select("*")
+      .select("driver_id, first_name, last_name, contact_info")
       .single();
-    
+
     if (error) throw error;
     if (patch.vehicle !== undefined) {
       const plate = formatPlate(patch.vehicle);
@@ -272,7 +266,7 @@ export const driversApi = {
         : await client.from("vehicle").insert({ plate_number: plate, driver_id: parseInt(id) });
       if (vehicleResult.error) throw vehicleResult.error;
     }
-    
+
     const raw = data as RawDriver;
     return { ...mapRawDriverToDbDriver(raw), ...(patch.vehicle !== undefined ? { vehicle: formatPlate(patch.vehicle) } : {}) };
   },

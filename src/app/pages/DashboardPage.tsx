@@ -25,14 +25,14 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
   const rightBg = dark ? "#111827" : "#fff";
 
   return (
-    <div style={{ display: "flex", flex: 1, overflow: "hidden", flexDirection: isMobile ? "column" : "row" }}>
+    <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden", flexDirection: isMobile ? "column" : "row" }}>
 
 
 
 {/* ============================================================ */}
       {/* Main scrollable content */}
       {/* ============================================================ */}
-      <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 20, display: "flex", flexDirection: "column", gap: 16, background: bg, transition: "background 0.2s" }}>
+      <main style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: isMobile ? 16 : 20, display: "flex", flexDirection: "column", gap: 16, background: bg, transition: "background 0.2s" }}>
         <PageHeader icon={LayoutDashboard} iconColor="#1D6AE5" title="Dashboard" subtitle="Overview of driver behavior and system status" />
         <StatCards />
         <RecentEvents onViewAll={onNavigate ? () => onNavigate("alerts") : undefined} />
@@ -55,7 +55,7 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
       {/* Right panel as sidebar on desktop only */}
       {/* ============================================================ */}
       {!isMobile && (
-        <aside style={{ width: 340, minWidth: 340, borderLeft: `1px solid ${rightBorder}`, background: rightBg, padding: 16, overflow: "hidden", display: "flex", flexDirection: "column", transition: "background 0.2s" }}>
+        <aside style={{ width: 340, minWidth: 340, minHeight: 0, borderLeft: `1px solid ${rightBorder}`, background: rightBg, padding: 16, overflow: "hidden", display: "flex", flexDirection: "column", transition: "background 0.2s" }}>
           <RightPanel />
         </aside>
       )}
