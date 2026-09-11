@@ -543,6 +543,8 @@ export function AnalyticsPage() {
     <div
       style={{
         flex: 1,
+        minHeight: 0,
+        height: "100%",
         overflowY: "auto",
         overflowX: "clip",
         padding: isMobile ? 12 : 24,

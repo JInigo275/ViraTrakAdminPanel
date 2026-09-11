@@ -290,6 +290,27 @@ export type DbVehicle = {
   secondary_driver_id: number | null;
 };
 
+async function assertDriversAvailable(client: ReturnType<typeof requireSupabase>, driverIds: Array<number | null>, excludedVehicleId?: number) {
+  const normalizedDriverIds = [...new Set(driverIds.filter((id): id is number => id !== null && Number.isInteger(id) && id > 0))];
+  if (normalizedDriverIds.length === 0) return;
+
+  const { data: vehicleRows, error } = await client
+    .from("vehicle")
+    .select("vehicle_id, driver_id, secondary_driver_id");
+
+  if (error) throw error;
+
+  const hasConflict = (vehicleRows ?? []).some((row) => {
+    if (excludedVehicleId !== undefined && row.vehicle_id === excludedVehicleId) return false;
+    const assignedDriverIds = [row.driver_id, row.secondary_driver_id].filter((id): id is number => id !== null);
+    return assignedDriverIds.some((assignedId) => normalizedDriverIds.includes(assignedId));
+  });
+
+  if (hasConflict) {
+    throw new Error("One or more selected drivers are already assigned to another vehicle.");
+  }
+}
+
 export const vehiclesApi = {
   list: async () => {
     const client = requireSupabase();
@@ -311,6 +332,7 @@ export const vehiclesApi = {
       .eq("plate_number", plate)
       .maybeSingle();
     if (duplicate) throw new Error("Vehicle plate already exists.");
+    await assertDriversAvailable(client, [vehicle.driver_id, vehicle.secondary_driver_id]);
     const { data, error } = await client
       .from("vehicle")
       .insert({ plate_number: plate, model: vehicle.model?.trim() || null, driver_id: vehicle.driver_id, secondary_driver_id: vehicle.secondary_driver_id })
@@ -322,9 +344,28 @@ export const vehiclesApi = {
   update: async (id: number, patch: Partial<Pick<DbVehicle, "plate_number" | "model" | "driver_id" | "secondary_driver_id">>) => {
     const client = requireSupabase();
     const dbPatch: Partial<Pick<DbVehicle, "plate_number" | "model" | "driver_id" | "secondary_driver_id">> = { ...patch };
+
     if (patch.driver_id !== undefined && patch.secondary_driver_id !== undefined && patch.driver_id !== null && patch.driver_id === patch.secondary_driver_id) {
       throw new Error("Select two different drivers.");
     }
+
+    const currentVehicle = ((patch.driver_id !== undefined || patch.secondary_driver_id !== undefined)
+      ? await client.from("vehicle").select("vehicle_id, driver_id, secondary_driver_id").eq("vehicle_id", id).maybeSingle()
+      : null);
+
+    const nextDriverIds = [
+      patch.driver_id ?? currentVehicle?.driver_id ?? null,
+      patch.secondary_driver_id ?? currentVehicle?.secondary_driver_id ?? null,
+    ];
+
+    if (nextDriverIds[0] !== null && nextDriverIds[0] === nextDriverIds[1]) {
+      throw new Error("Select two different drivers.");
+    }
+
+    if (patch.driver_id !== undefined || patch.secondary_driver_id !== undefined) {
+      await assertDriversAvailable(client, nextDriverIds, id);
+    }
+
     if (patch.plate_number !== undefined) {
       assertValid(validatePlate(patch.plate_number));
       dbPatch.plate_number = formatPlate(patch.plate_number);

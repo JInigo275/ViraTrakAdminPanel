@@ -160,7 +160,7 @@ function AppInner() {
       )}
 
       {/* Body row */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
 
         {/* Desktop sidebar — in normal flow */}
         {!isMobile && (
@@ -181,10 +181,9 @@ function AppInner() {
         )}
 
         {/* Page content */}
-        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-          <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%" }}>
-            <div style={{ flex: 1, minHeight: 0 }}>{renderPage()}</div>
-            <div aria-hidden="true" style={{ height: "5vh", minHeight: 36, width: "100%" }} />
+        <div style={{ display: "flex", flex: 1, minHeight: 0, height: "100%", overflow: "hidden" }}>
+          <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%", minHeight: 0 }}>
+            <div style={{ flex: 1, minHeight: 0, height: "100%", overflow: "auto" }}>{renderPage()}</div>
           </div>
         </div>
       </div>

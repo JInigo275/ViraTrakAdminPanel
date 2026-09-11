@@ -60,6 +60,7 @@ export function VehiclesPage() {
     const plateError = validatePlate(plate);
     if (plateError) { setError(plateError); return; }
     if (driverIds.length > 2) { setError("A vehicle can have up to two drivers."); return; }
+    if (new Set(driverIds).size !== driverIds.length) { setError("Select two different drivers."); return; }
     setSaving(true); setError("");
     try {
       const patch = { plateNumber: formatPlate(plate), model: model.trim(), driverIds };

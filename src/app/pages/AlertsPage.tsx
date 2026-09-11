@@ -224,6 +224,8 @@ export function AlertsPage() {
 
   // ============================================================
   filtered = [...filtered].sort((a, b) => a.driver.localeCompare(b.driver));
+  const mobileSummaryText = isMobile ? `${filtered.length} items` : `${filtered.length} records · Sorted A–Z by driver`;
+  const compactMobile = isMobile;
 
   const totalPages = perPage === "All" ? 1 : Math.ceil(filtered.length / (perPage as number));
   const paginated = perPage === "All" ? filtered : filtered.slice(((page as number) - 1) * (perPage as number), (page as number) * (perPage as number));
@@ -261,8 +263,11 @@ export function AlertsPage() {
     XLSX.writeFile(wb, `viratrak_alerts_${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
+  const tableMaxHeight = isMobile ? "none" : "calc(100vh - 290px)";
+  const tableHeaders = isMobile ? ["Type", "Driver", "Vehicle", "Date/Time", "Severity", "View"] : ["Type", "Driver", "Vehicle", "Date", "Time", "Severity", "Evidence"];
+
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%", minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: isMobile ? "16px 16px 56px" : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
       {showPDFPreview && (
         <PDFPreviewModal
           title="Alerts & Evidence — PDF Preview"
@@ -278,12 +283,12 @@ export function AlertsPage() {
         />
       )}
 
-      <PageHeader icon={Bell} iconColor="#EF4444" title="Alerts & Evidence" subtitle="All detected driver behavior events and evidence">
-        <button onClick={exportExcel} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-          <Download size={14} /> Excel
+      <PageHeader icon={Bell} iconColor="#EF4444" title="Alerts & Evidence" subtitle={isMobile ? "Driver events" : "All detected driver behavior events and evidence"}>
+        <button onClick={exportExcel} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: isMobile ? "9px 12px" : "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: isMobile ? 12 : 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", width: isMobile ? "48%" : "auto", minWidth: isMobile ? 100 : 0 }}>
+          <Download size={14} /> {isMobile ? "XLS" : "Excel"}
         </button>
-        <button onClick={() => setShowPDFPreview(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#EF4444", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-          <Download size={14} /> PDF {selected.size > 0 && `(${selected.size})`}
+        <button onClick={() => setShowPDFPreview(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: isMobile ? "9px 12px" : "8px 14px", background: "#EF4444", color: "#fff", borderRadius: 8, border: "none", fontSize: isMobile ? 12 : 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", width: isMobile ? "48%" : "auto", minWidth: isMobile ? 100 : 0 }}>
+          <Download size={14} /> {isMobile ? "PDF" : `PDF ${selected.size > 0 ? `(${selected.size})` : ""}`}
         </button>
       </PageHeader>
 
@@ -292,31 +297,35 @@ export function AlertsPage() {
 {/* ============================================================ */}
       {/* Filter bar */}
       {/* ============================================================ */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap", flexDirection: isMobile ? "column" : "row" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#374151" : "#F8F9FA", border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 320, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
           <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
-          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search alerts..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={isMobile ? "Search..." : "Search alerts..."} style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
         </div>
-        <button onClick={() => setShowFilters((v) => !v)}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: showFilters ? "#1D6AE5" : (dark ? "#374151" : "#fff"), color: showFilters ? "#fff" : textSub, border: `1px solid ${showFilters ? "#1D6AE5" : (dark ? "#4B5563" : "#E5E7EB")}`, borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-          <Filter size={13} /> Filters {activeFilters > 0 && `(${activeFilters})`}
-        </button>
-        {activeFilters > 0 && (
-          <button onClick={clearFilters} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", background: "transparent", color: "#EF4444", border: "1px solid #FECACA", borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-            <X size={12} /> Clear All
+
+        <div style={{ display: "flex", gap: 8, width: isMobile ? "100%" : "auto", alignItems: "center" }}>
+          <button onClick={() => setShowFilters((v) => !v)}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "7px 12px", background: showFilters ? "#1D6AE5" : (dark ? "#374151" : "#fff"), color: showFilters ? "#fff" : textSub, border: `1px solid ${showFilters ? "#1D6AE5" : (dark ? "#4B5563" : "#E5E7EB")}`, borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", width: isMobile ? "calc(50% - 4px)" : "auto", flexShrink: 0 }}>
+            <Filter size={13} /> {isMobile ? "Filters" : `Filters ${activeFilters > 0 ? `(${activeFilters})` : ""}`}
           </button>
-        )}
-        <span style={{ fontSize: 13, color: textSub, marginLeft: 4 }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""} · Sorted A–Z by driver</span>
+          {activeFilters > 0 && (
+            <button onClick={clearFilters} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 12px", background: "transparent", color: "#EF4444", border: "1px solid #FECACA", borderRadius: 8, fontSize: 13, cursor: "pointer", fontFamily: "Inter, sans-serif", width: isMobile ? "calc(50% - 4px)" : "auto", flexShrink: 0 }}>
+              <X size={12} /> {isMobile ? "Clear" : "Clear All"}
+            </button>
+          )}
+        </div>
+
+        <span style={{ fontSize: isMobile ? 12 : 13, color: textSub, marginLeft: 4 }}>{mobileSummaryText}</span>
 
 
 
 {/* ============================================================ */}
         {/* Per page */}
         {/* ============================================================ */}
-        <div ref={perPageRef} style={{ position: "relative", marginLeft: "auto" }}>
+        <div ref={perPageRef} style={{ position: "relative", marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : "auto" }}>
           <div onClick={() => setShowPerPageMenu((v) => !v)}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: dark ? "#374151" : "#fff", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 13, color: textSub, cursor: "pointer", userSelect: "none" }}>
-            Show: {perPage} <ChevronDown size={11} color={textSub} />
+            style={{ display: "flex", alignItems: "center", justifyContent: isMobile ? "space-between" : "center", gap: 6, padding: "7px 10px", background: dark ? "#374151" : "#fff", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 13, color: textSub, cursor: "pointer", userSelect: "none", width: isMobile ? "100%" : "auto" }}>
+            <span>{isMobile ? "Rows" : `Show: ${perPage}`}</span> <span>{isMobile ? perPage : ""}</span> <ChevronDown size={11} color={textSub} />
           </div>
           {showPerPageMenu && (
             <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: dark ? "#1F2937" : "#fff", border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 200, overflow: "hidden", minWidth: 90 }}>
@@ -355,14 +364,14 @@ export function AlertsPage() {
       {/* Select all / deselect */}
       {/* ============================================================ */}
       {paginated.length > 0 && selected.size > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for PDF</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: isMobile ? 8 : 10 }}>
+          <span style={{ fontSize: isMobile ? 12 : 13, color: textSub }}>{selected.size} selected for PDF</span>
         </div>
       )}
 
-      <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
+      <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden", marginBottom: isMobile ? 18 : 24 }}>
+        <div style={{ overflowX: "auto", overflowY: isMobile ? "visible" : "auto", maxHeight: tableMaxHeight, minHeight: isMobile ? 0 : 320, borderBottom: `1px solid ${borderColor}` }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isMobile ? 330 : 600 }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
               <th style={{ padding: "10px 16px", width: 40 }}>
@@ -395,21 +404,26 @@ export function AlertsPage() {
                       {checked && <Check size={10} color="#fff" />}
                     </div>
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
+                  <td style={{ padding: isMobile ? "8px 10px" : "10px 14px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <div style={{ width: 26, height: 26, borderRadius: 6, background: e.icon_bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon size={12} color={e.icon_color} /></div>
-                      <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.type}</span>
+                      <span style={{ fontSize: isMobile ? 13 : 14, color: textMain, fontWeight: 500 }}>{e.type}</span>
                     </div>
                   </td>
-                  <td style={{ padding: "10px 14px", fontSize: 14, color: textMain }}>{e.driver}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 14, color: textSub }}>{e.vehicle}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 14, color: textSub }}>{e.date}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 14, color: textSub, fontFamily: "monospace" }}>{e.time}</td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <span style={{ display: "inline-block", padding: "2px 9px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: sevStyle[e.severity].bg, color: sevStyle[e.severity].color }}>{e.severity}</span>
+                  <td style={{ padding: isMobile ? "8px 10px" : "10px 14px", fontSize: isMobile ? 13 : 14, color: textMain }}>{e.driver}</td>
+                  <td style={{ padding: isMobile ? "8px 10px" : "10px 14px", fontSize: isMobile ? 13 : 14, color: textSub }}>{e.vehicle}</td>
+                  <td style={{ padding: isMobile ? "8px 10px" : "10px 14px", fontSize: isMobile ? 12 : 14, color: textSub }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      <span>{e.date}</span>
+                      <span style={{ fontFamily: "monospace", color: textSub }}>{e.time}</span>
+                    </div>
                   </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedEvidence(e); }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: 0, border: "none", background: "transparent", fontSize: 13, color: e.evidence ? "#1D6AE5" : textSub, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: e.evidence ? "#EF4444" : textSub, display: "inline-block" }} /> View</button>
+                  <td style={{ padding: isMobile ? "8px 10px" : "10px 14px", fontSize: isMobile ? 12 : 14, color: textSub, fontFamily: "monospace" }}>{e.time}</td>
+                  <td style={{ padding: isMobile ? "8px 10px" : "10px 14px" }}>
+                    <span style={{ display: "inline-block", padding: "2px 9px", borderRadius: 999, fontSize: isMobile ? 11 : 12, fontWeight: 600, background: sevStyle[e.severity].bg, color: sevStyle[e.severity].color }}>{e.severity}</span>
+                  </td>
+                  <td style={{ padding: isMobile ? "8px 10px" : "10px 14px" }}>
+                    <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedEvidence(e); }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: 0, border: "none", background: "transparent", fontSize: isMobile ? 12 : 13, color: e.evidence ? "#1D6AE5" : textSub, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: e.evidence ? "#EF4444" : textSub, display: "inline-block" }} /> View</button>
                   </td>
                 </tr>
               );
@@ -425,26 +439,26 @@ export function AlertsPage() {
       {/* Pagination */}
       {/* ============================================================ */}
       {perPage !== "All" && totalPages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14 }}>
-          <span style={{ fontSize: 13, color: textSub }}>
-            Page {page} of {totalPages} · {filtered.length} total records
+        <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0, marginTop: 14 }}>
+          <span style={{ fontSize: isMobile ? 12 : 13, color: textSub }}>
+            {isMobile ? `Page ${page}/${totalPages}` : `Page ${page} of ${totalPages} · ${filtered.length} total records`}
           </span>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              style={{ padding: "6px 12px", borderRadius: 7, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, background: "transparent", fontSize: 13, color: page === 1 ? (dark ? "#4B5563" : "#D1D5DB") : textMain, cursor: page === 1 ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif" }}>
+              style={{ padding: isMobile ? "7px 10px" : "6px 12px", borderRadius: 7, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, background: "transparent", fontSize: 13, color: page === 1 ? (dark ? "#4B5563" : "#D1D5DB") : textMain, cursor: page === 1 ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif" }}>
               Prev
             </button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               const p = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
               return (
                 <button key={p} onClick={() => setPage(p)}
-                  style={{ width: 32, padding: "6px", borderRadius: 7, border: `1px solid ${p === page ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, background: p === page ? "#1D6AE5" : "transparent", fontSize: 13, color: p === page ? "#fff" : textMain, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                  style={{ width: 32, padding: isMobile ? "7px 0" : "6px", borderRadius: 7, border: `1px solid ${p === page ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, background: p === page ? "#1D6AE5" : "transparent", fontSize: 13, color: p === page ? "#fff" : textMain, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
                   {p}
                 </button>
               );
             })}
             <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              style={{ padding: "6px 12px", borderRadius: 7, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, background: "transparent", fontSize: 13, color: page === totalPages ? (dark ? "#4B5563" : "#D1D5DB") : textMain, cursor: page === totalPages ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif" }}>
+              style={{ padding: isMobile ? "7px 10px" : "6px 12px", borderRadius: 7, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, background: "transparent", fontSize: 13, color: page === totalPages ? (dark ? "#4B5563" : "#D1D5DB") : textMain, cursor: page === totalPages ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif" }}>
               Next
             </button>
           </div>

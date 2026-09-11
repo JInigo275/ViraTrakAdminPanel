@@ -79,6 +79,7 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
   const rowHover = dark ? "#374151" : "#FAFAFA";
   const shadow = dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)";
   const thColor = dark ? "#6B7280" : "#9CA3AF";
+  const cardMaxHeight = isMobile ? "60vh" : "calc(100vh - 260px)";
 
   useEffect(() => {
     alertsApi.list().then((rows) => setEvents(rows.slice().sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`)).slice(0, 5).map(toRow))).catch(console.error);
@@ -87,7 +88,7 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
   const total = useMemo(() => events.length, [events]);
 
   return (
-    <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, fontFamily: "Inter, sans-serif", overflow: "hidden", transition: "background 0.2s", display: "flex", flexDirection: "column" }}>
+    <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, fontFamily: "Inter, sans-serif", overflow: "hidden", transition: "background 0.2s", display: "flex", flexDirection: "column", width: "100%", minHeight: 220, maxHeight: cardMaxHeight, flex: 1 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: `1px solid ${headerBorder}`, flexShrink: 0 }}>
         <span style={{ fontSize: 16, fontWeight: 600, color: textMain }}>Recent Alerts</span>
         <button
@@ -98,7 +99,7 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
         </button>
       </div>
 
-      <div style={{ overflowY: "auto", maxHeight: 280, overflowX: "auto" }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "auto", minHeight: 0 }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isMobile ? 320 : 420 }}>
           <thead style={{ position: "sticky", top: 0, background: cardBg, zIndex: 1 }}>
             <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
