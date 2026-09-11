@@ -465,12 +465,12 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                   <td style={{ padding: "11px 14px", fontSize: 13, color: textSub }}>{e.contact}</td>
                   <td style={{ width: 235, padding: "11px 14px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 207, whiteSpace: "nowrap" }}>
-                      <button onClick={() => openEdit(e)} aria-label={`Edit ${e.firstName} ${e.lastName}`}
+                      <button onClick={(event) => { event.stopPropagation(); openEdit(e); }} aria-label={`Edit ${e.firstName} ${e.lastName}`}
                         style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
                         <Edit3 size={12} /> Edit
                       </button>
                       {onViewDetail && (
-                        <button onClick={() => onViewDetail(e.id)}
+                        <button onClick={(event) => { event.stopPropagation(); onViewDetail(e.id); }}
                           style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#ECFDF5", color: "#059669", border: "1px solid #A7F3D0", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
                           <BarChart2 size={12} /> View
                         </button>

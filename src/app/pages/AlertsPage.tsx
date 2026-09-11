@@ -387,10 +387,11 @@ export function AlertsPage() {
               const checked = selected.has(e.id);
               return (
                 <tr key={e.id} style={{ borderBottom: i < paginated.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: checked ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent", cursor: "pointer" }}
+                  onClick={() => toggleOne(e.id)}
                   onMouseEnter={(el) => { if (!checked) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
                   onMouseLeave={(el) => { if (!checked) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
-                  <td style={{ padding: "10px 16px" }} onClick={() => toggleOne(e.id)}>
-                    <div style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${checked ? "#1D6AE5" : checkBorder}`, background: checked ? "#1D6AE5" : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <td style={{ padding: "10px 16px" }}>
+                    <div onClick={(event) => { event.stopPropagation(); toggleOne(e.id); }} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${checked ? "#1D6AE5" : checkBorder}`, background: checked ? "#1D6AE5" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                       {checked && <Check size={10} color="#fff" />}
                     </div>
                   </td>
