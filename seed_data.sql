@@ -45,14 +45,14 @@ INSERT INTO public.driver (
 )
 OVERRIDING SYSTEM VALUE
 VALUES
-  (1, 'Jon', 'Patel', 'DL-1002', '+639171010002');
+  (26091101, 'Jon', 'Patel', 'DL-1002', '+639171010002');
 
 INSERT INTO public.vehicle (
   vehicle_id, plate_number, model, driver_id
 )
 OVERRIDING SYSTEM VALUE
 VALUES
-  (1, 'PLT5634', 'Toyota Camry', 1);
+  (1, 'PLT5634', 'Toyota Camry', 26091101);
 
 INSERT INTO public.device (
   device_id, status, video_feed, vehicle_id

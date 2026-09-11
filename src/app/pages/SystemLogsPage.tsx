@@ -15,8 +15,8 @@ import { PDFPreviewModal } from "../components/PDFPreviewModal";
 // Log types and styles
 // ============================================================
 
-type LogSource = "System" | "Hardware";
-type LogLevel  = "INFO" | "WARNING" | "ERROR";
+type LogSource = "System" | "Hardware" | "Behavior";
+type LogLevel = "INFO" | "WARNING" | "ERROR";
 
 interface LogEntry {
   id: number;
@@ -26,17 +26,19 @@ interface LogEntry {
   level: LogLevel;
   ref: string;
   action: string;
+  actor: string;
 }
 
 const levelStyle: Record<LogLevel, { bg: string; color: string }> = {
-  INFO:    { bg: "#EBF2FF", color: "#1D6AE5" },
+  INFO: { bg: "#EBF2FF", color: "#1D6AE5" },
   WARNING: { bg: "#FFF7ED", color: "#F59E0B" },
-  ERROR:   { bg: "#FEF2F2", color: "#EF4444" },
+  ERROR: { bg: "#FEF2F2", color: "#EF4444" },
 };
 
 const sourceStyle: Record<LogSource, { bg: string; color: string }> = {
-  System:   { bg: "#F5F3FF", color: "#8B5CF6" },
+  System: { bg: "#F5F3FF", color: "#8B5CF6" },
   Hardware: { bg: "#FFF7ED", color: "#D97706" },
+  Behavior: { bg: "#ECFDF5", color: "#10B981" },
 };
 
 
@@ -68,16 +70,16 @@ export function SystemLogsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const bg          = dark ? "#111827" : "#F4F5F7";
-  const cardBg      = dark ? "#1F2937" : "#fff";
-  const textMain    = dark ? "#F9FAFB" : "#111827";
-  const textSub     = dark ? "#9CA3AF" : "#6B7280";
+  const bg = dark ? "#111827" : "#F4F5F7";
+  const cardBg = dark ? "#1F2937" : "#fff";
+  const textMain = dark ? "#F9FAFB" : "#111827";
+  const textSub = dark ? "#9CA3AF" : "#6B7280";
   const borderColor = dark ? "#374151" : "#F3F4F6";
-  const shadow      = dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)";
-  const rowHover    = dark ? "#374151" : "#FAFAFA";
-  const inputBg     = dark ? "#374151" : "#F8F9FA";
-  const thColor     = dark ? "#6B7280" : "#9CA3AF";
-  const filterBg    = dark ? "#374151" : "#F3F4F6";
+  const shadow = dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)";
+  const rowHover = dark ? "#374151" : "#FAFAFA";
+  const inputBg = dark ? "#374151" : "#F8F9FA";
+  const thColor = dark ? "#6B7280" : "#9CA3AF";
+  const filterBg = dark ? "#374151" : "#F3F4F6";
 
   const filtered = allLogs.filter((l) => {
     const q = search.toLowerCase();
@@ -87,7 +89,7 @@ export function SystemLogsPage() {
     return true;
   });
 
-  const allChecked  = filtered.length > 0 && filtered.every((l) => selected.has(l.id));
+  const allChecked = filtered.length > 0 && filtered.every((l) => selected.has(l.id));
   const someChecked = filtered.some((l) => selected.has(l.id));
 
   function toggleOne(id: number) {
@@ -122,12 +124,12 @@ export function SystemLogsPage() {
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.json_to_sheet(printData.map((l) => ({
-        Date:        l.date,
-        Time:        l.time,
-        Type:        l.level,
-        Source:      l.source,
-        Reference:   l.ref,
-        Actor:       l.actor,
+        Date: l.date,
+        Time: l.time,
+        Type: l.level,
+        Source: l.source,
+        Reference: l.ref,
+        Actor: l.actor,
         Description: l.action,
       }))),
       "System Logs"
@@ -157,7 +159,7 @@ export function SystemLogsPage() {
 
 
 
-{/* ============================================================ */}
+      {/* ============================================================ */}
       {/* Filters */}
       {/* ============================================================ */}
       <div style={{ display: "flex", gap: 18, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
@@ -166,7 +168,7 @@ export function SystemLogsPage() {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search logs…" style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", paddingLeft: isMobile ? 0 : 20 }}>
           <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Type:</span>
           {["All", "INFO", "WARNING", "ERROR"].map((f) => (
             <button key={f} onClick={() => setLevelFilter(f)}
@@ -176,9 +178,14 @@ export function SystemLogsPage() {
           ))}
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{
+          display: "flex", 
+          gap: 10, 
+          alignItems: "center",
+          paddingLeft: isMobile ? 0 : 20,
+        }}>
           <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Source:</span>
-          {["All", "System", "Hardware"].map((f) => (
+          {["All", "Behavior", "System", "Hardware"].map((f) => (
             <button key={f} onClick={() => setSourceFilter(f)}
               style={{ padding: "5px 11px", borderRadius: 999, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer", background: sourceFilter === f ? "#1D6AE5" : filterBg, color: sourceFilter === f ? "#fff" : textSub, transition: "all 0.15s", fontFamily: "Inter, sans-serif" }}>
               {f}
@@ -191,7 +198,7 @@ export function SystemLogsPage() {
 
 
 
-{/* ============================================================ */}
+      {/* ============================================================ */}
       {/* Selection summary */}
       {/* ============================================================ */}
       {filtered.length > 0 && (
@@ -202,7 +209,7 @@ export function SystemLogsPage() {
 
 
 
-{/* ============================================================ */}
+      {/* ============================================================ */}
       {/* Table */}
       {/* ============================================================ */}
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>

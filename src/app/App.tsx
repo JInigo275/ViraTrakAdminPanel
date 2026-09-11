@@ -16,7 +16,6 @@ import { VehiclesPage } from "./pages/VehiclesPage";
 import { DriverDetailPage } from "./pages/DriverDetailPage";
 import { SystemLogsPage } from "./pages/SystemLogsPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { TestPage } from "./pages/TestPage";
 import { LoadingState } from "./components/LoadingState";
 import { supabase } from "../api/supabaseClient";
 
@@ -128,7 +127,6 @@ function AppInner() {
       case "vehicles":   return <VehiclesPage />;
       case "logs":       return <SystemLogsPage />;
       case "settings":   return <SettingsPage />;
-      case "test":       return <TestPage />;
       default:           return <DashboardPage isMobile={isMobile} />;
     }
   };
@@ -184,7 +182,10 @@ function AppInner() {
 
         {/* Page content */}
         <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-          {renderPage()}
+          <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%" }}>
+            <div style={{ flex: 1, minHeight: 0 }}>{renderPage()}</div>
+            <div aria-hidden="true" style={{ height: "5vh", minHeight: 36, width: "100%" }} />
+          </div>
         </div>
       </div>
 

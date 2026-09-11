@@ -50,6 +50,7 @@ const EVENT_COLORS: Record<string, string> = {
   "Eyes Closed": "#F59E0B",
   "Micro Sleep": "#8B5CF6",
   "Head Pose": "#1D6AE5",
+  "Shoulder Elevation": "#10B981",
   "Body Posture": "#10B981",
   "Blink Rate": "#EAB308",
 };
@@ -332,6 +333,7 @@ export function AnalyticsPage() {
   if (dataLoading) return <LoadingState label="Loading analytics data..." />;
 
   function buildPDF(): jsPDF {
+    const generatedAt = new Date();
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -342,7 +344,6 @@ export function AnalyticsPage() {
 
     // ============================================================
     // Title
-
     // ============================================================
     doc.setFontSize(18).setFont("helvetica", "bold");
     doc.text("Analytics Report", 14, y);
@@ -352,7 +353,7 @@ export function AnalyticsPage() {
       .setFont("helvetica", "normal")
       .setTextColor(100);
     doc.text(
-      `Period: ${period}   ·   Generated: ${new Date().toLocaleString()}`,
+      `Period: ${period}   ·   Generated: ${generatedAt.toLocaleString()}`,
       14,
       y,
     );
@@ -361,7 +362,6 @@ export function AnalyticsPage() {
 
     // ============================================================
     // KPI grid (2 per row)
-
     // ============================================================
     doc.setFontSize(12).setFont("helvetica", "bold");
     doc.text("Fleet Overview", 14, y);
@@ -449,6 +449,7 @@ export function AnalyticsPage() {
   }
 
   function handlePrint() {
+    const generatedAt = new Date();
     const win = window.open(
       "",
       "_blank",
@@ -474,7 +475,7 @@ export function AnalyticsPage() {
         @media print { body { padding: 16px; } }
       </style></head><body>
       <h1>Analytics Report</h1>
-      <p>Period: ${period} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</p>
+      <p>Period: ${period} &nbsp;·&nbsp; Generated: ${generatedAt.toLocaleString()}</p>
       <div class="grid">${kpis.map((k) => `<div class="kpi"><div class="kpi-label">${k.label}</div><div class="kpi-value" style="color:${k.color}">${k.value}</div><div class="kpi-note">${k.note}</div></div>`).join("")}</div>
       <table><thead><tr><th>Event</th><th>Driver</th><th>Time</th><th>Severity</th></tr></thead><tbody>
       ${recentEvents
@@ -719,11 +720,12 @@ export function AnalyticsPage() {
         <PDFPreviewModal
           title={`Analytics Report — ${period}`}
           onClose={() => setShowPDFPreview(false)}
-          onConfirm={() =>
+          onConfirm={() => {
+            const generatedAt = new Date();
             buildPDF().save(
-              `analytics-${period.toLowerCase().replace(/\s+/g, "-")}.pdf`,
-            )
-          }
+              `analytics-${period.toLowerCase().replace(/\s+/g, "-")}-${generatedAt.toISOString().slice(0, 10)}.pdf`,
+            );
+          }}
           buildDoc={buildPDF}
         />
       )}
@@ -799,6 +801,148 @@ export function AnalyticsPage() {
             gap: 16,
           }}
         >
+
+
+
+          {/* ============================================================ */}
+          {/* Driver comparison */}
+          {/* ============================================================ */}
+          <Card
+            title="Driver Alert Load"
+            subtitle={`Alert counts and severity by driver · ${totalEvents} total for ${period.toLowerCase()}`}
+            span={isMobile ? undefined : "1 / -1"}
+          >
+            <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch" as const }}>
+              <div style={{ width: isMobile ? Math.max(320, driverComparison.length * 60) : "100%", height: isMobile ? 180 : 200 }}>
+                <ResponsiveContainer key={`bar-${period}`} width="100%" height="100%">
+                  <BarChart data={driverComparison} margin={{ left: -10, right: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="driver" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[0, driverChartMax]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
+                    <Tooltip contentStyle={tooltipStyle} />
+                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <Bar dataKey="blink" name="Alerts" fill="#1D6AE5" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="perclos" name="High severity" fill="#F59E0B" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="ear" name="Moderate severity" fill="#EF4444" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </Card>
+
+
+
+          {/* ============================================================ */}
+          {/* Recent events */}
+          {/* ============================================================ */}
+          <Card
+            title="Recent Events"
+            subtitle="Latest alert records from the current data set"
+            span={isMobile ? undefined : "1 / -1"}
+          >
+            <div
+              style={{
+                display: "block",
+                overflowY: "auto",
+                maxHeight: 280,
+                overflowX: "auto",
+                WebkitOverflowScrolling: "touch" as const,
+                width: "100%",
+              }}
+            >
+              <table
+                style={{
+                  borderCollapse: "collapse",
+                  minWidth: isMobile ? 280 : 380,
+                  width: "100%",
+                }}
+              >
+                <thead
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    background: cardBg,
+                    zIndex: 1,
+                  }}
+                >
+                  <tr
+                    style={{
+                      borderBottom: `1px solid ${borderColor}`,
+                    }}
+                  >
+                    {[
+                      "Event",
+                      "Driver",
+                      "Time",
+                      "Severity",
+                    ].map((h) => (
+                      <th
+                        key={h}
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: textSub,
+                          textAlign: "left",
+                          padding: isMobile ? "8px 10px" : "8px 16px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} style={{ padding: "24px 16px", textAlign: "center", color: textSub, fontSize: 14 }}>
+                        No recent alert records are available.
+                      </td>
+                    </tr>
+                  ) : recentEvents.map((e, i) => {
+                    const sev = sevMap[e.severity];
+                    return (
+                      <tr
+                        key={i}
+                        style={{
+                          borderBottom:
+                            i < recentEvents.length - 1
+                              ? `1px solid ${borderColor}`
+                              : "none",
+                        }}
+                      >
+                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px", fontSize: 14, fontWeight: 500, color: textMain }}>
+                          {e.event}
+                        </td>
+                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px", fontSize: 14, color: textMain }}>
+                          {e.driver}
+                        </td>
+                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px", fontSize: 14, color: textSub, fontFamily: "monospace" }}>
+                          {e.time}
+                        </td>
+                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px" }}>
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "2px 10px",
+                              borderRadius: 999,
+                              fontSize: 12,
+                              fontWeight: 600,
+                              background: sev.bg,
+                              color: sev.color,
+                            }}
+                          >
+                            {e.severity}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
 
 
@@ -1114,14 +1258,14 @@ export function AnalyticsPage() {
             </ResponsiveContainer>
           </Card>
 
-          <Card title={`Body Posture — ${period}`} subtitle="General driver fleet · posture score out of 100">
+          <Card title={`Shoulder Elevation — ${period}`} subtitle="General driver fleet · posture score out of 100">
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetPosture} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [value.toFixed(2), "Body Posture"]} />
-                <Line type="monotone" dataKey="value" name="Body Posture" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} />
+                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [value.toFixed(2), "Shoulder Elevation"]} />
+                <Line type="monotone" dataKey="value" name="Shoulder Elevation" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
           </Card>
@@ -1136,154 +1280,6 @@ export function AnalyticsPage() {
                 <Line type="monotone" dataKey="value" name="Head Pose" stroke="#8B5CF6" strokeWidth={2.5} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
-          </Card>
-
-
-
-          {/* ============================================================ */}
-          {/* Driver comparison */}
-          {/* ============================================================ */}
-          <Card
-            title="Driver Alert Load"
-            subtitle={`Alert counts and severity by driver · ${totalEvents} total for ${period.toLowerCase()}`}
-            span={isMobile ? undefined : "1 / -1"}
-          >
-
-
-
-            {/* ============================================================ */}
-            {/* On mobile: fixed-width scrollable chart so all drivers show clearly */}
-            {/* ============================================================ */}
-            <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch" as const }}>
-              <div style={{ width: isMobile ? Math.max(320, driverComparison.length * 60) : "100%", height: isMobile ? 180 : 200 }}>
-                <ResponsiveContainer key={`bar-${period}`} width="100%" height="100%">
-                  <BarChart data={driverComparison} margin={{ left: -10, right: 8 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="driver" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, driverChartMax]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
-                    <Tooltip contentStyle={tooltipStyle} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="blink" name="Alerts" fill="#1D6AE5" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="perclos" name="High severity" fill="#F59E0B" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="ear" name="Moderate severity" fill="#EF4444" radius={[3, 3, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </Card>
-
-
-
-          {/* ============================================================ */}
-          {/* Recent events */}
-          {/* ============================================================ */}
-          <Card
-            title="Recent Events"
-            subtitle="Latest alert records from the current data set"
-            span={isMobile ? undefined : "1 / -1"}
-          >
-            <div
-              style={{
-                display: "block",
-                overflowY: "auto",
-                maxHeight: 280,
-                overflowX: "auto",
-                WebkitOverflowScrolling: "touch" as const,
-                width: "100%",
-              }}
-            >
-              <table
-                style={{
-                  borderCollapse: "collapse",
-                  minWidth: isMobile ? 280 : 380,
-                  width: "100%",
-                }}
-              >
-                <thead
-                  style={{
-                    position: "sticky",
-                    top: 0,
-                    background: cardBg,
-                    zIndex: 1,
-                  }}
-                >
-                  <tr
-                    style={{
-                      borderBottom: `1px solid ${borderColor}`,
-                    }}
-                  >
-                    {[
-                      "Event",
-                      "Driver",
-                      "Time",
-                      "Severity",
-                    ].map((h) => (
-                      <th
-                        key={h}
-                        style={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: textSub,
-                          textAlign: "left",
-                          padding: isMobile ? "8px 10px" : "8px 16px",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.04em",
-                        }}
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentEvents.length === 0 ? (
-                    <tr>
-                      <td colSpan={4} style={{ padding: "24px 16px", textAlign: "center", color: textSub, fontSize: 14 }}>
-                        No recent alert records are available.
-                      </td>
-                    </tr>
-                  ) : recentEvents.map((e, i) => {
-                    const sev = sevMap[e.severity];
-                    return (
-                      <tr
-                        key={i}
-                        style={{
-                          borderBottom:
-                            i < recentEvents.length - 1
-                              ? `1px solid ${borderColor}`
-                              : "none",
-                        }}
-                      >
-                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px", fontSize: 14, fontWeight: 500, color: textMain }}>
-                          {e.event}
-                        </td>
-                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px", fontSize: 14, color: textMain }}>
-                          {e.driver}
-                        </td>
-                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px", fontSize: 14, color: textSub, fontFamily: "monospace" }}>
-                          {e.time}
-                        </td>
-                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px" }}>
-                          <span
-                            style={{
-                              display: "inline-block",
-                              padding: "2px 10px",
-                              borderRadius: 999,
-                              fontSize: 12,
-                              fontWeight: 600,
-                              background: sev.bg,
-                              color: sev.color,
-                            }}
-                          >
-                            {e.severity}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
           </Card>
         </div>
       </div>
