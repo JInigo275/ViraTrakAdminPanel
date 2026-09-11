@@ -13,9 +13,9 @@ type MetricDefinition = {
 
 const metricDefinitions: MetricDefinition[] = [
   { title: "Percentage of Eye Closure (PERCLOS)", key: "perclos", color: "#F59E0B", unit: "%" },
-  { title: "Blink Rate", key: "blink_rate", color: "#1D6AE5", unit: " bpm" },
+  { title: "Blink Rate", key: "blink_rate", color: "#1D6AE5", unit: " blinks/min" },
   { title: "Yawn", key: "yawn", color: "#EF4444", unit: "" },
-  { title: "Body Posture", key: "body_posture", color: "#10B981", unit: "" },
+  { title: "Shoulder Elevation", key: "body_posture", color: "#10B981", unit: "" },
   { title: "Head Pose", key: "head_pose", color: "#8B5CF6", unit: "°" },
 ];
 
@@ -67,7 +67,6 @@ export function StatCards() {
                 <div style={{ fontSize: 13, color: dark ? "#9CA3AF" : "#6B7280", marginBottom: 5, fontWeight: 700, letterSpacing: "0.02em" }}>{c.title}</div>
                 <div style={{ fontSize: isMobile ? 25 : 29, fontWeight: 800, color: textMain, lineHeight: 1 }}>{latestValue === null ? "--" : `${latestValue}${c.unit}`}</div>
               </div>
-                <div style={{ fontSize: 12, color: dark ? "#9CA3AF" : "#6B7280", whiteSpace: "nowrap" }}>{c.series.length} readings</div>
             </div>
             <div style={{ width: "100%", height: 72 }}>
               <ResponsiveContainer width="100%" height="100%">

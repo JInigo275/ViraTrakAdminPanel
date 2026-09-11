@@ -33,6 +33,7 @@ DECLARE
   actor_user public.users%ROWTYPE;
   actor_uuid text;
   entity_key text;
+  password_changed boolean;
 BEGIN
   actor_uuid := (select auth.uid())::text;
   -- Service-role jobs have no end-user JWT. They must write an attributed
@@ -59,20 +60,34 @@ BEGIN
     WHEN 'behavior_log' THEN 'log_id'
     ELSE 'id'
   END;
+  password_changed := TG_OP = 'UPDATE'
+    AND TG_TABLE_NAME = 'users'
+    AND OLD IS NOT NULL
+    AND NEW IS NOT NULL
+    AND OLD.password IS DISTINCT FROM NEW.password;
 
   INSERT INTO public.system_log (
     message, log_type, timestamp, actor_id, actor_role, actor_name,
     entity_type, entity_id, operation
   ) VALUES (
-    format('%s %s %s', TG_TABLE_NAME, lower(TG_OP), coalesce(row_data ->> entity_key, 'unknown')),
-    'AUDIT_' || TG_OP,
+    CASE
+      WHEN password_changed THEN 'User updated password'
+      ELSE format('%s %s %s', TG_TABLE_NAME, lower(TG_OP), coalesce(row_data ->> entity_key, 'unknown'))
+    END,
+    CASE
+      WHEN password_changed THEN 'USER_PASSWORD_UPDATE'
+      ELSE 'AUDIT_' || TG_OP
+    END,
     now(),
     actor_uuid,
     coalesce(actor_user.role, (select auth.jwt() -> 'app_metadata' ->> 'role')),
     nullif(trim(coalesce(actor_user.first_name, '') || ' ' || coalesce(actor_user.last_name, '')), ''),
     TG_TABLE_NAME,
     row_data ->> entity_key,
-    TG_OP
+    CASE
+      WHEN password_changed THEN 'UPDATE_PASSWORD'
+      ELSE TG_OP
+    END
   );
 
   IF TG_OP = 'DELETE' THEN

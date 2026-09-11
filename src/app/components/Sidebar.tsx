@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  LayoutDashboard, Bell, TrendingUp, Users, Contact, ScrollText, FlaskConical, Truck,
+  LayoutDashboard, Bell, TrendingUp, Users, Contact, ScrollText, Truck,
   ChevronDown, Moon, Sun, Monitor, LogOut, Check, Settings, X,
 } from "lucide-react";
 const viraTrakLogo = new URL("../../imports/ViraTrak_Logo.png", import.meta.url).href;

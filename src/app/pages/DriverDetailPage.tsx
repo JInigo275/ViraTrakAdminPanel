@@ -256,7 +256,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
                 status: averageYawn > 0.70 ? "danger" : averageYawn > 0.55 ? "warn" : "ok",
               },
               {
-                label: "Avg Body Posture",
+                label: "Avg Shoulder Elevation",
                 value: formatMetric(averageBodyPosture),
                 note: "Postural score out of 100",
                 status: averageBodyPosture < 60 ? "danger" : averageBodyPosture < 75 ? "warn" : "ok",
@@ -344,16 +344,16 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 
 
 {/* ============================================================ */}
-  {/* Body Posture */}
+  {/* Shoulder Elevation */}
         {/* ============================================================ */}
-        <Card title="Body Posture" subtitle="Postural score by time">
+        <Card title="Shoulder Elevation" subtitle="Postural score by time">
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.posture.map((point) => ({ time: point.metric, value: point.score }))}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
               <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
               <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="value" name="Body Posture" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="value" name="Shoulder Elevation" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </Card>

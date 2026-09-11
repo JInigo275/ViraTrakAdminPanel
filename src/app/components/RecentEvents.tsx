@@ -13,6 +13,7 @@ const typeIconMap: Record<string, typeof Wind> = {
   "Head Pose": Navigation,
   "Micro Sleep": Navigation,
   "Blink Rate": Navigation,
+  "Shoulder Elevation": User,
   "Body Posture": User,
 };
 

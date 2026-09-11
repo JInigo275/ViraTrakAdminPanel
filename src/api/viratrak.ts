@@ -131,6 +131,28 @@ type RawDevice = {
   vehicle_id: number | null;
 };
 
+function normalizeDriverId(value: string | number): number {
+  const digits = String(value).replace(/\D/g, "");
+  if (!digits) throw new Error("Driver ID is required.");
+  const numeric = Number.parseInt(digits, 10);
+  if (!Number.isInteger(numeric) || numeric <= 0) throw new Error("Driver ID must be a positive integer.");
+  if (String(numeric).length !== 8) throw new Error("Driver ID must match the YYMMDDNN format.");
+  return numeric;
+}
+
+async function assertDriverIdAvailable(client: ReturnType<typeof requireSupabase>, id: number, excludedId?: number) {
+  const { data, error } = await client
+    .from("driver")
+    .select("driver_id")
+    .eq("driver_id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (data && Number(data.driver_id) !== excludedId) {
+    throw new Error("Driver ID is already assigned to another active driver.");
+  }
+}
+
 async function fetchDriversWithVehicles(): Promise<RawDriver[]> {
   const client = requireSupabase();
   const { data: driverRows, error: driverError } = await client
@@ -187,14 +209,17 @@ export const driversApi = {
     assertValid(validateName(e.last_name, "Last name"));
     if (e.vehicle) assertValid(validatePlate(e.vehicle));
     assertValid(validatePhone(e.contact));
+    const normalizedId = normalizeDriverId(e.id);
     const plate = e.vehicle ? formatPlate(e.vehicle) : "";
     if (plate) {
       const { data: existingVehicle } = await client.from("vehicle").select("vehicle_id").eq("plate_number", plate).maybeSingle();
       if (existingVehicle) throw new Error("Vehicle plate already exists.");
     }
+    await assertDriverIdAvailable(client, normalizedId);
     const { data, error } = await client
       .from("driver")
       .insert({
+        driver_id: normalizedId,
         first_name: formatName(e.first_name),
         last_name: formatName(e.last_name),
         license_number: `LIC-${Date.now()}`, // Generate placeholder
@@ -218,14 +243,20 @@ export const driversApi = {
     if (patch.last_name !== undefined) assertValid(validateName(patch.last_name, "Last name"));
     if (patch.vehicle !== undefined) assertValid(validatePlate(patch.vehicle));
     if (patch.contact !== undefined) assertValid(validatePhone(patch.contact));
+    const numericId = parseInt(id, 10);
+    const nextDriverId = patch.id !== undefined ? normalizeDriverId(patch.id) : undefined;
+    if (nextDriverId !== undefined) {
+      await assertDriverIdAvailable(client, nextDriverId, numericId);
+    }
     const { data, error } = await client
       .from("driver")
       .update({
+        ...(nextDriverId !== undefined ? { driver_id: nextDriverId } : {}),
         first_name: patch.first_name === undefined ? undefined : formatName(patch.first_name),
         last_name: patch.last_name === undefined ? undefined : formatName(patch.last_name),
         contact_info: patch.contact === undefined ? undefined : formatPhone(patch.contact),
       })
-      .eq("driver_id", parseInt(id))
+      .eq("driver_id", numericId)
       .select("*")
       .single();
     
@@ -696,7 +727,7 @@ export const metricsApi = {
 // ---------- System Logs ----------
 export type DbLog = {
   id: number;
-  source: "System" | "Hardware";
+  source: "System" | "Hardware" | "Behavior";
   date: string;
   time: string;
   level: "INFO" | "WARNING" | "ERROR";
@@ -745,15 +776,23 @@ function mapSystemLogToDbLog(raw: RawSystemLog): DbLog {
     second: "2-digit",
     hour12: false,
   });
-  
+
+  const logType = (raw.log_type || "").toUpperCase();
+  const operation = (raw.operation || "").toUpperCase();
+  const message = (raw.message || "").trim();
+  const isPasswordUpdate =
+    logType === "USER_PASSWORD_UPDATE" ||
+    operation === "UPDATE_PASSWORD" ||
+    message.toLowerCase().includes("password");
+
   return {
     id: raw.systemlog_id,
     source: "System",
     date,
     time,
     level: determineLogLevel(raw.log_type),
-    ref: raw.log_type || "SYSTEM",
-    action: raw.message,
+    ref: isPasswordUpdate ? "USER_PASSWORD_UPDATE" : (raw.log_type || "SYSTEM"),
+    action: isPasswordUpdate ? "User updated password" : message || "System event",
     actor: raw.actor_name || raw.actor_role || "System",
   };
 }
@@ -771,10 +810,13 @@ function mapBehaviorLogToDbLog(raw: RawBehaviorLog): DbLog {
     second: "2-digit",
     hour12: false,
   });
-  
+
+  // Behavior logs are a separate source from system/audit logs.
+  // Treating them as System/Hardware causes alert-backed rows like ALERT_15 to
+  // appear in the System Logs source filter and look like a new system event.
   return {
     id: raw.log_id,
-    source: raw.device_id ? "Hardware" : "System",
+    source: "Behavior",
     date,
     time,
     level: "INFO",
@@ -806,17 +848,18 @@ export const logsApi = {
       
       if (behError) throw behError;
       
-      // Combine and map
+      // Keep system/audit entries and behavior entries separate so the UI can
+      // filter them correctly instead of mixing alert references into the System source.
       const systemMapped = (sysLogs ?? []).map(mapSystemLogToDbLog);
       const behaviorMapped = (behaviorLogs ?? []).map(mapBehaviorLogToDbLog);
-      
+
       // Merge and sort by timestamp (newest first)
       const combined = [...systemMapped, ...behaviorMapped].sort((a, b) => {
         const aTime = `${a.date}T${a.time}`;
         const bTime = `${b.date}T${b.time}`;
         return bTime.localeCompare(aTime);
       });
-      
+
       return combined.slice(0, 20); // Return top 20 logs
     } catch (error) {
       console.error("Error fetching logs from schema2:", error);

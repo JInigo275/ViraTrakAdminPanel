@@ -88,11 +88,28 @@ export function genTempPassword() {
 }
 
 export function genDriverId(existing: Driver[]) {
-  const max = existing.reduce((m, e) => {
-    const n = parseInt(e.id.replace("EMP-", ""), 10);
-    return isNaN(n) ? m : Math.max(m, n);
-  }, 0);
-  return `EMP-${String(max + 1).padStart(3, "0")}`;
+  const now = new Date();
+  const datePrefix = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  const usedSuffixes = new Set<number>();
+
+  existing.forEach((driver) => {
+    const digits = driver.id.replace(/\D/g, "");
+    if (!digits || digits.length < 8) return;
+    const numeric = Number.parseInt(digits, 10);
+    if (!Number.isFinite(numeric)) return;
+    const raw = String(numeric);
+    if (!raw.startsWith(datePrefix)) return;
+    const suffix = Number.parseInt(raw.slice(datePrefix.length), 10);
+    if (Number.isFinite(suffix)) usedSuffixes.add(suffix);
+  });
+
+  for (let suffix = 1; suffix <= 99; suffix += 1) {
+    if (!usedSuffixes.has(suffix)) {
+      return `${datePrefix}${String(suffix).padStart(2, "0")}`;
+    }
+  }
+
+  return `${datePrefix}01`;
 }
 
 export function getFullName(u: { firstName: string; lastName: string }) {
@@ -224,23 +241,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Load protected lists after authentication is available.
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.id) {
+      setDbReady(true);
+      return;
+    }
     if (!supabase) {
       setDbReady(true);
       return;
     }
 
+    let isActive = true;
     setDbReady(false);
-    const minimumLoadingTime = new Promise((resolve) => window.setTimeout(resolve, 2000));
     Promise.all([
-      usersApi.list().then((rows) => setUsers(rows.map(mapUser))),
-      driversApi.list().then((rows) => setDrivers(rows.map(mapDriver))),
-      vehiclesApi.list().then((rows) => setVehicles(rows.map(mapVehicle))),
-      minimumLoadingTime,
+      usersApi.list().then((rows) => {
+        if (!isActive) return;
+        setUsers(rows.map(mapUser));
+      }),
+      driversApi.list().then((rows) => {
+        if (!isActive) return;
+        setDrivers(rows.map(mapDriver));
+      }),
+      vehiclesApi.list().then((rows) => {
+        if (!isActive) return;
+        setVehicles(rows.map(mapVehicle));
+      }),
     ])
-      .catch((e) => console.warn("Data load failed, using available data:", e))
-      .finally(() => setDbReady(true));
-  }, [currentUser]);
+      .catch((e) => {
+        if (!isActive) return;
+        console.warn("Data load failed, using available data:", e);
+      })
+      .finally(() => {
+        if (isActive) setDbReady(true);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser?.id]);
 
   // Persist currentUser in session storage while logged in, and in local storage only when stayLoggedIn is true.
   useEffect(() => {
