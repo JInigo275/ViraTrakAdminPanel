@@ -32,10 +32,12 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
 {/* ============================================================ */}
       {/* Main scrollable content */}
       {/* ============================================================ */}
-      <main style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: isMobile ? 16 : 20, display: "flex", flexDirection: "column", gap: 16, background: bg, transition: "background 0.2s" }}>
+      <main style={{ flex: 1, minHeight: 0, height: "100%", overflowY: "auto", overflowX: "hidden", padding: isMobile ? 16 : 20, display: "flex", flexDirection: "column", gap: 16, background: bg, transition: "background 0.2s" }}>
         <PageHeader icon={LayoutDashboard} iconColor="#1D6AE5" title="Dashboard" subtitle="Overview of driver behavior and system status" />
         <StatCards />
-        <RecentEvents onViewAll={onNavigate ? () => onNavigate("alerts") : undefined} />
+        <div style={{ minHeight: 0, flex: 1, display: "flex" }}>
+          <RecentEvents onViewAll={onNavigate ? () => onNavigate("alerts") : undefined} />
+        </div>
 
 
 

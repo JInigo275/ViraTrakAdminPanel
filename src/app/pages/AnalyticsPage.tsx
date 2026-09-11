@@ -507,7 +507,7 @@ export function AnalyticsPage() {
           background: cardBg,
           borderRadius: 12,
           boxShadow: shadow,
-          padding: isMobile ? "14px 12px" : "18px 20px",
+          padding: isMobile ? "12px 10px" : "18px 20px",
           gridColumn: span,
           minWidth: 0,
         }}
@@ -543,9 +543,11 @@ export function AnalyticsPage() {
     <div
       style={{
         flex: 1,
+        minHeight: 0,
+        height: "100%",
         overflowY: "auto",
         overflowX: "clip",
-        padding: isMobile ? 12 : 24,
+        padding: isMobile ? "8px 8px 0" : 24,
         background: bg,
         fontFamily: "Inter, sans-serif",
         transition: "background 0.2s",
@@ -735,7 +737,7 @@ export function AnalyticsPage() {
       {/* ============================================================ */}
       {/* Content to print */}
       {/* ============================================================ */}
-      <div ref={printRef}>
+      <div ref={printRef} style={{ marginBottom: 0 }}>
 
 
 
@@ -748,8 +750,8 @@ export function AnalyticsPage() {
             gridTemplateColumns: isMobile
               ? "repeat(2, 1fr)"
               : "repeat(6, 1fr)",
-            gap: 12,
-            marginBottom: 20,
+            gap: isMobile ? 8 : 12,
+            marginBottom: isMobile ? 12 : 20,
           }}
         >
           {kpis.map(({ label, value, color, note }) => (

@@ -30,7 +30,7 @@ export function PageHeader({ icon: Icon, iconColor = "#1D6AE5", title, subtitle,
       borderRadius: 14,
       boxShadow: shadow,
       border: `1px solid ${borderColor}`,
-      marginBottom: 20,
+      marginBottom: isMobile ? 8 : 20,
       position: "relative",
       overflow: "hidden",
     }}>
@@ -48,13 +48,19 @@ export function PageHeader({ icon: Icon, iconColor = "#1D6AE5", title, subtitle,
 
       <div style={{
         display: "flex",
-        alignItems: isMobile ? "flex-start" : "center",
+        alignItems: isMobile ? "stretch" : "center",
         flexDirection: isMobile ? "column" : "row",
-        gap: isMobile ? 12 : 0,
-        padding: isMobile ? "16px 16px 16px 20px" : "18px 20px 18px 24px",
+        gap: isMobile ? 6 : 0,
+        padding: isMobile ? "10px 14px 10px 16px" : "18px 20px 18px 24px",
       }}>
         {/* Icon + text */}
-        <div style={{ display: "flex", alignItems: "center", gap: Icon ? 14 : 0, flex: 1 }}>
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: Icon ? 14 : 0,
+          flex: 1,
+          minWidth: 0,
+        }}>
           {Icon && (
             <div style={{
               width: 44,
@@ -71,7 +77,7 @@ export function PageHeader({ icon: Icon, iconColor = "#1D6AE5", title, subtitle,
             </div>
           )}
 
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{
               fontSize: isMobile ? 16 : 18,
               fontWeight: 700,
@@ -97,6 +103,7 @@ export function PageHeader({ icon: Icon, iconColor = "#1D6AE5", title, subtitle,
             flexWrap: "wrap",
             flexShrink: 0,
             width: isMobile ? "100%" : "auto",
+            justifyContent: isMobile ? "space-between" : "center",
           }}>
             {children}
           </div>

@@ -296,7 +296,7 @@ Zimbabwe|+263`.split("\n").map((entry) => {
 export function DriversPage({ onViewDetail }: DriversPageProps) {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
-  const { drivers, addDriver, updateDriver, removeDriver } = useApp();
+  const { drivers, vehicles, addDriver, updateDriver, removeDriver } = useApp();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<null | "add" | "edit">(null);
@@ -333,6 +333,14 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
 
   const allChecked = filtered.length > 0 && filtered.every((e) => selected.has(e.id));
   const someChecked = filtered.some((e) => selected.has(e.id));
+  const hasAvailableVehicleSlot = vehicles.some((vehicle) => vehicle.driverIds.length < 2);
+
+  function vehicleSlotAvailable(plate: string) {
+    const normalized = formatPlate(plate || "");
+    if (!normalized) return false;
+    const vehicle = vehicles.find((item) => item.plateNumber === normalized);
+    return Boolean(vehicle && vehicle.driverIds.length < 2);
+  }
 
   function toggleAll() { if (allChecked) setSelected(new Set()); else setSelected(new Set(filtered.map((e) => e.id))); }
   function toggleOne(id: string) { setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
@@ -496,7 +504,13 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
               <FloatField label="Driver First Name" value={form.firstName} onChange={(v) => setForm((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Driver Last Name" value={form.lastName} onChange={(v) => setForm((p) => ({ ...p, lastName: v }))} />
             </div>
-            <FloatField label="Vehicle (6-8 characters)" value={form.vehicle === "Unassigned" ? "" : form.vehicle} maxLength={8} disabled={!form.vehicle || form.vehicle === "Unassigned"} onChange={(v) => setForm((p) => ({ ...p, vehicle: formatPlate(v) }))} />
+            <FloatField
+              label="Vehicle (6-8 characters)"
+              value={form.vehicle === "Unassigned" ? "" : form.vehicle}
+              maxLength={8}
+              disabled={!hasAvailableVehicleSlot && !form.vehicle}
+              onChange={(v) => setForm((p) => ({ ...p, vehicle: formatPlate(v) }))}
+            />
             <div style={{ display: "grid", gridTemplateColumns: "minmax(145px, 0.9fr) 1.4fr", gap: 8 }}>
               <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} aria-label="Country code"
                 style={{ width: "100%", padding: "0 10px", fontSize: 14, color: dark ? "#F9FAFB" : "#111827", background: dark ? "#374151" : "#fff", border: `1.5px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none" }}>

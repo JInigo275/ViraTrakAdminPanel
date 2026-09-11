@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { Wind, EyeOff, Zap, User, Navigation, Download, X, Filter, Check, ChevronDown, ChevronUp, Bell, Search } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
@@ -23,11 +24,11 @@ import { alertsApi, DbAlert } from "../../api/viratrak";
 // Edit alert-type icons and labels here.
 // ============================================================
 const typeIconMap: Record<string, React.ElementType> = {
-  "Yawning":      Wind,
-  "Eyes Closed":  EyeOff,
-  "Head Gaze":    Zap,
+  "Yawning": Wind,
+  "Eyes Closed": EyeOff,
+  "Head Gaze": Zap,
   "Frequent Blinking": Navigation,
-  "Body Tilt":    User,
+  "Body Tilt": User,
 };
 
 type AlertRow = DbAlert & { icon: React.ElementType };
@@ -37,28 +38,68 @@ function dbToRow(a: DbAlert): AlertRow {
 }
 
 const sevStyle: Record<string, { bg: string; color: string }> = {
-  High:     { bg: "#FEF2F2", color: "#EF4444" },
+  High: { bg: "#FEF2F2", color: "#EF4444" },
   Moderate: { bg: "#FFF7ED", color: "#F59E0B" },
-  Low:      { bg: "#ECFDF5", color: "#10B981" },
+  Low: { bg: "#ECFDF5", color: "#10B981" },
 };
 
-const PAGE_OPTIONS = [5, 10, 25, 50, "All"] as const;
-type PageOption = typeof PAGE_OPTIONS[number];
-
-function SearchDropdown({ label, value, onChange, options, openKey, activeKey, setActiveKey, dark }: {
+function SearchDropdown({ label, value, onChange, options, openKey, activeKey, setActiveKey, dark, layoutVersion }: {
   label: string; value: string; onChange: (v: string) => void;
-  options: string[]; openKey: string; activeKey: string | null; setActiveKey: (k: string | null) => void; dark: boolean;
+  options: string[]; openKey: string; activeKey: string | null; setActiveKey: (k: string | null) => void; dark: boolean; layoutVersion?: string;
 }) {
   const [query, setQuery] = useState(value);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0 });
   const ref = useRef<HTMLDivElement>(null);
   const open = activeKey === openKey;
+  const menuId = `search-dropdown-${openKey}`;
+  const isMobile = useIsMobile();
 
   useEffect(() => { setQuery(value); }, [value]);
   useEffect(() => {
-    function h(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) { if (open) setActiveKey(null); } }
+    if (!open || !ref.current) return;
+
+    const updatePosition = () => {
+      const rect = ref.current!.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const preferredWidth = isMobile
+        ? Math.min(rect.width, Math.max(110, viewportWidth - 16))
+        : Math.min(Math.max(rect.width, 150), Math.max(150, viewportWidth - rect.left - 12));
+      const maxLeft = Math.max(8, viewportWidth - preferredWidth - 8);
+      const left = Math.min(Math.max(8, rect.left), maxLeft);
+      setMenuPos({ top: rect.bottom + 3, left, width: preferredWidth });
+    };
+
+    const run = () => window.requestAnimationFrame(updatePosition);
+    run();
+    window.addEventListener("resize", run);
+    window.addEventListener("scroll", run, { passive: true, capture: true });
+
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== "undefined" && ref.current) {
+      observer = new ResizeObserver(() => run());
+      observer.observe(ref.current);
+      if (ref.current.parentElement) observer.observe(ref.current.parentElement);
+    }
+
+    return () => {
+      window.removeEventListener("resize", run);
+      window.removeEventListener("scroll", run, true);
+      observer?.disconnect();
+    };
+  }, [open, isMobile, layoutVersion]);
+
+  useEffect(() => {
+    function h(e: MouseEvent) {
+      const target = e.target as Node;
+      const menuEl = document.getElementById(menuId);
+      const clickedInsideMenu = !!(menuEl && target && menuEl.contains(target));
+      if (ref.current && !ref.current.contains(target) && !clickedInsideMenu && open) {
+        setActiveKey(null);
+      }
+    }
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
-  }, [open]);
+  }, [open, menuId, setActiveKey]);
 
   const filtered = options.filter((o) => o.toLowerCase().includes(query.toLowerCase()));
   const border = dark ? "#374151" : "#E5E7EB";
@@ -70,7 +111,7 @@ function SearchDropdown({ label, value, onChange, options, openKey, activeKey, s
   const activeBg = value ? "#EBF2FF" : (dark ? "#1F2937" : "#fff");
 
   return (
-    <div ref={ref} style={{ position: "relative", minWidth: 150 }}>
+    <div ref={ref} style={{ position: "relative", minWidth: isMobile ? 100 : 150, flex: 1, width: "100%" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: activeBg, border: `1.5px solid ${activeBorder}`, borderRadius: 8, cursor: "text", boxShadow: value ? "0 0 0 1px rgba(29,106,229,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
         <input
           value={query}
@@ -84,8 +125,8 @@ function SearchDropdown({ label, value, onChange, options, openKey, activeKey, s
           : open ? <ChevronUp size={12} color={textSub} style={{ flexShrink: 0 }} /> : <ChevronDown size={12} color={textSub} style={{ flexShrink: 0 }} />
         }
       </div>
-      {open && filtered.length > 0 && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: bg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 200, maxHeight: 180, overflowY: "auto" }}>
+      {open && filtered.length > 0 && createPortal(
+        <div id={menuId} style={{ position: "fixed", top: menuPos.top, left: menuPos.left, width: menuPos.width, background: bg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 9999, maxHeight: 180, overflowY: "auto" }}>
           {filtered.map((opt) => (
             <div key={opt} onClick={() => { onChange(opt); setQuery(opt); setActiveKey(null); }}
               style={{ padding: "8px 12px", fontSize: 14, color: value === opt ? "#1D6AE5" : textMain, fontWeight: value === opt ? 600 : 400, cursor: "pointer" }}
@@ -94,24 +135,68 @@ function SearchDropdown({ label, value, onChange, options, openKey, activeKey, s
               {opt}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
 }
 
-function SimpleDropdown({ label, value, onChange, options, openKey, activeKey, setActiveKey, dark }: {
+function SimpleDropdown({ label, value, onChange, options, openKey, activeKey, setActiveKey, dark, layoutVersion }: {
   label: string; value: string; onChange: (v: string) => void;
-  options: string[]; openKey: string; activeKey: string | null; setActiveKey: (k: string | null) => void; dark: boolean;
+  options: string[]; openKey: string; activeKey: string | null; setActiveKey: (k: string | null) => void; dark: boolean; layoutVersion?: string;
 }) {
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0 });
   const ref = useRef<HTMLDivElement>(null);
   const open = activeKey === openKey;
+  const menuId = `simple-dropdown-${openKey}`;
+  const isMobile = useIsMobile();
 
   useEffect(() => {
-    function h(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) { if (open) setActiveKey(null); } }
+    if (!open || !ref.current) return;
+
+    const updatePosition = () => {
+      const rect = ref.current!.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const preferredWidth = isMobile
+        ? Math.min(rect.width, Math.max(110, viewportWidth - 16))
+        : Math.min(Math.max(rect.width, 150), Math.max(150, viewportWidth - rect.left - 12));
+      const maxLeft = Math.max(8, viewportWidth - preferredWidth - 8);
+      const left = Math.min(Math.max(8, rect.left), maxLeft);
+      setMenuPos({ top: rect.bottom + 3, left, width: preferredWidth });
+    };
+
+    const run = () => window.requestAnimationFrame(updatePosition);
+    run();
+    window.addEventListener("resize", run);
+    window.addEventListener("scroll", run, { passive: true, capture: true });
+
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== "undefined" && ref.current) {
+      observer = new ResizeObserver(() => run());
+      observer.observe(ref.current);
+      if (ref.current.parentElement) observer.observe(ref.current.parentElement);
+    }
+
+    return () => {
+      window.removeEventListener("resize", run);
+      window.removeEventListener("scroll", run, true);
+      observer?.disconnect();
+    };
+  }, [open, isMobile, layoutVersion]);
+
+  useEffect(() => {
+    function h(e: MouseEvent) {
+      const target = e.target as Node;
+      const menuEl = document.getElementById(menuId);
+      const clickedInsideMenu = !!(menuEl && target && menuEl.contains(target));
+      if (ref.current && !ref.current.contains(target) && !clickedInsideMenu && open) {
+        setActiveKey(null);
+      }
+    }
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
-  }, [open]);
+  }, [open, menuId, setActiveKey]);
 
   const border = dark ? "#374151" : "#E5E7EB";
   const bg = dark ? "#1F2937" : "#fff";
@@ -120,14 +205,14 @@ function SimpleDropdown({ label, value, onChange, options, openKey, activeKey, s
   const hoverBg = dark ? "#374151" : "#F9FAFB";
 
   return (
-    <div ref={ref} style={{ position: "relative", minWidth: 130 }}>
+    <div ref={ref} style={{ position: "relative", minWidth: isMobile ? 90 : 130, flex: 1, width: "100%" }}>
       <div onClick={() => setActiveKey(open ? null : openKey)}
         style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: value ? "#EBF2FF" : (dark ? "#1F2937" : "#fff"), border: `1px solid ${value ? "#1D6AE5" : border}`, borderRadius: 8, cursor: "pointer", userSelect: "none" }}>
         <span style={{ flex: 1, fontSize: 13, color: value ? "#1D6AE5" : textSub }}>{value || label}</span>
         {value ? <X size={12} color="#1D6AE5" onClick={(e) => { e.stopPropagation(); onChange(""); }} /> : open ? <ChevronUp size={12} color={textSub} /> : <ChevronDown size={12} color={textSub} />}
       </div>
-      {open && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, background: bg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 200, overflow: "hidden" }}>
+      {open && createPortal(
+        <div id={menuId} style={{ position: "fixed", top: menuPos.top, left: menuPos.left, width: menuPos.width, background: bg, border: `1px solid ${border}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 9999, overflow: "hidden" }}>
           {options.map((opt) => (
             <div key={opt} onClick={() => { onChange(opt); setActiveKey(null); }}
               style={{ padding: "8px 12px", fontSize: 14, color: value === opt ? "#1D6AE5" : textMain, fontWeight: value === opt ? 600 : 400, cursor: "pointer" }}
@@ -136,7 +221,8 @@ function SimpleDropdown({ label, value, onChange, options, openKey, activeKey, s
               {opt}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -156,6 +242,8 @@ function SimpleDropdown({ label, value, onChange, options, openKey, activeKey, s
 export function AlertsPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
+  const [viewportWidth, setViewportWidth] = useState<number>(typeof window !== "undefined" ? window.innerWidth : 1280);
+  const isCompactDesktop = !isMobile && viewportWidth < 1200;
   const [allAlerts, setAllAlerts] = useState<AlertRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
@@ -164,17 +252,14 @@ export function AlertsPage() {
   const [filterVehicle, setFilterVehicle] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [filterSeverity, setFilterSeverity] = useState("");
-  const [filterEvidence, setFilterEvidence] = useState("");
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [perPage, setPerPage] = useState<PageOption>(10);
+  const [perPage, setPerPage] = useState(10);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [showDeselectAll, setShowDeselectAll] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [selectedEvidence, setSelectedEvidence] = useState<AlertRow | null>(null);
-  const [showPerPageMenu, setShowPerPageMenu] = useState(false);
-  const perPageRef = useRef<HTMLDivElement>(null);
 
   const bg = dark ? "#111827" : "#F4F5F7";
   const cardBg = dark ? "#1F2937" : "#fff";
@@ -188,10 +273,24 @@ export function AlertsPage() {
   const filterBg = dark ? "#374151" : "#F3F4F6";
 
   useEffect(() => {
-    function h(e: MouseEvent) { if (perPageRef.current && !perPageRef.current.contains(e.target as Node)) setShowPerPageMenu(false); }
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
+    const updatePerPage = () => {
+      const availableHeight = window.innerHeight - (isMobile ? 310 : 420);
+      const rowHeight = isMobile ? 46 : 52;
+      const nextPerPage = Math.max(5, Math.min(50, Math.floor(Math.max(availableHeight, 180) / rowHeight)));
+      setPerPage((current) => (current === nextPerPage ? current : nextPerPage));
+    };
+
+    const updateViewport = () => setViewportWidth(window.innerWidth);
+
+    updatePerPage();
+    updateViewport();
+    window.addEventListener("resize", updatePerPage);
+    window.addEventListener("resize", updateViewport);
+    return () => {
+      window.removeEventListener("resize", updatePerPage);
+      window.removeEventListener("resize", updateViewport);
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     alertsApi.list()
@@ -204,7 +303,7 @@ export function AlertsPage() {
   const drivers = [...new Set(allAlerts.map((a) => a.driver))].sort();
   const vehicles = [...new Set(allAlerts.map((a) => a.vehicle))].sort();
 
-  const activeFilters = [filterType, filterDriver, filterVehicle, filterDate, filterSeverity, filterEvidence].filter(Boolean).length;
+  const activeFilters = [filterType, filterDriver, filterVehicle, filterDate, filterSeverity].filter(Boolean).length;
 
   let filtered = allAlerts.filter((a) => {
     const searchText = search.trim().toLowerCase();
@@ -214,8 +313,6 @@ export function AlertsPage() {
     if (filterVehicle && a.vehicle !== filterVehicle) return false;
     if (filterDate && a.date !== filterDate) return false;
     if (filterSeverity && a.severity !== filterSeverity) return false;
-    if (filterEvidence === "Yes" && !a.evidence) return false;
-    if (filterEvidence === "No" && a.evidence) return false;
     return true;
   });
 
@@ -224,17 +321,23 @@ export function AlertsPage() {
 
   // ============================================================
   filtered = [...filtered].sort((a, b) => a.driver.localeCompare(b.driver));
+  const mobileSummaryText = isMobile ? `${filtered.length} items` : `${filtered.length} records · Sorted A–Z by driver`;
+  const compactMobile = isMobile;
 
-  const totalPages = perPage === "All" ? 1 : Math.ceil(filtered.length / (perPage as number));
-  const paginated = perPage === "All" ? filtered : filtered.slice(((page as number) - 1) * (perPage as number), (page as number) * (perPage as number));
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filtered.length / Math.max(1, perPage)));
+    setPage((current) => Math.min(current, maxPage));
+  }, [filtered.length, perPage]);
 
-  function clearFilters() { setFilterType(""); setFilterDriver(""); setFilterVehicle(""); setFilterDate(""); setFilterSeverity(""); setFilterEvidence(""); setPage(1); }
+  const visibleRows = filtered;
+
+  function clearFilters() { setFilterType(""); setFilterDriver(""); setFilterVehicle(""); setFilterDate(""); setFilterSeverity(""); setPage(1); }
 
   function toggleOne(id: number) { setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
-  function selectAll() { setSelected(new Set(paginated.map((a) => a.id))); setShowDeselectAll(true); }
+  function selectAll() { setSelected(new Set(visibleRows.map((a) => a.id))); setShowDeselectAll(true); }
   function deselectAll() { setSelected(new Set()); setShowDeselectAll(false); }
-  const allChecked = paginated.length > 0 && paginated.every((a) => selected.has(a.id));
-  const someChecked = paginated.some((a) => selected.has(a.id));
+  const allChecked = visibleRows.length > 0 && visibleRows.every((a) => selected.has(a.id));
+  const someChecked = visibleRows.some((a) => selected.has(a.id));
 
   const printData = selected.size > 0 ? filtered.filter((a) => selected.has(a.id)) : filtered;
 
@@ -258,16 +361,20 @@ export function AlertsPage() {
   function exportExcel() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(printData.map((a) => ({ Type: a.type, Driver: a.driver, Vehicle: a.vehicle, Date: a.date, Time: a.time, Severity: a.severity, Evidence: a.evidence ? "Yes" : "No" }))), "Alerts");
-    XLSX.writeFile(wb, `viratrak_alerts_${new Date().toISOString().slice(0,10)}.xlsx`);
+    XLSX.writeFile(wb, `viratrak_alerts_${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
+  const tableMaxHeight = isMobile ? "calc(100vh - 250px)" : "calc(100vh - 280px)";
+  const tableHeaders = isMobile ? ["Type", "Driver", "Vehicle", "Date/Time", "Severity", "View"] : ["Type", "Driver", "Vehicle", "Date", "Time", "Severity", "Evidence"];
+  const filterLayoutVersion = `${showFilters ? "open" : "closed"}-${isCompactDesktop ? "compact" : "wide"}-${viewportWidth}`;
+
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%", minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: isMobile ? "16px 16px 0" : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
       {showPDFPreview && (
         <PDFPreviewModal
           title="Alerts & Evidence — PDF Preview"
           onClose={() => setShowPDFPreview(false)}
-          onConfirm={() => buildPDF().save(`viratrak_alerts_${new Date().toISOString().slice(0,10)}.pdf`)}
+          onConfirm={() => buildPDF().save(`viratrak_alerts_${new Date().toISOString().slice(0, 10)}.pdf`)}
           buildDoc={buildPDF}
         />
       )}
@@ -278,176 +385,162 @@ export function AlertsPage() {
         />
       )}
 
-      <PageHeader icon={Bell} iconColor="#EF4444" title="Alerts & Evidence" subtitle="All detected driver behavior events and evidence">
-        <button onClick={exportExcel} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-          <Download size={14} /> Excel
-        </button>
-        <button onClick={() => setShowPDFPreview(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: "#EF4444", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-          <Download size={14} /> PDF {selected.size > 0 && `(${selected.size})`}
-        </button>
+      <PageHeader icon={Bell} iconColor="#EF4444" title="Alerts & Evidence" subtitle={isMobile ? "Driver events" : "All detected driver behavior events and evidence"}>
+        {!isMobile && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={exportExcel} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "9px 16px", background: "#10B981", color: "#fff", borderRadius: 10, border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}>
+              <Download size={14} /> Excel
+            </button>
+            <button onClick={() => setShowPDFPreview(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "9px 16px", background: "#EF4444", color: "#fff", borderRadius: 10, border: "none", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}>
+              <Download size={14} /> PDF
+            </button>
+          </div>
+        )}
       </PageHeader>
 
 
 
-{/* ============================================================ */}
+      {/* ============================================================ */}
       {/* Filter bar */}
       {/* ============================================================ */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#374151" : "#F8F9FA", border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 320, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
-          <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
-          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search alerts..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
-        </div>
-        <button onClick={() => setShowFilters((v) => !v)}
-          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", background: showFilters ? "#1D6AE5" : (dark ? "#374151" : "#fff"), color: showFilters ? "#fff" : textSub, border: `1px solid ${showFilters ? "#1D6AE5" : (dark ? "#4B5563" : "#E5E7EB")}`, borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-          <Filter size={13} /> Filters {activeFilters > 0 && `(${activeFilters})`}
-        </button>
-        {activeFilters > 0 && (
-          <button onClick={clearFilters} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", background: "transparent", color: "#EF4444", border: "1px solid #FECACA", borderRadius: 8, fontSize: 14, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-            <X size={12} /> Clear All
-          </button>
-        )}
-        <span style={{ fontSize: 13, color: textSub, marginLeft: 4 }}>{filtered.length} record{filtered.length !== 1 ? "s" : ""} · Sorted A–Z by driver</span>
-
-
-
-{/* ============================================================ */}
-        {/* Per page */}
-        {/* ============================================================ */}
-        <div ref={perPageRef} style={{ position: "relative", marginLeft: "auto" }}>
-          <div onClick={() => setShowPerPageMenu((v) => !v)}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: dark ? "#374151" : "#fff", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 13, color: textSub, cursor: "pointer", userSelect: "none" }}>
-            Show: {perPage} <ChevronDown size={11} color={textSub} />
-          </div>
-          {showPerPageMenu && (
-            <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, background: dark ? "#1F2937" : "#fff", border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", zIndex: 200, overflow: "hidden", minWidth: 90 }}>
-              {PAGE_OPTIONS.map((opt) => (
-                <div key={String(opt)} onClick={() => { setPerPage(opt); setPage(1); setShowPerPageMenu(false); }}
-                  style={{ padding: "8px 14px", fontSize: 14, color: perPage === opt ? "#1D6AE5" : textMain, fontWeight: perPage === opt ? 600 : 400, cursor: "pointer" }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.background = dark ? "#374151" : "#F9FAFB")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.background = "transparent")}>
-                  {String(opt)} rows
-                </div>
-              ))}
+      <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 8 : 0, marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isCompactDesktop ? "wrap" : "nowrap", overflow: "visible", width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, width: "100%", transition: "width 0.2s ease" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#374151" : "#F8F9FA", border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: "100%", boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)", minWidth: 0 }}>
+              <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
+              <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={isMobile ? "Search..." : "Search alerts..."} style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", minWidth: 0, fontFamily: "Inter, sans-serif" }} />
             </div>
-          )}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: isCompactDesktop ? 0 : "auto", flexShrink: 0, minWidth: 0, overflow: "visible", width: isCompactDesktop ? "100%" : undefined, justifyContent: isCompactDesktop ? "space-between" : undefined }}>
+            {/* Desktop: chips stay inline in this row */}
+            {showFilters && !isMobile && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: cardBg, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, borderRadius: 10, boxShadow: shadow, padding: "6px 8px" }}>
+                <SearchDropdown label="Event Type" value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} options={types} openKey="type" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+                <SearchDropdown label="Driver" value={filterDriver} onChange={(v) => { setFilterDriver(v); setPage(1); }} options={drivers} openKey="driver" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+                <SearchDropdown label="Vehicle" value={filterVehicle} onChange={(v) => { setFilterVehicle(v); setPage(1); }} options={vehicles} openKey="vehicle" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+                <div style={{ position: "relative" }}>
+                  <input type="date" value={filterDate} onChange={(e) => { setFilterDate(e.target.value); setPage(1); }}
+                    style={{ padding: "7px 10px", background: filterDate ? "#EBF2FF" : (dark ? "#1F2937" : "#fff"), border: `1px solid ${filterDate ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, borderRadius: 8, fontSize: 13, color: filterDate ? "#1D6AE5" : textSub, outline: "none", fontFamily: "Inter, sans-serif", cursor: "pointer", boxSizing: "border-box" }} />
+                </div>
+                <SimpleDropdown label="Severity" value={filterSeverity} onChange={(v) => { setFilterSeverity(v); setPage(1); }} options={["High", "Moderate", "Low"]} openKey="severity" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
+              </div>
+            )}
+
+            <button onClick={() => setShowFilters((v) => !v)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, padding: isMobile ? "8px 10px" : "8px 12px", background: showFilters ? "#FEE2E2" : (dark ? "#374151" : "#fff"), color: showFilters ? "#B91C1C" : textSub, border: `1px solid ${showFilters ? "#FCA5A5" : (dark ? "#4B5563" : "#E5E7EB")}`, borderRadius: 8, fontSize: isMobile ? 12 : 13, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", flexShrink: 0, minWidth: isMobile ? 0 : undefined }}>
+              {showFilters ? <X size={13} /> : <Filter size={13} />}
+              {showFilters ? "Close" : "Filters"}
+              {activeFilters > 0 && !showFilters && <span style={{ color: "#1D6AE5", fontSize: 12, fontWeight: 700 }}>({activeFilters})</span>}
+            </button>
+
+            {activeFilters > 0 && !showFilters && (
+              <button onClick={clearFilters} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 10px", background: "transparent", color: "#EF4444", border: "1px solid #FECACA", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif", flexShrink: 0 }}>
+                <X size={12} /> Clear
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Mobile only: chips pop up as a full-width block below the search/filter row */}
+        {showFilters && isMobile && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, background: cardBg, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, borderRadius: 10, boxShadow: shadow, padding: 10, width: "100%", boxSizing: "border-box" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SearchDropdown label="Event Type" value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} options={types} openKey="type" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SearchDropdown label="Driver" value={filterDriver} onChange={(v) => { setFilterDriver(v); setPage(1); }} options={drivers} openKey="driver" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SearchDropdown label="Vehicle" value={filterVehicle} onChange={(v) => { setFilterVehicle(v); setPage(1); }} options={vehicles} openKey="vehicle" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
+                <input type="date" value={filterDate} onChange={(e) => { setFilterDate(e.target.value); setPage(1); }}
+                  style={{ width: "100%", padding: "7px 10px", background: filterDate ? "#EBF2FF" : (dark ? "#1F2937" : "#fff"), border: `1px solid ${filterDate ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, borderRadius: 8, fontSize: 13, color: filterDate ? "#1D6AE5" : textSub, outline: "none", fontFamily: "Inter, sans-serif", cursor: "pointer", boxSizing: "border-box" }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SimpleDropdown label="Severity" value={filterSeverity} onChange={(v) => { setFilterSeverity(v); setPage(1); }} options={["High", "Moderate", "Low"]} openKey="severity" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {showFilters && (
-        <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, padding: "14px 18px", marginBottom: 12, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}` }}>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-            <SearchDropdown label="Event Type"  value={filterType}      onChange={(v) => { setFilterType(v); setPage(1); }}      options={types}   openKey="type"      activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
-            <SearchDropdown label="Driver"       value={filterDriver}    onChange={(v) => { setFilterDriver(v); setPage(1); }}    options={drivers} openKey="driver"    activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
-            <SearchDropdown label="Vehicle"      value={filterVehicle}   onChange={(v) => { setFilterVehicle(v); setPage(1); }}   options={vehicles} openKey="vehicle"  activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
-            <div style={{ position: "relative" }}>
-              <input type="date" value={filterDate} onChange={(e) => { setFilterDate(e.target.value); setPage(1); }}
-                style={{ padding: "7px 10px", background: filterDate ? "#EBF2FF" : (dark ? "#1F2937" : "#fff"), border: `1px solid ${filterDate ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, borderRadius: 8, fontSize: 13, color: filterDate ? "#1D6AE5" : textSub, outline: "none", fontFamily: "Inter, sans-serif", cursor: "pointer", boxSizing: "border-box" }} />
-            </div>
-            <SimpleDropdown label="Severity"  value={filterSeverity}  onChange={(v) => { setFilterSeverity(v); setPage(1); }}  options={["High", "Moderate", "Low"]}  openKey="severity"  activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
-            <SimpleDropdown label="Evidence" value={filterEvidence} onChange={(v) => { setFilterEvidence(v); setPage(1); }} options={["Yes", "No"]}                   openKey="evidence" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
-          </div>
-        </div>
-      )}
 
 
-
-{/* ============================================================ */}
+      {/* ============================================================ */}
       {/* Select all / deselect */}
       {/* ============================================================ */}
-      {paginated.length > 0 && selected.size > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-          <span style={{ fontSize: 13, color: textSub }}>{selected.size} selected for PDF</span>
-        </div>
-      )}
-
-      <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
-          <thead>
-            <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-              <th style={{ padding: "10px 16px", width: 40 }}>
-                <div onClick={allChecked ? deselectAll : selectAll}
-                  style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${allChecked ? "#1D6AE5" : checkBorder}`, background: allChecked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {allChecked && <Check size={10} color="#fff" />}
-                  {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
-                </div>
-              </th>
-              {["Type", "Driver", "Vehicle", "Date", "Time", "Severity", "Evidence"].map((h) => (
-                <th key={h} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>Loading alerts…</td></tr>
-            ) : paginated.length === 0 ? (
-              <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No records match the selected filters.</td></tr>
-            ) : paginated.map((e, i) => {
-              const Icon = e.icon;
-              const checked = selected.has(e.id);
-              return (
-                <tr key={e.id} style={{ borderBottom: i < paginated.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: checked ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent", cursor: "pointer" }}
-                  onClick={() => toggleOne(e.id)}
-                  onMouseEnter={(el) => { if (!checked) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
-                  onMouseLeave={(el) => { if (!checked) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
-                  <td style={{ padding: "10px 16px" }}>
-                    <div onClick={(event) => { event.stopPropagation(); toggleOne(e.id); }} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${checked ? "#1D6AE5" : checkBorder}`, background: checked ? "#1D6AE5" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                      {checked && <Check size={10} color="#fff" />}
-                    </div>
-                  </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: 6, background: e.icon_bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon size={12} color={e.icon_color} /></div>
-                      <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.type}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: "10px 14px", fontSize: 14, color: textMain }}>{e.driver}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 14, color: textSub }}>{e.vehicle}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 14, color: textSub }}>{e.date}</td>
-                  <td style={{ padding: "10px 14px", fontSize: 14, color: textSub, fontFamily: "monospace" }}>{e.time}</td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <span style={{ display: "inline-block", padding: "2px 9px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: sevStyle[e.severity].bg, color: sevStyle[e.severity].color }}>{e.severity}</span>
-                  </td>
-                  <td style={{ padding: "10px 14px" }}>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedEvidence(e); }} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: 0, border: "none", background: "transparent", fontSize: 13, color: e.evidence ? "#1D6AE5" : textSub, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}><span style={{ width: 7, height: 7, borderRadius: "50%", background: e.evidence ? "#EF4444" : textSub, display: "inline-block" }} /> View</button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden", marginBottom: isMobile ? 18 : 24 }}>
+        <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: tableMaxHeight, minHeight: 0, borderBottom: `1px solid ${borderColor}` }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isMobile ? 330 : 600 }}>
+            <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
+              <tr style={{ borderBottom: `1px solid ${borderColor}`, background: cardBg }}>
+                <th style={{ padding: "10px 16px", width: 40, position: "sticky", top: 0, zIndex: 3, background: cardBg }}>
+                  <div onClick={allChecked ? deselectAll : selectAll}
+                    style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${allChecked ? "#1D6AE5" : checkBorder}`, background: allChecked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {allChecked && <Check size={10} color="#fff" />}
+                    {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
+                  </div>
+                </th>
+                {["Type", "Driver", "Vehicle", "Date", "Time", "Severity", "Evidence"].map((h) => (
+                  <th key={h} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", position: "sticky", top: 0, zIndex: 3, background: cardBg }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>Loading alerts…</td></tr>
+              ) : visibleRows.length === 0 ? (
+                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No records match the selected filters.</td></tr>
+              ) : visibleRows.map((e, i) => {
+                const Icon = e.icon;
+                const checked = selected.has(e.id);
+                const hasEvidence = Boolean(e.evidence);
+                return (
+                  <tr key={e.id} style={{ borderBottom: i < visibleRows.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: checked ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent", cursor: "pointer" }}
+                    onClick={() => toggleOne(e.id)}
+                    onMouseEnter={(el) => { if (!checked) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
+                    onMouseLeave={(el) => { if (!checked) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
+                    <td style={{ padding: "10px 16px" }}>
+                      <div onClick={(event) => { event.stopPropagation(); toggleOne(e.id); }} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${checked ? "#1D6AE5" : checkBorder}`, background: checked ? "#1D6AE5" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                        {checked && <Check size={10} color="#fff" />}
+                      </div>
+                    </td>
+                    <td style={{ padding: isMobile ? "8px 10px" : "10px 14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 26, height: 26, borderRadius: 6, background: e.icon_bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon size={12} color={e.icon_color} /></div>
+                        <span style={{ fontSize: isMobile ? 13 : 14, color: textMain, fontWeight: 500 }}>{e.type}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: isMobile ? "8px 10px" : "10px 14px", fontSize: isMobile ? 13 : 14, color: textMain }}>{e.driver}</td>
+                    <td style={{ padding: isMobile ? "8px 10px" : "10px 14px", fontSize: isMobile ? 13 : 14, color: textSub }}>{e.vehicle}</td>
+                    <td style={{ padding: isMobile ? "8px 10px" : "10px 14px", fontSize: isMobile ? 12 : 14, color: textSub }}>
+                      <span>{e.date}</span>
+                    </td>
+                    <td style={{ padding: isMobile ? "8px 10px" : "10px 14px", fontSize: isMobile ? 12 : 14, color: textSub, fontFamily: "monospace" }}>{e.time}</td>
+                    <td style={{ padding: isMobile ? "8px 10px" : "10px 14px" }}>
+                      <span style={{ display: "inline-block", padding: "2px 9px", borderRadius: 999, fontSize: isMobile ? 11 : 12, fontWeight: 600, background: sevStyle[e.severity].bg, color: sevStyle[e.severity].color }}>{e.severity}</span>
+                    </td>
+                    <td style={{ padding: isMobile ? "8px 10px" : "10px 14px" }}>
+                      {hasEvidence ? (
+                        <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedEvidence(e); }} style={{ display: "inline-flex", alignItems: "center", padding: 0, border: "none", background: "transparent", fontSize: isMobile ? 12 : 13, color: "#1D6AE5", fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>View</button>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
-
-
-{/* ============================================================ */}
-      {/* Pagination */}
-      {/* ============================================================ */}
-      {perPage !== "All" && totalPages > 1 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14 }}>
-          <span style={{ fontSize: 13, color: textSub }}>
-            Page {page} of {totalPages} · {filtered.length} total records
-          </span>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              style={{ padding: "6px 12px", borderRadius: 7, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, background: "transparent", fontSize: 13, color: page === 1 ? (dark ? "#4B5563" : "#D1D5DB") : textMain, cursor: page === 1 ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif" }}>
-              Prev
-            </button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              const p = Math.max(1, Math.min(page - 2, totalPages - 4)) + i;
-              return (
-                <button key={p} onClick={() => setPage(p)}
-                  style={{ width: 32, padding: "6px", borderRadius: 7, border: `1px solid ${p === page ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, background: p === page ? "#1D6AE5" : "transparent", fontSize: 13, color: p === page ? "#fff" : textMain, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-                  {p}
-                </button>
-              );
-            })}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              style={{ padding: "6px 12px", borderRadius: 7, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, background: "transparent", fontSize: 13, color: page === totalPages ? (dark ? "#4B5563" : "#D1D5DB") : textMain, cursor: page === totalPages ? "not-allowed" : "pointer", fontFamily: "Inter, sans-serif" }}>
-              Next
-            </button>
-          </div>
+      {visibleRows.length > 0 && selected.size > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, paddingBottom: 8 }}>
+          <span style={{ fontSize: isMobile ? 12 : 13, color: textSub }}>{selected.size} selected for PDF</span>
         </div>
       )}
     </div>
