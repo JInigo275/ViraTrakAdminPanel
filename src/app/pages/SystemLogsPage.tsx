@@ -238,11 +238,12 @@ export function SystemLogsPage() {
                 const checked = selected.has(l.id);
                 return (
                   <tr key={l.id}
-                    style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: checked ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent" }}
+                    style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: checked ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent", cursor: "pointer" }}
+                    onClick={() => toggleOne(l.id)}
                     onMouseEnter={(e) => { if (!checked) (e.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
                     onMouseLeave={(e) => { if (!checked) (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
-                    <td style={{ padding: "10px 14px" }} onClick={() => toggleOne(l.id)}>
-                      <div style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${checked ? "#1D6AE5" : (dark ? "#4B5563" : "#D1D5DB")}`, background: checked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <td style={{ padding: "10px 14px" }}>
+                      <div onClick={(event) => { event.stopPropagation(); toggleOne(l.id); }} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${checked ? "#1D6AE5" : (dark ? "#4B5563" : "#D1D5DB")}`, background: checked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {checked && <Check size={10} color="#fff" />}
                       </div>
                     </td>
