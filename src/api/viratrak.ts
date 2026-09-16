@@ -210,10 +210,6 @@ export const driversApi = {
     if (e.vehicle) assertValid(validatePlate(e.vehicle));
     assertValid(validatePhone(e.contact));
     const plate = e.vehicle ? formatPlate(e.vehicle) : "";
-    if (plate) {
-      const { data: existingVehicle } = await client.from("vehicle").select("vehicle_id").eq("plate_number", plate).maybeSingle();
-      if (existingVehicle) throw new Error("Vehicle plate already exists.");
-    }
 
     const { data, error } = await client
       .from("driver")
@@ -229,8 +225,27 @@ export const driversApi = {
     if (error) throw error;
 
     if (plate) {
-      const { error: vehicleError } = await client.from("vehicle").insert({ plate_number: plate, driver_id: data.driver_id });
-      if (vehicleError) throw vehicleError;
+      const { data: vehicle, error: vehicleLookupError } = await client
+        .from("vehicle")
+        .select("vehicle_id, driver_id, secondary_driver_id")
+        .eq("plate_number", plate)
+        .maybeSingle();
+      if (vehicleLookupError) throw vehicleLookupError;
+      if (!vehicle) throw new Error("Selected vehicle was not found.");
+      if (vehicle.driver_id !== null && vehicle.secondary_driver_id !== null) {
+        throw new Error("Selected vehicle already has two assigned drivers.");
+      }
+      const assignment = vehicle.driver_id === null
+        ? { driver_id: data.driver_id }
+        : { secondary_driver_id: data.driver_id };
+      const { error: vehicleError } = await client
+        .from("vehicle")
+        .update(assignment)
+        .eq("vehicle_id", vehicle.vehicle_id);
+      if (vehicleError) {
+        await client.from("driver").delete().eq("driver_id", data.driver_id);
+        throw vehicleError;
+      }
     }
 
     const raw = data as RawDriver;

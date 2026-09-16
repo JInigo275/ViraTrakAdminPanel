@@ -342,6 +342,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     const saved = await driversApi.create(db);
     setDrivers((prev) => [...prev, mapDriver(saved)]);
+    if (e.vehicle) {
+      setVehicles((prev) => prev.map((vehicle) => vehicle.plateNumber === e.vehicle
+        ? { ...vehicle, driverIds: [...vehicle.driverIds, saved.id] }
+        : vehicle));
+    }
     recordDriverAction(`Driver ${saved.first_name} ${saved.last_name} was added with ID ${saved.id}${saved.vehicle !== "Unassigned" ? ` and assigned vehicle ${saved.vehicle}.` : ". No vehicle was assigned."}`, "DRIVER_CREATED");
   }
 
