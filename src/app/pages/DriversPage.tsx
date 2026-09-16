@@ -85,6 +85,15 @@ function ReceiptModal({ driver, onClose }: { driver: Driver; onClose: () => void
 }
 
 const emptyForm = { firstName: "", lastName: "", vehicle: "", contact: "" };
+
+function getSaveError(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    return String(error.message);
+  }
+  return "Failed to save. Please try again.";
+}
+
 const countries = `Philippines|+63
 Afghanistan|+93
 Albania|+355
@@ -369,7 +378,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
         setReceipt(newDriver);
         setSuccessMessage("New Driver Added!");
       } catch (e) {
-        setFormError(e instanceof Error ? e.message : "Failed to save. Please try again.");
+        setFormError(getSaveError(e));
       }
     } else if (modal === "edit" && editTarget) {
       try {
@@ -378,7 +387,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
         setModal(null);
         setSuccessMessage("Changes Saved");
       } catch (e) {
-        setFormError(e instanceof Error ? e.message : "Failed to save. Please try again.");
+        setFormError(getSaveError(e));
       }
     }
   }
@@ -504,13 +513,18 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
               <FloatField label="Driver First Name" value={form.firstName} onChange={(v) => setForm((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Driver Last Name" value={form.lastName} onChange={(v) => setForm((p) => ({ ...p, lastName: v }))} />
             </div>
-            <FloatField
-              label="Vehicle (6-8 characters)"
+            <select
               value={form.vehicle === "Unassigned" ? "" : form.vehicle}
-              maxLength={8}
               disabled={!hasAvailableVehicleSlot && !form.vehicle}
-              onChange={(v) => setForm((p) => ({ ...p, vehicle: formatPlate(v) }))}
-            />
+              onChange={(e) => setForm((p) => ({ ...p, vehicle: e.target.value }))}
+              aria-label="Vehicle"
+              style={{ width: "100%", padding: "15px 14px", fontSize: 15, color: form.vehicle ? (dark ? "#F9FAFB" : "#111827") : (dark ? "#9CA3AF" : "#9CA3AF"), background: dark ? "#374151" : "#fff", border: `1.5px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none", boxSizing: "border-box", fontFamily: "Inter, sans-serif" }}
+            >
+              <option value="">Unassigned</option>
+              {vehicles.filter((vehicle) => vehicle.driverIds.length < 2).map((vehicle) => (
+                <option key={vehicle.id} value={vehicle.plateNumber}>{vehicle.plateNumber}{vehicle.model ? ` - ${vehicle.model}` : ""}</option>
+              ))}
+            </select>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(145px, 0.9fr) 1.4fr", gap: 8 }}>
               <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} aria-label="Country code"
                 style={{ width: "100%", padding: "0 10px", fontSize: 14, color: dark ? "#F9FAFB" : "#111827", background: dark ? "#374151" : "#fff", border: `1.5px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none" }}>

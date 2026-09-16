@@ -60,11 +60,10 @@ BEGIN
     WHEN 'behavior_log' THEN 'log_id'
     ELSE 'id'
   END;
-  password_changed := TG_OP = 'UPDATE'
-    AND TG_TABLE_NAME = 'users'
-    AND OLD IS NOT NULL
-    AND NEW IS NOT NULL
-    AND OLD.password IS DISTINCT FROM NEW.password;
+  password_changed := false;
+  IF TG_OP = 'UPDATE' AND TG_TABLE_NAME = 'users' THEN
+    password_changed := (to_jsonb(OLD) -> 'password') IS DISTINCT FROM (to_jsonb(NEW) -> 'password');
+  END IF;
 
   INSERT INTO public.system_log (
     message, log_type, timestamp, actor_id, actor_role, actor_name,

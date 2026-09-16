@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   id text NOT NULL,
   first_name text NOT NULL,
   last_name text NOT NULL,
-  email text NOT NULL UNIQUE,
+  email text NOT NULL UNIQUE CHECK (email = lower(email) AND email !~ '\s'::text AND email ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$'::text),
   role text NOT NULL CHECK (role = ANY (ARRAY['Owner'::text, 'Administrator'::text, 'Supervisor'::text])),
   status text NOT NULL CHECK (status = ANY (ARRAY['Active'::text, 'Deactivated'::text])),
   last_login text NOT NULL DEFAULT 'Never'::text,
@@ -25,15 +25,16 @@ CREATE TABLE IF NOT EXISTS public.driver (
   first_name character varying NOT NULL,
   last_name character varying NOT NULL,
   license_number character varying NOT NULL UNIQUE,
-  contact_info character varying,
+  contact_info character varying CHECK (contact_info IS NULL OR contact_info::text ~ '^\+?[0-9]{7,15}$'::text),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
+  avatar text,
   CONSTRAINT driver_pkey PRIMARY KEY (driver_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.vehicle (
   vehicle_id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
-  plate_number character varying NOT NULL UNIQUE,
+  plate_number character varying NOT NULL UNIQUE CHECK (length(plate_number::text) >= 1 AND length(plate_number::text) <= 8 AND plate_number::text = upper(plate_number::text) AND plate_number::text ~ '^[A-Z0-9]+$'::text),
   model character varying,
   driver_id integer,
   secondary_driver_id integer,
@@ -41,10 +42,9 @@ CREATE TABLE IF NOT EXISTS public.vehicle (
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT vehicle_pkey PRIMARY KEY (vehicle_id),
   CONSTRAINT vehicle_driver_id_fkey FOREIGN KEY (driver_id)
-    REFERENCES public.driver(driver_id) ON DELETE SET NULL,
+    REFERENCES public.driver(driver_id),
   CONSTRAINT vehicle_secondary_driver_id_fkey FOREIGN KEY (secondary_driver_id)
-    REFERENCES public.driver(driver_id) ON DELETE SET NULL,
-  CONSTRAINT vehicle_distinct_drivers CHECK (driver_id IS NULL OR secondary_driver_id IS NULL OR driver_id <> secondary_driver_id)
+    REFERENCES public.driver(driver_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.device (
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS public.device (
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT device_pkey PRIMARY KEY (device_id),
   CONSTRAINT device_vehicle_id_fkey FOREIGN KEY (vehicle_id)
-    REFERENCES public.vehicle(vehicle_id) ON DELETE SET NULL
+    REFERENCES public.vehicle(vehicle_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.recorded_evidence (
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS public.recorded_evidence (
   device_id text,
   CONSTRAINT recorded_evidence_pkey PRIMARY KEY (event_id),
   CONSTRAINT recorded_evidence_device_id_fkey FOREIGN KEY (device_id)
-    REFERENCES public.device(device_id) ON DELETE SET NULL
+    REFERENCES public.device(device_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.detection_events (
@@ -126,9 +126,9 @@ CREATE TABLE IF NOT EXISTS public.device_action (
   alert_id integer,
   CONSTRAINT device_action_pkey PRIMARY KEY (action_id),
   CONSTRAINT device_action_device_id_fkey FOREIGN KEY (device_id)
-    REFERENCES public.device(device_id) ON DELETE SET NULL,
+    REFERENCES public.device(device_id),
   CONSTRAINT device_action_alert_id_fkey FOREIGN KEY (alert_id)
-    REFERENCES public.alert(alert_id) ON DELETE SET NULL
+    REFERENCES public.alert(alert_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.behavior_log (
@@ -143,15 +143,15 @@ CREATE TABLE IF NOT EXISTS public.behavior_log (
   event_id text,
   CONSTRAINT behavior_log_pkey PRIMARY KEY (log_id),
   CONSTRAINT behavior_log_alert_id_fkey FOREIGN KEY (alert_id)
-    REFERENCES public.alert(alert_id) ON DELETE SET NULL,
+    REFERENCES public.alert(alert_id),
   CONSTRAINT behavior_log_device_id_fkey FOREIGN KEY (device_id)
-    REFERENCES public.device(device_id) ON DELETE SET NULL,
+    REFERENCES public.device(device_id),
   CONSTRAINT behavior_log_vehicle_id_fkey FOREIGN KEY (vehicle_id)
-    REFERENCES public.vehicle(vehicle_id) ON DELETE SET NULL,
+    REFERENCES public.vehicle(vehicle_id),
   CONSTRAINT behavior_log_detection_id_fkey FOREIGN KEY (detection_id)
-    REFERENCES public.detection(detection_id) ON DELETE SET NULL,
+    REFERENCES public.detection(detection_id),
   CONSTRAINT behavior_log_event_id_fkey FOREIGN KEY (event_id)
-    REFERENCES public.recorded_evidence(event_id) ON DELETE SET NULL
+    REFERENCES public.recorded_evidence(event_id)
 );
 
 CREATE TABLE IF NOT EXISTS public.system_log (
@@ -160,9 +160,15 @@ CREATE TABLE IF NOT EXISTS public.system_log (
   log_type character varying,
   timestamp timestamp without time zone NOT NULL DEFAULT now(),
   device_id text,
+  actor_id text,
+  actor_role text,
+  actor_name text,
+  entity_type text,
+  entity_id text,
+  operation text,
   CONSTRAINT system_log_pkey PRIMARY KEY (systemlog_id),
   CONSTRAINT system_log_device_id_fkey FOREIGN KEY (device_id)
-    REFERENCES public.device(device_id) ON DELETE SET NULL
+    REFERENCES public.device(device_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_vehicle_driver_id ON public.vehicle(driver_id);
