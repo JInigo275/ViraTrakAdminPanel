@@ -209,11 +209,14 @@ export const driversApi = {
     assertValid(validateName(e.last_name, "Last name"));
     if (e.vehicle) assertValid(validatePlate(e.vehicle));
     assertValid(validatePhone(e.contact));
+    const driverId = normalizeDriverId(e.id);
+    await assertDriverIdAvailable(client, driverId);
     const plate = e.vehicle ? formatPlate(e.vehicle) : "";
 
     const { data, error } = await client
       .from("driver")
       .insert({
+        driver_id: driverId,
         first_name: formatName(e.first_name),
         last_name: formatName(e.last_name),
         license_number: `LIC-${Date.now()}`,
@@ -272,14 +275,30 @@ export const driversApi = {
     if (error) throw error;
     if (patch.vehicle !== undefined) {
       const plate = formatPlate(patch.vehicle);
-      const { data: duplicate } = await client.from("vehicle").select("vehicle_id").eq("plate_number", plate).neq("driver_id", parseInt(id)).maybeSingle();
-      if (duplicate) throw new Error("Vehicle plate already exists.");
-      const { data: vehicle, error: vehicleLookupError } = await client.from("vehicle").select("vehicle_id").eq("driver_id", parseInt(id)).maybeSingle();
+      const { data: vehicleRows, error: vehicleLookupError } = await client
+        .from("vehicle")
+        .select("vehicle_id, plate_number, driver_id, secondary_driver_id");
       if (vehicleLookupError) throw vehicleLookupError;
-      const vehicleResult = vehicle
-        ? await client.from("vehicle").update({ plate_number: plate }).eq("vehicle_id", vehicle.vehicle_id)
-        : await client.from("vehicle").insert({ plate_number: plate, driver_id: parseInt(id) });
-      if (vehicleResult.error) throw vehicleResult.error;
+      const currentVehicle = (vehicleRows ?? []).find((vehicle) => vehicle.driver_id === numericId || vehicle.secondary_driver_id === numericId);
+      const selectedVehicle = (vehicleRows ?? []).find((vehicle) => vehicle.plate_number === plate);
+      if (!selectedVehicle) throw new Error("Selected vehicle was not found.");
+      if (currentVehicle?.vehicle_id !== selectedVehicle.vehicle_id) {
+        if (selectedVehicle.driver_id !== null && selectedVehicle.secondary_driver_id !== null) {
+          throw new Error("Selected vehicle already has two assigned drivers.");
+        }
+        if (currentVehicle) {
+          const clearAssignment = currentVehicle.driver_id === numericId
+            ? { driver_id: null }
+            : { secondary_driver_id: null };
+          const { error: clearError } = await client.from("vehicle").update(clearAssignment).eq("vehicle_id", currentVehicle.vehicle_id);
+          if (clearError) throw clearError;
+        }
+        const assignment = selectedVehicle.driver_id === null
+          ? { driver_id: numericId }
+          : { secondary_driver_id: numericId };
+        const { error: assignError } = await client.from("vehicle").update(assignment).eq("vehicle_id", selectedVehicle.vehicle_id);
+        if (assignError) throw assignError;
+      }
     }
 
     const raw = data as RawDriver;

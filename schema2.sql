@@ -363,7 +363,7 @@ INSERT INTO public.behavior_log (
   alert_id,
   device_id,
   vehicle_id,
-  detection_id,
+  detection_id, 
   event_id
 )
 OVERRIDING SYSTEM VALUE

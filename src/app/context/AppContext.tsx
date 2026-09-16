@@ -358,6 +358,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.contact !== undefined) dbPatch.contact = patch.contact;
     const saved = await driversApi.update(id, dbPatch);
     setDrivers((prev) => prev.map((e) => e.id === id ? mapDriver(saved) : e));
+    if (patch.vehicle !== undefined) {
+      setVehicles((prev) => prev.map((vehicle) => {
+        const driverIds = vehicle.driverIds.filter((driverId) => driverId !== id);
+        if (saved.vehicle === vehicle.plateNumber) {
+          return { ...vehicle, driverIds: [...driverIds, id] };
+        }
+        return { ...vehicle, driverIds };
+      }));
+    }
     recordDriverAction(`Driver ${saved.first_name} ${saved.last_name} (${saved.id}) was updated${saved.vehicle !== "Unassigned" ? `; assigned vehicle is now ${saved.vehicle}.` : "; no vehicle is assigned."}`, "DRIVER_UPDATED");
   }
 
