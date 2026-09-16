@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Edit3, Plus, Search, Trash2, Truck, UserRound, X } from "lucide-react";
+import { Check, ChevronDown, Edit3, Plus, Search, Trash2, Truck, UserRound, X } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
@@ -47,6 +47,15 @@ export function VehiclesPage() {
   const filtered = vehicles.filter((vehicle) => `${vehicle.plateNumber} ${vehicle.model} ${vehicle.driverIds.map((id) => drivers.find((driver) => driver.id === id)?.firstName ?? "").join(" ")} ${vehicle.driverIds.map((id) => drivers.find((driver) => driver.id === id)?.lastName ?? "").join(" ")}`.toLowerCase().includes(search.toLowerCase()));
   const allChecked = filtered.length > 0 && filtered.every((vehicle) => selectedIds.has(vehicle.id));
   const someChecked = filtered.some((vehicle) => selectedIds.has(vehicle.id));
+
+  function availableDriversForSlot(index: number) {
+    const selectedInOtherSlot = new Set(driverIds.filter((_, selectedIndex) => selectedIndex !== index));
+    return drivers.filter((driver) => {
+      if (selectedInOtherSlot.has(driver.id)) return false;
+      if (driverIds[index] === driver.id) return true;
+      return !vehicles.some((vehicle) => vehicle.id !== editing?.id && vehicle.driverIds.includes(driver.id));
+    });
+  }
 
   function openAdd() {
     setEditing(null); setPlate(""); setModel(""); setDriverIds([]); setError(""); setModal("add");
@@ -171,12 +180,25 @@ export function VehiclesPage() {
           <div>
             <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>Designated drivers <span style={{ color: muted, fontWeight: 400 }}>(up to 2)</span></label>
             <div style={{ display: "grid", gap: 8, marginTop: 6 }}>
-              {[0, 1].map((index) => (
-                <select key={index} value={driverIds[index] ?? ""} onChange={(event) => setDriverIds((current) => { const next = [...current]; if (event.target.value) next[index] = event.target.value; else next.splice(index, 1); return next.filter(Boolean); })} style={{ width: "100%", padding: "11px 12px", border: `1px solid ${border}`, borderRadius: 8, background: dark ? "#374151" : "#fff", color: text }}>
-                  <option value="">{index === 0 ? "Select a driver" : "Second driver (optional)"}</option>
-                  {drivers.filter((driver) => driver.id === driverIds[index] || !driverIds.includes(driver.id)).map((driver) => <option key={driver.id} value={driver.id}>{driver.firstName} {driver.lastName}</option>)}
-                </select>
-              ))}
+              {[0, 1].map((index) => {
+                const availableDrivers = availableDriversForSlot(index);
+                const hasCurrentDriver = Boolean(driverIds[index]);
+                const noDriversAvailable = availableDrivers.length === 0 && !hasCurrentDriver;
+                return (
+                  <div key={index} style={{ position: "relative" }}>
+                    <select
+                      value={driverIds[index] ?? ""}
+                      disabled={noDriversAvailable}
+                      onChange={(event) => setDriverIds((current) => { const next = [...current]; if (event.target.value) next[index] = event.target.value; else next.splice(index, 1); return next.filter(Boolean); })}
+                      style={{ width: "100%", padding: "11px 38px 11px 12px", border: `1px solid ${noDriversAvailable ? (dark ? "#4B5563" : "#D1D5DB") : border}`, borderRadius: 8, background: noDriversAvailable ? (dark ? "#374151" : "#F3F4F6") : (dark ? "#374151" : "#fff"), color: noDriversAvailable ? (dark ? "#6B7280" : "#9CA3AF") : text, appearance: "none", cursor: noDriversAvailable ? "not-allowed" : "pointer" }}
+                    >
+                      <option value="">{noDriversAvailable ? "No Drivers Available" : index === 0 ? "Select a driver" : "Second driver (optional)"}</option>
+                      {availableDrivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.firstName} {driver.lastName}</option>)}
+                    </select>
+                    <ChevronDown size={16} color={noDriversAvailable ? (dark ? "#6B7280" : "#9CA3AF") : muted} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                  </div>
+                );
+              })}
             </div>
           </div>
           {error && <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>}

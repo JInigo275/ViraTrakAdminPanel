@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Search, Plus, Trash2, X, Check, BarChart2, Contact, Edit3 } from "lucide-react";
+import { Search, Plus, Trash2, X, Check, BarChart2, Contact, Edit3, ChevronDown } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, Driver, genDriverId } from "../context/AppContext";
@@ -513,18 +513,21 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
               <FloatField label="Driver First Name" value={form.firstName} onChange={(v) => setForm((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Driver Last Name" value={form.lastName} onChange={(v) => setForm((p) => ({ ...p, lastName: v }))} />
             </div>
-            <select
-              value={form.vehicle === "Unassigned" ? "" : form.vehicle}
-              disabled={!hasAvailableVehicleSlot && !form.vehicle}
-              onChange={(e) => setForm((p) => ({ ...p, vehicle: e.target.value }))}
-              aria-label="Vehicle"
-              style={{ width: "100%", padding: "15px 14px", fontSize: 15, color: form.vehicle ? (dark ? "#F9FAFB" : "#111827") : (dark ? "#9CA3AF" : "#9CA3AF"), background: dark ? "#374151" : "#fff", border: `1.5px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none", boxSizing: "border-box", fontFamily: "Inter, sans-serif" }}
-            >
-              <option value="">Unassigned</option>
-              {vehicles.filter((vehicle) => vehicle.driverIds.length < 2).map((vehicle) => (
-                <option key={vehicle.id} value={vehicle.plateNumber}>{vehicle.plateNumber}{vehicle.model ? ` - ${vehicle.model}` : ""}</option>
-              ))}
-            </select>
+            <div style={{ position: "relative" }}>
+              <select
+                value={form.vehicle === "Unassigned" ? "" : form.vehicle}
+                disabled={!hasAvailableVehicleSlot && !form.vehicle}
+                onChange={(e) => setForm((p) => ({ ...p, vehicle: e.target.value }))}
+                aria-label="Vehicle"
+                style={{ width: "100%", padding: "15px 44px 15px 14px", fontSize: 15, color: !hasAvailableVehicleSlot && !form.vehicle ? (dark ? "#6B7280" : "#9CA3AF") : form.vehicle ? (dark ? "#F9FAFB" : "#111827") : (dark ? "#9CA3AF" : "#9CA3AF"), background: !hasAvailableVehicleSlot && !form.vehicle ? (dark ? "#374151" : "#F3F4F6") : (dark ? "#374151" : "#fff"), border: `1.5px solid ${!hasAvailableVehicleSlot && !form.vehicle ? (dark ? "#4B5563" : "#D1D5DB") : (dark ? "#4B5563" : "#E5E7EB")}`, borderRadius: 10, outline: "none", boxSizing: "border-box", fontFamily: "Inter, sans-serif", appearance: "none", cursor: !hasAvailableVehicleSlot && !form.vehicle ? "not-allowed" : "pointer" }}
+              >
+                <option value="">{modal === "add" && !hasAvailableVehicleSlot ? "No Vehicles Available" : "Unassigned"}</option>
+                {vehicles.filter((vehicle) => vehicle.driverIds.length < 2 || (modal === "edit" && vehicle.plateNumber === form.vehicle)).map((vehicle) => (
+                  <option key={vehicle.id} value={vehicle.plateNumber}>{vehicle.plateNumber}{vehicle.model ? ` - ${vehicle.model}` : ""}</option>
+                ))}
+              </select>
+              <ChevronDown size={18} color={!hasAvailableVehicleSlot && !form.vehicle ? (dark ? "#6B7280" : "#9CA3AF") : (dark ? "#D1D5DB" : "#4B5563")} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "minmax(145px, 0.9fr) 1.4fr", gap: 8 }}>
               <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} aria-label="Country code"
                 style={{ width: "100%", padding: "0 10px", fontSize: 14, color: dark ? "#F9FAFB" : "#111827", background: dark ? "#374151" : "#fff", border: `1.5px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none" }}>
