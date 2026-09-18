@@ -1,3 +1,17 @@
+# IMPORTANT NOTES!!!
+- Remove System Log Source. Temporarily retain system logs only.
+- Remove "Warning" in System Logs Type.
+- Add Dark Mode Colors, apply proper dark mode colors.
+- Add Range in Analytics
+- Temporarily Remove Blink Rate to all.
+- Add Low to Driver Load Bar Graph in Analytics Page
+- Colors of Bar Graph Alert = Blue, Low = Green, Moderate = Yellow, High = Red.
+- Transfer Active Drivers and Vehicles from Analytics Page to Dashboard Page.
+- Add Low Severity Stat Card in Analytics Page.
+- Add Device ID in Add Vehicle Options via Text. (Sample: pi-viratrak-01)
+   - Edit only the Number Part. pi-viratrak- cannot be changed.
+- Read Data from recent_alerts view for Dashboard, analytics and, alerts and evidences.
+
 # ViraTrak Admin Panel
 
 ## Overview
