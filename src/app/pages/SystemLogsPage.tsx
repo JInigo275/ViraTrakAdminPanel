@@ -15,12 +15,10 @@ import { PDFPreviewModal } from "../components/PDFPreviewModal";
 // Log types and styles
 // ============================================================
 
-type LogSource = "System" | "Hardware" | "Behavior";
-type LogLevel = "INFO" | "WARNING" | "ERROR";
+type LogLevel = "INFO" | "ERROR";
 
 interface LogEntry {
   id: number;
-  source: LogSource;
   date: string;
   time: string;
   level: LogLevel;
@@ -31,16 +29,8 @@ interface LogEntry {
 
 const levelStyle: Record<LogLevel, { bg: string; color: string }> = {
   INFO: { bg: "#EBF2FF", color: "#1D6AE5" },
-  WARNING: { bg: "#FFF7ED", color: "#F59E0B" },
   ERROR: { bg: "#FEF2F2", color: "#EF4444" },
 };
-
-const sourceStyle: Record<LogSource, { bg: string; color: string }> = {
-  System: { bg: "#F5F3FF", color: "#8B5CF6" },
-  Hardware: { bg: "#FFF7ED", color: "#D97706" },
-  Behavior: { bg: "#ECFDF5", color: "#10B981" },
-};
-
 
 // End of region comment
 
@@ -59,7 +49,6 @@ export function SystemLogsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState("All");
-  const [sourceFilter, setSourceFilter] = useState("All");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [showPDFPreview, setShowPDFPreview] = useState(false);
 
@@ -80,12 +69,14 @@ export function SystemLogsPage() {
   const inputBg = dark ? "#374151" : "#F8F9FA";
   const thColor = dark ? "#6B7280" : "#9CA3AF";
   const filterBg = dark ? "#374151" : "#F3F4F6";
+  const getLevelStyle = (level: LogLevel) => dark
+    ? level === "ERROR" ? { bg: "#451A1A", color: "#FCA5A5" } : { bg: "#172554", color: "#93C5FD" }
+    : levelStyle[level];
 
   const filtered = allLogs.filter((l) => {
     const q = search.toLowerCase();
     if (q && !l.action.toLowerCase().includes(q) && !l.ref.toLowerCase().includes(q)) return false;
     if (levelFilter !== "All" && l.level !== levelFilter) return false;
-    if (sourceFilter !== "All" && l.source !== sourceFilter) return false;
     return true;
   });
 
@@ -106,8 +97,8 @@ export function SystemLogsPage() {
     doc.text(`Exported: ${new Date().toLocaleString()}${selected.size > 0 ? ` | ${selected.size} selected` : ""}`, 14, 24);
     autoTable(doc, {
       startY: 30,
-      head: [["Date", "Time", "Type", "Source", "Reference", "Actor", "Description"]],
-      body: printData.map((l) => [l.date, l.time, l.level, l.source, l.ref, l.actor, l.action]),
+      head: [["Date", "Time", "Type", "Reference", "Actor", "Description"]],
+      body: printData.map((l) => [l.date, l.time, l.level, l.ref, l.actor, l.action]),
       styles: { fontSize: 7.5 },
       headStyles: { fillColor: [29, 106, 229] },
       margin: { left: 14, right: 14 },
@@ -127,7 +118,6 @@ export function SystemLogsPage() {
         Date: l.date,
         Time: l.time,
         Type: l.level,
-        Source: l.source,
         Reference: l.ref,
         Actor: l.actor,
         Description: l.action,
@@ -138,7 +128,7 @@ export function SystemLogsPage() {
   }
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, height: "100%", overflow: "hidden", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
       {showPDFPreview && (
         <PDFPreviewModal
           title="System Logs — PDF Preview"
@@ -170,24 +160,9 @@ export function SystemLogsPage() {
 
         <div style={{ display: "flex", gap: 10, alignItems: "center", paddingLeft: isMobile ? 0 : 20 }}>
           <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Type:</span>
-          {["All", "INFO", "WARNING", "ERROR"].map((f) => (
+          {["All", "INFO", "ERROR"].map((f) => (
             <button key={f} onClick={() => setLevelFilter(f)}
               style={{ padding: "5px 11px", borderRadius: 999, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer", background: levelFilter === f ? "#1D6AE5" : filterBg, color: levelFilter === f ? "#fff" : textSub, transition: "all 0.15s", fontFamily: "Inter, sans-serif" }}>
-              {f}
-            </button>
-          ))}
-        </div>
-
-        <div style={{
-          display: "flex", 
-          gap: 10, 
-          alignItems: "center",
-          paddingLeft: isMobile ? 0 : 20,
-        }}>
-          <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Source:</span>
-          {["All", "Behavior", "System", "Hardware"].map((f) => (
-            <button key={f} onClick={() => setSourceFilter(f)}
-              style={{ padding: "5px 11px", borderRadius: 999, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer", background: sourceFilter === f ? "#1D6AE5" : filterBg, color: sourceFilter === f ? "#fff" : textSub, transition: "all 0.15s", fontFamily: "Inter, sans-serif" }}>
               {f}
             </button>
           ))}
@@ -212,10 +187,10 @@ export function SystemLogsPage() {
       {/* ============================================================ */}
       {/* Table */}
       {/* ============================================================ */}
-      <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
-            <thead>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
+        <div style={{ flex: 1, minHeight: 0, overflowX: "auto", overflowY: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
+            <thead style={{ position: "sticky", top: 0, zIndex: 1, background: cardBg }}>
               <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
                 <th style={{ padding: "10px 14px", width: 40 }}>
                   <div onClick={toggleAll}
@@ -224,43 +199,55 @@ export function SystemLogsPage() {
                     {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
                   </div>
                 </th>
-                {["Date", "Time", "Type", "Source", "Reference", "Actor", "Description"].map((h) => (
+                {["Date", "Time", "Type", "Reference", "Actor", "Description"].map((h) => (
                   <th key={h} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>Loading logs…</td></tr>
+                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>Loading logs…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No logs match the current filters.</td></tr>
-              ) : filtered.map((l, i) => {
-                const checked = selected.has(l.id);
-                return (
-                  <tr key={l.id}
-                    style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: checked ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent", cursor: "pointer" }}
-                    onClick={() => toggleOne(l.id)}
-                    onMouseEnter={(e) => { if (!checked) (e.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
-                    onMouseLeave={(e) => { if (!checked) (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
-                    <td style={{ padding: "10px 14px" }}>
-                      <div onClick={(event) => { event.stopPropagation(); toggleOne(l.id); }} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${checked ? "#1D6AE5" : (dark ? "#4B5563" : "#D1D5DB")}`, background: checked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {checked && <Check size={10} color="#fff" />}
+                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No logs match the current filters.</td></tr>
+              ) : (
+                <>
+                  {filtered.map((l, i) => {
+                    const checked = selected.has(l.id);
+                    return (
+                      <tr key={l.id}
+                        style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: checked ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent", cursor: "pointer" }}
+                        onClick={() => toggleOne(l.id)}
+                        onMouseEnter={(e) => { if (!checked) (e.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
+                        onMouseLeave={(e) => { if (!checked) (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
+                        <td style={{ padding: "10px 14px" }}>
+                          <div onClick={(event) => { event.stopPropagation(); toggleOne(l.id); }} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${checked ? "#1D6AE5" : (dark ? "#4B5563" : "#D1D5DB")}`, background: checked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {checked && <Check size={10} color="#fff" />}
+                          </div>
+                        </td>
+                        <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap", fontFamily: "monospace" }}>{l.date}</td>
+                        <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap", fontFamily: "monospace" }}>{l.time}</td>
+                        <td style={{ padding: "10px 14px" }}>
+                          <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, background: getLevelStyle(l.level).bg, color: getLevelStyle(l.level).color }}>{l.level}</span>
+                        </td>
+                        <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap" }}>{l.ref}</td>
+                        <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap" }}>{l.actor}</td>
+                        <td style={{ padding: "10px 14px", fontSize: 14, color: textMain }}>{l.action}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td colSpan={7} style={{ padding: "10px 18px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+                        <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: dark ? "#9CA3AF" : "#94A3B8", whiteSpace: "nowrap" }}>
+                          End of table
+                        </span>
+                        <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
                       </div>
                     </td>
-                    <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap", fontFamily: "monospace" }}>{l.date}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap", fontFamily: "monospace" }}>{l.time}</td>
-                    <td style={{ padding: "10px 14px" }}>
-                      <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, background: levelStyle[l.level].bg, color: levelStyle[l.level].color }}>{l.level}</span>
-                    </td>
-                    <td style={{ padding: "10px 14px" }}>
-                      <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, background: sourceStyle[l.source].bg, color: sourceStyle[l.source].color }}>{l.source}</span>
-                    </td>
-                    <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap" }}>{l.ref}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 13, color: textSub, whiteSpace: "nowrap" }}>{l.actor}</td>
-                    <td style={{ padding: "10px 14px", fontSize: 14, color: textMain }}>{l.action}</td>
                   </tr>
-                );
-              })}
+                </>
+              )}
             </tbody>
           </table>
         </div>

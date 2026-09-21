@@ -423,46 +423,65 @@ export function UsersPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((u, i) => (
-              <tr key={u.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s" }}
-                onMouseEnter={(el) => ((el.currentTarget as HTMLTableRowElement).style.background = rowHover)}
-                onMouseLeave={(el) => ((el.currentTarget as HTMLTableRowElement).style.background = "transparent")}>
-                <td style={{ padding: "12px 18px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
-                      {(u.firstName[0] ?? "") + (u.lastName[0] ?? "")}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{getFullName(u)}</div>
-                      {u.mustChangePassword && <div style={{ fontSize: 12, color: "#F59E0B", fontWeight: 500 }}>Temp password active</div>}
-                    </div>
-                  </div>
-                </td>
-                <td style={{ padding: "12px 18px", fontSize: 14, color: textSub }}>{u.email}</td>
-                <td style={{ padding: "12px 18px" }}>
-                  <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: roleColors[u.role].bg, color: roleColors[u.role].color }}>{u.role}</span>
-                </td>
-                <td style={{ padding: "12px 18px" }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, color: u.status === "Active" ? "#10B981" : textSub }}>
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", background: u.status === "Active" ? "#10B981" : "#9CA3AF", display: "inline-block" }} />
-                    {u.status}
-                  </span>
-                </td>
-                <td style={{ padding: "12px 18px", fontSize: 14, color: textSub }}>{formatLastLogin(u.lastLogin)}</td>
-                <td style={{ padding: "12px 18px" }}>
-                  {canManageUser(u) && (
-                    <KebabMenu
-                      user={u}
-                      adderRole={myRole}
-                      onChangeRole={(role) => updateUser(u.id, { role }).catch(console.error)}
-                      onResetPassword={() => handleReset(u)}
-                      onToggleStatus={() => handleStatusToggle(u)}
-                      onDelete={() => setDeleteTarget(u)}
-                    />
-                  )}
-                </td>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ padding: 36, textAlign: "center", color: textSub }}>No users match your search.</td>
               </tr>
-            ))}
+            ) : (
+              <>
+                {filtered.map((u, i) => (
+                  <tr key={u.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s" }}
+                    onMouseEnter={(el) => ((el.currentTarget as HTMLTableRowElement).style.background = rowHover)}
+                    onMouseLeave={(el) => ((el.currentTarget as HTMLTableRowElement).style.background = "transparent")}>
+                    <td style={{ padding: "12px 18px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+                          {(u.firstName[0] ?? "") + (u.lastName[0] ?? "")}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{getFullName(u)}</div>
+                          {u.mustChangePassword && <div style={{ fontSize: 12, color: "#F59E0B", fontWeight: 500 }}>Temp password active</div>}
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px 18px", fontSize: 14, color: textSub }}>{u.email}</td>
+                    <td style={{ padding: "12px 18px" }}>
+                      <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: roleColors[u.role].bg, color: roleColors[u.role].color }}>{u.role}</span>
+                    </td>
+                    <td style={{ padding: "12px 18px" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 14, color: u.status === "Active" ? "#10B981" : textSub }}>
+                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: u.status === "Active" ? "#10B981" : "#9CA3AF", display: "inline-block" }} />
+                        {u.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: "12px 18px", fontSize: 14, color: textSub }}>{formatLastLogin(u.lastLogin)}</td>
+                    <td style={{ padding: "12px 18px" }}>
+                      {canManageUser(u) && (
+                        <KebabMenu
+                          user={u}
+                          adderRole={myRole}
+                          onChangeRole={(role) => updateUser(u.id, { role }).catch(console.error)}
+                          onResetPassword={() => handleReset(u)}
+                          onToggleStatus={() => handleStatusToggle(u)}
+                          onDelete={() => setDeleteTarget(u)}
+                        />
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                <tr>
+                  <td colSpan={6} style={{ padding: "10px 18px 15px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+                      <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: dark ? "#9CA3AF" : "#94A3B8", whiteSpace: "nowrap" }}>
+                        End of table
+                      </span>
+                      <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
+                    </div>
+                  </td>
+                </tr>
+              </>
+            )}
           </tbody>
         </table>
         </div>

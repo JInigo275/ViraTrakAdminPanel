@@ -13,17 +13,10 @@ import {
 
 
 
-// ============================================================
-// Driver data
-// ============================================================
-// ============================================================
-// Replace this dataset or connect it to the driver detail API here.
-// ============================================================
 type DriverAlert = { icon: typeof Wind; iconColor: string; iconBg: string; type: string; date: string; time: string; severity: string };
 
 type DriverChartData = {
   alerts: DriverAlert[];
-  blink: { time: string; rate: number }[];
   perclos: { time: string; value: number }[];
   ear: { time: string; value: number }[];
   mar: { time: string; value: number }[];
@@ -33,7 +26,6 @@ type DriverChartData = {
 
 const emptyData: DriverChartData = {
   alerts: [],
-  blink: [],
   perclos: [],
   ear: [],
   mar: [],
@@ -113,7 +105,6 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
           })));
         setLiveData({
           alerts: [],
-          blink: readings.filter((reading) => reading.blinkRate !== null).map((reading) => ({ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), rate: reading.blinkRate ?? 0 })),
           perclos: readings.filter((reading) => reading.perclos !== null).map((reading) => ({ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), value: reading.perclos ?? 0 })),
           ear: [],
           mar: readings.filter((reading) => reading.yawn !== null).map((reading) => ({ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), value: reading.yawn ?? 0 })),
@@ -140,7 +131,6 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
   const alertHistory = liveAlerts ?? data.alerts;
   const average = (values: number[]) => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
   const summary = {
-    avgBlink: average(data.blink.map((point) => point.rate)),
     avgPerclos: average(data.perclos.map((point) => point.value)),
   };
   const averageYawn = average(data.mar.map((point) => point.value));
@@ -238,12 +228,6 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {[
               {
-                label: "Avg Blink Rate",
-                value: `${Math.round(summary.avgBlink)} bpm`,
-                note: "Normal: 15–20",
-                status: summary.avgBlink < 12 ? "danger" : summary.avgBlink < 15 ? "warn" : "ok",
-              },
-              {
                 label: "Avg Percentage of Eye Closure (PERCLOS)",
                 value: `${formatMetric(summary.avgPerclos)}%`,
                 note: "Threshold: 10%",
@@ -292,24 +276,6 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 
 
 
-{/* ============================================================ */}
-        {/* Blink Rate */}
-        {/* ============================================================ */}
-        <Card title="Blink Rate" subtitle="Blinks/min — normal: 15–20 bpm">
-          <ResponsiveContainer width="100%" height={150}>
-            <LineChart data={data.blink}>
-              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-              <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 25]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="rate" name="Blink Rate" stroke="#1D6AE5" strokeWidth={2.5} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
-
-
-
-{/* ============================================================ */}
         {/* PERCLOS */}
         {/* ============================================================ */}
         <Card title="Percentage of Eye Closure (PERCLOS)" subtitle="% time eyes closed — threshold: 10%">
@@ -415,6 +381,17 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
                     </tr>
                   );
                 })}
+                <tr>
+                  <td colSpan={4} style={{ padding: "10px 18px 0" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+                      <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: dark ? "#9CA3AF" : "#94A3B8", whiteSpace: "nowrap" }}>
+                        End of table
+                      </span>
+                      <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </table>
             </div>

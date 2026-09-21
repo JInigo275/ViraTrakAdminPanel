@@ -314,6 +314,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
   const [countryCode, setCountryCode] = useState("+63");
   const [formError, setFormError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [receipt, setReceipt] = useState<Driver | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -400,6 +401,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
   async function massDelete() {
     await Promise.all([...selected].map((id) => removeDriver(id).catch(console.error)));
     setSelected(new Set());
+    setConfirmBulkDelete(false);
   }
 
   return (
@@ -426,7 +428,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : "auto" }}>
           {selected.size > 0 && (
-            <button onClick={massDelete} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", background: "#FEF2F2", color: "#EF4444", borderRadius: 8, border: "1px solid #FECACA", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", flex: isMobile ? 1 : undefined }}>
+            <button onClick={() => setConfirmBulkDelete(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", background: "#FEF2F2", color: "#EF4444", borderRadius: 8, border: "1px solid #FECACA", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", flex: isMobile ? 1 : undefined }}>
               <Trash2 size={14} /> Delete {selected.size} Selected
             </button>
           )}
@@ -455,47 +457,70 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                 ))}
               </tr>
             </thead>
-            <tbody>
+              <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: 36, textAlign: "center", color: textSub }}>No drivers match your search.</td>
+                  <td
+                    colSpan={6}
+                    style={{
+                      padding: 36,
+                      textAlign: "center",
+                      color: textSub,
+                      fontSize: 14,
+                    }}>
+                  No drivers match your search.</td>
                 </tr>
-              ) : filtered.map((e, i) => (
-                <tr key={e.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: selected.has(e.id) ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent" }}
-                  onMouseEnter={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
-                  onMouseLeave={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
-                  <td style={{ padding: "11px 16px" }}>
-                    <div onClick={() => toggleOne(e.id)} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${selected.has(e.id) ? "#1D6AE5" : checkBorder}`, background: selected.has(e.id) ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {selected.has(e.id) && <Check size={10} color="#fff" />}
-                    </div>
-                  </td>
-                  <td style={{ padding: "11px 14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                        {(e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
+              ) : (
+                <>
+                  {filtered.map((e, i) => (
+                    <tr key={e.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: selected.has(e.id) ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent" }}
+                      onMouseEnter={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
+                      onMouseLeave={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
+                      <td style={{ padding: "11px 16px" }}>
+                        <div onClick={() => toggleOne(e.id)} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${selected.has(e.id) ? "#1D6AE5" : checkBorder}`, background: selected.has(e.id) ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {selected.has(e.id) && <Check size={10} color="#fff" />}
+                        </div>
+                      </td>
+                      <td style={{ padding: "11px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                            {(e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
+                          </div>
+                          <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.firstName} {e.lastName}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "11px 14px", fontSize: 13, color: "#1D6AE5", fontFamily: "monospace", fontWeight: 600 }}>{e.id}</td>
+                      <td style={{ padding: "11px 14px", fontSize: 14, color: textMain, fontWeight: 500 }}>{e.vehicle}</td>
+                      <td style={{ padding: "11px 14px", fontSize: 13, color: textSub }}>{e.contact}</td>
+                      <td style={{ width: 235, padding: "11px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 207, whiteSpace: "nowrap" }}>
+                          <button onClick={(event) => { event.stopPropagation(); openEdit(e); }} aria-label={`Edit ${e.firstName} ${e.lastName}`}
+                            style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                            <Edit3 size={12} /> Edit
+                          </button>
+                          {onViewDetail && (
+                            <button onClick={(event) => { event.stopPropagation(); onViewDetail(e.id); }}
+                              style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#ECFDF5", color: "#059669", border: "1px solid #A7F3D0", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                              <BarChart2 size={12} /> View
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td colSpan={6} style={{ padding: "10px 18px 15px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+                        <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: dark ? "#9CA3AF" : "#94A3B8", whiteSpace: "nowrap" }}>
+                          End of table
+                        </span>
+                        <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
                       </div>
-                      <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.firstName} {e.lastName}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: "11px 14px", fontSize: 13, color: "#1D6AE5", fontFamily: "monospace", fontWeight: 600 }}>{e.id}</td>
-                  <td style={{ padding: "11px 14px", fontSize: 14, color: textMain, fontWeight: 500 }}>{e.vehicle}</td>
-                  <td style={{ padding: "11px 14px", fontSize: 13, color: textSub }}>{e.contact}</td>
-                  <td style={{ width: 235, padding: "11px 14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 207, whiteSpace: "nowrap" }}>
-                      <button onClick={(event) => { event.stopPropagation(); openEdit(e); }} aria-label={`Edit ${e.firstName} ${e.lastName}`}
-                        style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-                        <Edit3 size={12} /> Edit
-                      </button>
-                      {onViewDetail && (
-                        <button onClick={(event) => { event.stopPropagation(); onViewDetail(e.id); }}
-                          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#ECFDF5", color: "#059669", border: "1px solid #A7F3D0", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-                          <BarChart2 size={12} /> View
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </div>
@@ -557,11 +582,29 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
       {confirmDelete && (
         <Modal title="Delete Driver" onClose={() => setConfirmDelete(null)}>
           <p style={{ fontSize: 15, color: dark ? "#D1D5DB" : "#374151", lineHeight: 1.6, marginBottom: 20 }}>
-            Are you sure you want to delete <strong>{drivers.find((e) => e.id === confirmDelete)?.firstName} {drivers.find((e) => e.id === confirmDelete)?.lastName}</strong>? This action cannot be undone.
+            Are you sure you want to delete <strong style={{ color: "#EF4444" }}>{drivers.find((e) => e.id === confirmDelete)?.firstName} {drivers.find((e) => e.id === confirmDelete)?.lastName}</strong>? This action cannot be undone.
           </p>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>
             <button onClick={() => deleteOne(confirmDelete)} style={{ flex: 1, padding: "11px", background: "#EF4444", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Delete</button>
+          </div>
+        </Modal>
+      )}
+
+      {confirmBulkDelete && (
+        <Modal title="Delete Drivers" onClose={() => setConfirmBulkDelete(false)}>
+          <p style={{ fontSize: 15, color: dark ? "#D1D5DB" : "#374151", lineHeight: 1.6, marginBottom: 12 }}>
+            Are you sure you want to delete the following drivers? This action cannot be undone.
+          </p>
+          <div style={{ maxHeight: 140, overflowY: "auto", display: "grid", gap: 6, marginBottom: 20, padding: 10, background: dark ? "#451A1A" : "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8 }}>
+            {[...selected].map((id) => {
+              const driver = drivers.find((item) => item.id === id);
+              return <strong key={id} style={{ color: dark ? "#FCA5A5" : "#B91C1C", fontSize: 14 }}>{driver ? `${driver.firstName} ${driver.lastName} (${driver.id})` : id}</strong>;
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => setConfirmBulkDelete(false)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>
+            <button onClick={() => void massDelete()} style={{ flex: 1, padding: "11px", background: "#EF4444", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Delete</button>
           </div>
         </Modal>
       )}

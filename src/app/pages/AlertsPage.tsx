@@ -25,10 +25,12 @@ import { alertsApi, DbAlert } from "../../api/viratrak";
 // ============================================================
 const typeIconMap: Record<string, React.ElementType> = {
   "Yawning": Wind,
+  "Yawn": Wind,
   "Eyes Closed": EyeOff,
   "Head Gaze": Zap,
-  "Frequent Blinking": Navigation,
+  "Head Pose": Navigation,
   "Body Tilt": User,
+  "Posture": User,
 };
 
 type AlertRow = DbAlert & { icon: React.ElementType };
@@ -43,9 +45,9 @@ const sevStyle: Record<string, { bg: string; color: string }> = {
   Low: { bg: "#ECFDF5", color: "#10B981" },
 };
 
-function SearchDropdown({ label, value, onChange, options, openKey, activeKey, setActiveKey, dark, layoutVersion }: {
+function SearchDropdown({ label, value, onChange, options, openKey, activeKey, setActiveKey, dark }: {
   label: string; value: string; onChange: (v: string) => void;
-  options: string[]; openKey: string; activeKey: string | null; setActiveKey: (k: string | null) => void; dark: boolean; layoutVersion?: string;
+  options: string[]; openKey: string; activeKey: string | null; setActiveKey: (k: string | null) => void; dark: boolean;
 }) {
   const [query, setQuery] = useState(value);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0 });
@@ -61,32 +63,19 @@ function SearchDropdown({ label, value, onChange, options, openKey, activeKey, s
     const updatePosition = () => {
       const rect = ref.current!.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
-      const preferredWidth = isMobile
-        ? Math.min(rect.width, Math.max(110, viewportWidth - 16))
-        : Math.min(Math.max(rect.width, 150), Math.max(150, viewportWidth - rect.left - 12));
-      const maxLeft = Math.max(8, viewportWidth - preferredWidth - 8);
-      const left = Math.min(Math.max(8, rect.left), maxLeft);
+      const preferredWidth = isMobile ? Math.min(rect.width, Math.max(110, viewportWidth - 16)) : rect.width;
+      const left = isMobile ? Math.min(Math.max(8, rect.left), Math.max(8, viewportWidth - preferredWidth - 8)) : rect.left;
       setMenuPos({ top: rect.bottom + 3, left, width: preferredWidth });
     };
 
-    const run = () => window.requestAnimationFrame(updatePosition);
-    run();
-    window.addEventListener("resize", run);
-    window.addEventListener("scroll", run, { passive: true, capture: true });
-
-    let observer: ResizeObserver | undefined;
-    if (typeof ResizeObserver !== "undefined" && ref.current) {
-      observer = new ResizeObserver(() => run());
-      observer.observe(ref.current);
-      if (ref.current.parentElement) observer.observe(ref.current.parentElement);
-    }
-
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, { passive: true, capture: true });
     return () => {
-      window.removeEventListener("resize", run);
-      window.removeEventListener("scroll", run, true);
-      observer?.disconnect();
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, isMobile, layoutVersion]);
+  }, [open, isMobile]);
 
   useEffect(() => {
     function h(e: MouseEvent) {
@@ -142,9 +131,9 @@ function SearchDropdown({ label, value, onChange, options, openKey, activeKey, s
   );
 }
 
-function SimpleDropdown({ label, value, onChange, options, openKey, activeKey, setActiveKey, dark, layoutVersion }: {
+function SimpleDropdown({ label, value, onChange, options, openKey, activeKey, setActiveKey, dark }: {
   label: string; value: string; onChange: (v: string) => void;
-  options: string[]; openKey: string; activeKey: string | null; setActiveKey: (k: string | null) => void; dark: boolean; layoutVersion?: string;
+  options: string[]; openKey: string; activeKey: string | null; setActiveKey: (k: string | null) => void; dark: boolean;
 }) {
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 0 });
   const ref = useRef<HTMLDivElement>(null);
@@ -158,32 +147,19 @@ function SimpleDropdown({ label, value, onChange, options, openKey, activeKey, s
     const updatePosition = () => {
       const rect = ref.current!.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
-      const preferredWidth = isMobile
-        ? Math.min(rect.width, Math.max(110, viewportWidth - 16))
-        : Math.min(Math.max(rect.width, 150), Math.max(150, viewportWidth - rect.left - 12));
-      const maxLeft = Math.max(8, viewportWidth - preferredWidth - 8);
-      const left = Math.min(Math.max(8, rect.left), maxLeft);
+      const preferredWidth = isMobile ? Math.min(rect.width, Math.max(110, viewportWidth - 16)) : rect.width;
+      const left = isMobile ? Math.min(Math.max(8, rect.left), Math.max(8, viewportWidth - preferredWidth - 8)) : rect.left;
       setMenuPos({ top: rect.bottom + 3, left, width: preferredWidth });
     };
 
-    const run = () => window.requestAnimationFrame(updatePosition);
-    run();
-    window.addEventListener("resize", run);
-    window.addEventListener("scroll", run, { passive: true, capture: true });
-
-    let observer: ResizeObserver | undefined;
-    if (typeof ResizeObserver !== "undefined" && ref.current) {
-      observer = new ResizeObserver(() => run());
-      observer.observe(ref.current);
-      if (ref.current.parentElement) observer.observe(ref.current.parentElement);
-    }
-
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, { passive: true, capture: true });
     return () => {
-      window.removeEventListener("resize", run);
-      window.removeEventListener("scroll", run, true);
-      observer?.disconnect();
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open, isMobile, layoutVersion]);
+  }, [open, isMobile]);
 
   useEffect(() => {
     function h(e: MouseEvent) {
@@ -364,12 +340,10 @@ export function AlertsPage() {
     XLSX.writeFile(wb, `viratrak_alerts_${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  const tableMaxHeight = isMobile ? "calc(100vh - 250px)" : "calc(100vh - 280px)";
   const tableHeaders = isMobile ? ["Type", "Driver", "Vehicle", "Date/Time", "Severity", "View"] : ["Type", "Driver", "Vehicle", "Date", "Time", "Severity", "Evidence"];
-  const filterLayoutVersion = `${showFilters ? "open" : "closed"}-${isCompactDesktop ? "compact" : "wide"}-${viewportWidth}`;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%", minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: isMobile ? "16px 16px 0" : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, height: "100%", minHeight: 0, overflow: "hidden", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
       {showPDFPreview && (
         <PDFPreviewModal
           title="Alerts & Evidence — PDF Preview"
@@ -404,11 +378,11 @@ export function AlertsPage() {
       {/* Filter bar */}
       {/* ============================================================ */}
       <div style={{ display: "flex", flexDirection: "column", gap: isMobile ? 8 : 0, marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isCompactDesktop ? "wrap" : "nowrap", overflow: "visible", width: "100%" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0, width: "100%", transition: "width 0.2s ease" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#374151" : "#F8F9FA", border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: "100%", boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)", minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: isCompactDesktop ? "wrap" : "nowrap", overflow: "visible" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, width: (showFilters && !isMobile) ? (isCompactDesktop ? "100%" : 240) : (isMobile ? "calc(100% - 82px)" : (isCompactDesktop ? "100%" : 320)), flexShrink: 0, transition: "width 0.2s ease" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: dark ? "#374151" : "#F8F9FA", border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: "100%", boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)", flexShrink: 0 }}>
               <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
-              <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={isMobile ? "Search..." : "Search alerts..."} style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", minWidth: 0, fontFamily: "Inter, sans-serif" }} />
+              <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={isMobile ? "Search..." : "Search alerts..."} style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
             </div>
           </div>
 
@@ -416,9 +390,9 @@ export function AlertsPage() {
             {/* Desktop: chips stay inline in this row */}
             {showFilters && !isMobile && (
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: cardBg, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, borderRadius: 10, boxShadow: shadow, padding: "6px 8px" }}>
-                <SearchDropdown label="Event Type" value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} options={types} openKey="type" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
-                <SearchDropdown label="Driver" value={filterDriver} onChange={(v) => { setFilterDriver(v); setPage(1); }} options={drivers} openKey="driver" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
-                <SearchDropdown label="Vehicle" value={filterVehicle} onChange={(v) => { setFilterVehicle(v); setPage(1); }} options={vehicles} openKey="vehicle" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+                <SearchDropdown label="Event Type" value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} options={types} openKey="type" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
+                <SearchDropdown label="Driver" value={filterDriver} onChange={(v) => { setFilterDriver(v); setPage(1); }} options={drivers} openKey="driver" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
+                <SearchDropdown label="Vehicle" value={filterVehicle} onChange={(v) => { setFilterVehicle(v); setPage(1); }} options={vehicles} openKey="vehicle" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
                 <div style={{ position: "relative" }}>
                   <input type="date" value={filterDate} onChange={(e) => { setFilterDate(e.target.value); setPage(1); }}
                     style={{ padding: "7px 10px", background: filterDate ? "#EBF2FF" : (dark ? "#1F2937" : "#fff"), border: `1px solid ${filterDate ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, borderRadius: 8, fontSize: 13, color: filterDate ? "#1D6AE5" : textSub, outline: "none", fontFamily: "Inter, sans-serif", cursor: "pointer", boxSizing: "border-box" }} />
@@ -447,22 +421,22 @@ export function AlertsPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8, background: cardBg, border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`, borderRadius: 10, boxShadow: shadow, padding: 10, width: "100%", boxSizing: "border-box" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <SearchDropdown label="Event Type" value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} options={types} openKey="type" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+                <SearchDropdown label="Event Type" value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} options={types} openKey="type" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <SearchDropdown label="Driver" value={filterDriver} onChange={(v) => { setFilterDriver(v); setPage(1); }} options={drivers} openKey="driver" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+                <SearchDropdown label="Driver" value={filterDriver} onChange={(v) => { setFilterDriver(v); setPage(1); }} options={drivers} openKey="driver" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, width: "100%" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <SearchDropdown label="Vehicle" value={filterVehicle} onChange={(v) => { setFilterVehicle(v); setPage(1); }} options={vehicles} openKey="vehicle" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+                <SearchDropdown label="Vehicle" value={filterVehicle} onChange={(v) => { setFilterVehicle(v); setPage(1); }} options={vehicles} openKey="vehicle" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
               </div>
               <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
                 <input type="date" value={filterDate} onChange={(e) => { setFilterDate(e.target.value); setPage(1); }}
                   style={{ width: "100%", padding: "7px 10px", background: filterDate ? "#EBF2FF" : (dark ? "#1F2937" : "#fff"), border: `1px solid ${filterDate ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, borderRadius: 8, fontSize: 13, color: filterDate ? "#1D6AE5" : textSub, outline: "none", fontFamily: "Inter, sans-serif", cursor: "pointer", boxSizing: "border-box" }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <SimpleDropdown label="Severity" value={filterSeverity} onChange={(v) => { setFilterSeverity(v); setPage(1); }} options={["High", "Moderate", "Low"]} openKey="severity" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} layoutVersion={filterLayoutVersion} />
+                <SimpleDropdown label="Severity" value={filterSeverity} onChange={(v) => { setFilterSeverity(v); setPage(1); }} options={["High", "Moderate", "Low"]} openKey="severity" activeKey={activeFilter} setActiveKey={setActiveFilter} dark={dark} />
               </div>
             </div>
           </div>
@@ -474,8 +448,8 @@ export function AlertsPage() {
       {/* ============================================================ */}
       {/* Select all / deselect */}
       {/* ============================================================ */}
-      <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden", marginBottom: isMobile ? 18 : 24 }}>
-        <div style={{ overflowX: "auto", overflowY: "auto", maxHeight: tableMaxHeight, minHeight: 0, borderBottom: `1px solid ${borderColor}` }}>
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden", marginBottom: isMobile ? 0 : 0 }}>
+        <div style={{ flex: 1, minHeight: 0, overflowX: "auto", overflowY: "auto", borderBottom: `1px solid ${borderColor}` }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isMobile ? 330 : 600 }}>
             <thead style={{ position: "sticky", top: 0, zIndex: 2 }}>
               <tr style={{ borderBottom: `1px solid ${borderColor}`, background: cardBg }}>
@@ -499,7 +473,6 @@ export function AlertsPage() {
               ) : visibleRows.map((e, i) => {
                 const Icon = e.icon;
                 const checked = selected.has(e.id);
-                const hasEvidence = Boolean(e.evidence);
                 return (
                   <tr key={e.id} style={{ borderBottom: i < visibleRows.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: checked ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent", cursor: "pointer" }}
                     onClick={() => toggleOne(e.id)}
@@ -526,9 +499,7 @@ export function AlertsPage() {
                       <span style={{ display: "inline-block", padding: "2px 9px", borderRadius: 999, fontSize: isMobile ? 11 : 12, fontWeight: 600, background: sevStyle[e.severity].bg, color: sevStyle[e.severity].color }}>{e.severity}</span>
                     </td>
                     <td style={{ padding: isMobile ? "8px 10px" : "10px 14px" }}>
-                      {hasEvidence ? (
-                        <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedEvidence(e); }} style={{ display: "inline-flex", alignItems: "center", padding: 0, border: "none", background: "transparent", fontSize: isMobile ? 12 : 13, color: "#1D6AE5", fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>View</button>
-                      ) : null}
+                      <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedEvidence(e); }} style={{ display: "inline-flex", alignItems: "center", padding: 0, border: "none", background: "transparent", fontSize: isMobile ? 12 : 13, color: e.evidence ? "#1D6AE5" : textSub, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>View</button>
                     </td>
                   </tr>
                 );
