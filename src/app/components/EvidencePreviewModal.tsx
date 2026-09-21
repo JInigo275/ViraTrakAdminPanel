@@ -225,7 +225,7 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
                 }}
               >
                 <AlertTriangle size={24} color="#F59E0B" />
-                <span>Evidence URL could not be loaded.</span>
+                <span>Evidence file could not be found in storage.</span>
               </div>
             ) : (
               <div style={{ color: textSub, fontSize: 14 }}>No image URL is attached to this event.</div>

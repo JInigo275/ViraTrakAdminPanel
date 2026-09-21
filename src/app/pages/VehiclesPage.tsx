@@ -33,6 +33,7 @@ export function VehiclesPage() {
   const [deviceNumber, setDeviceNumber] = useState("");
   const [driverIds, setDriverIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -91,6 +92,7 @@ export function VehiclesPage() {
   async function massDelete() {
     await Promise.all([...selectedIds].map((id) => removeVehicle(id).catch((deleteError) => setError(deleteError instanceof Error ? deleteError.message : "Could not delete vehicle."))));
     setSelectedIds(new Set());
+    setConfirmDelete(false);
   }
 
   function driverName(ids: string[]) {
@@ -130,7 +132,7 @@ export function VehiclesPage() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : "auto" }}>
           {selectedIds.size > 0 && (
-            <button onClick={() => void massDelete()} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", background: "#FEF2F2", color: "#EF4444", borderRadius: 8, border: "1px solid #FECACA", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", flex: isMobile ? 1 : undefined }}>
+            <button onClick={() => setConfirmDelete(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", background: "#FEF2F2", color: "#EF4444", borderRadius: 8, border: "1px solid #FECACA", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", flex: isMobile ? 1 : undefined }}>
               <Trash2 size={14} /> Delete {selectedIds.size} Selected
             </button>
           )}
@@ -213,7 +215,7 @@ export function VehiclesPage() {
             Device ID
             <div style={{ display: "flex", alignItems: "center", marginTop: 6, border: `1px solid ${border}`, borderRadius: 8, background: dark ? "#374151" : "#fff", overflow: "hidden", transition: "border-color .15s" }}>
               <span aria-hidden="true" style={{ padding: "11px 0 11px 12px", color: muted, fontSize: 15, whiteSpace: "nowrap" }}>pi-viratrak-</span>
-              <input aria-label="Device ID number" value={deviceNumber} maxLength={3} inputMode="numeric" onChange={(event) => setDeviceNumber(event.target.value.replace(/\D/g, "").slice(0, 3))} placeholder="##" style={{ minWidth: 0, flex: 1, padding: "11px 12px 11px 2px", border: "none", outline: "none", background: "transparent", color: text, fontSize: 15 }} />
+              <input aria-label="Device ID number" value={deviceNumber} maxLength={2} inputMode="numeric" onChange={(event) => setDeviceNumber(event.target.value.replace(/\D/g, "").slice(0, 3))} placeholder="##" style={{ minWidth: 0, flex: 1, padding: "11px 12px 11px 2px", border: "none", outline: "none", background: "transparent", color: text, fontSize: 15 }} />
             </div>
           </label>
           <div>
@@ -244,6 +246,24 @@ export function VehiclesPage() {
           <button onClick={() => void save()} disabled={saving} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 7, border: 0, borderRadius: 8, padding: "11px 14px", background: saving ? "#93C5FD" : "#1D6AE5", color: "#fff", fontWeight: 600, cursor: saving ? "wait" : "pointer" }}>{saving ? "Saving..." : <><Check size={16} /> Save vehicle</>}</button>
         </div>
       </Modal>}
+
+      {confirmDelete && (
+        <Modal title="Delete Vehicles" onClose={() => setConfirmDelete(false)}>
+          <p style={{ fontSize: 15, color: dark ? "#D1D5DB" : "#374151", lineHeight: 1.6, marginBottom: 12 }}>
+            Are you sure you want to delete the following vehicles? This action cannot be undone.
+          </p>
+          <div style={{ maxHeight: 140, overflowY: "auto", display: "grid", gap: 6, marginBottom: 20, padding: 10, background: dark ? "#451A1A" : "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8 }}>
+            {[...selectedIds].map((id) => {
+              const vehicle = vehicles.find((item) => item.id === id);
+              return <strong key={id} style={{ color: dark ? "#FCA5A5" : "#B91C1C", fontSize: 14 }}>{vehicle ? `${vehicle.plateNumber}${vehicle.model ? ` - ${vehicle.model}` : ""}` : id}</strong>;
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>
+            <button onClick={() => void massDelete()} style={{ flex: 1, padding: "11px", background: "#EF4444", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Delete</button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

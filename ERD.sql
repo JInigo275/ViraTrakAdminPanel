@@ -1,102 +1,85 @@
--- Additive relationships for schema2.sql.
--- Run after schema2.sql. This file does not alter existing columns.
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
-BEGIN;
-
-CREATE TABLE IF NOT EXISTS public.device (
-  device_id text PRIMARY KEY,
-  vehicle_id integer UNIQUE REFERENCES public.vehicle(vehicle_id) ON DELETE SET NULL,
+CREATE TABLE public.detection_data (
+  id bigint NOT NULL DEFAULT nextval('detection_events_id_seq'::regclass),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now()
+  reported_at timestamp with time zone,
+  alert_level text NOT NULL,
+  triggered_metrics ARRAY NOT NULL DEFAULT '{}'::text[],
+  eyes_status text NOT NULL DEFAULT ''::text,
+  yawn_status text NOT NULL DEFAULT ''::text,
+  head_pose_status text NOT NULL DEFAULT ''::text,
+  posture_status text NOT NULL DEFAULT ''::text,
+  fps real,
+  device_id text NOT NULL DEFAULT 'pi-viratrak-01'::text,
+  screenshot_url text,
+  vehicle_id integer,
+  CONSTRAINT detection_data_pkey PRIMARY KEY (id),
+  CONSTRAINT detection_data_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicle(vehicle_id)
 );
-
--- Keep updated_at current on row updates.
--- Assumes public.set_updated_at() already exists in schema2.sql;
--- comment out this trigger if it doesn't.
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM pg_proc WHERE proname = 'set_updated_at'
-  ) AND NOT EXISTS (
-    SELECT 1 FROM pg_trigger WHERE tgname = 'trg_device_updated_at'
-  ) THEN
-    CREATE TRIGGER trg_device_updated_at
-      BEFORE UPDATE ON public.device
-      FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-  END IF;
-END $$;
-
-INSERT INTO public.device (device_id)
-SELECT DISTINCT device_id
-FROM public.detection_data
-WHERE device_id IS NOT NULL
-ON CONFLICT (device_id) DO NOTHING;
-
--- Add FKs using NOT VALID + VALIDATE so the ALTER only takes a brief lock;
--- existing rows are checked afterward without blocking writes.
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'detection_data_device_id_fkey'
-  ) THEN
-    ALTER TABLE public.detection_data
-      ADD CONSTRAINT detection_data_device_id_fkey
-      FOREIGN KEY (device_id) REFERENCES public.device(device_id) ON DELETE SET NULL
-      NOT VALID;
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'behavior_log_detection_id_fkey'
-  ) THEN
-    ALTER TABLE public.behavior_log
-      ADD CONSTRAINT behavior_log_detection_id_fkey
-      FOREIGN KEY (detection_id) REFERENCES public.detection_data(id) ON DELETE SET NULL
-      NOT VALID;
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'system_log_actor_id_fkey'
-  ) THEN
-    ALTER TABLE public.system_log
-      ADD CONSTRAINT system_log_actor_id_fkey
-      FOREIGN KEY (actor_id) REFERENCES public.users(id) ON DELETE SET NULL
-      NOT VALID;
-  END IF;
-END $$;
-
--- Validate each constraint that isn't already valid. If orphaned rows exist,
--- this raises a clear error instead of silently skipping the constraint.
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'detection_data_device_id_fkey' AND NOT convalidated
-  ) THEN
-    ALTER TABLE public.detection_data VALIDATE CONSTRAINT detection_data_device_id_fkey;
-  END IF;
-
-  IF EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'behavior_log_detection_id_fkey' AND NOT convalidated
-  ) THEN
-    ALTER TABLE public.behavior_log VALIDATE CONSTRAINT behavior_log_detection_id_fkey;
-  END IF;
-
-  IF EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'system_log_actor_id_fkey' AND NOT convalidated
-  ) THEN
-    ALTER TABLE public.system_log VALIDATE CONSTRAINT system_log_actor_id_fkey;
-  END IF;
-END $$;
-
-CREATE INDEX IF NOT EXISTS idx_detection_data_device_created_at
-  ON public.detection_data (device_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_behavior_log_detection_id
-  ON public.behavior_log (detection_id);
-
-CREATE INDEX IF NOT EXISTS idx_system_log_actor_id
-  ON public.system_log (actor_id);
-
-COMMIT;
+CREATE TABLE public.users (
+  id text NOT NULL,
+  first_name text NOT NULL,
+  last_name text NOT NULL,
+  email text NOT NULL UNIQUE CHECK (email = lower(email) AND email !~ '\s'::text AND email ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$'::text),
+  role text NOT NULL CHECK (role = ANY (ARRAY['Owner'::text, 'Administrator'::text, 'Supervisor'::text])),
+  status text NOT NULL CHECK (status = ANY (ARRAY['Active'::text, 'Deactivated'::text])),
+  last_login text NOT NULL DEFAULT 'Never'::text,
+  password text,
+  must_change_password boolean NOT NULL DEFAULT false,
+  avatar text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.driver (
+  driver_id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  first_name character varying NOT NULL,
+  last_name character varying NOT NULL,
+  license_number character varying NOT NULL UNIQUE,
+  contact_info character varying CHECK (contact_info IS NULL OR contact_info::text ~ '^\+?[0-9]{7,15}$'::text),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  avatar text,
+  CONSTRAINT driver_pkey PRIMARY KEY (driver_id)
+);
+CREATE TABLE public.vehicle (
+  vehicle_id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  plate_number character varying NOT NULL UNIQUE CHECK (length(plate_number::text) >= 1 AND length(plate_number::text) <= 8 AND plate_number::text = upper(plate_number::text) AND plate_number::text ~ '^[A-Z0-9]+$'::text),
+  model character varying,
+  driver_id integer,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  secondary_driver_id integer,
+  CONSTRAINT vehicle_pkey PRIMARY KEY (vehicle_id),
+  CONSTRAINT vehicle_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.driver(driver_id),
+  CONSTRAINT vehicle_secondary_driver_id_fkey FOREIGN KEY (secondary_driver_id) REFERENCES public.driver(driver_id)
+);
+CREATE TABLE public.behavior_log (
+  log_id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  message character varying,
+  timestamp timestamp without time zone NOT NULL DEFAULT now(),
+  date date NOT NULL DEFAULT CURRENT_DATE,
+  alert_id integer,
+  device_id text,
+  vehicle_id integer,
+  detection_id integer,
+  event_id text,
+  CONSTRAINT behavior_log_pkey PRIMARY KEY (log_id),
+  CONSTRAINT behavior_log_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicle(vehicle_id)
+);
+CREATE TABLE public.system_log (
+  systemlog_id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  message character varying,
+  log_type character varying,
+  timestamp timestamp without time zone NOT NULL DEFAULT now(),
+  device_id text,
+  actor_id text,
+  actor_role text,
+  actor_name text,
+  entity_type text,
+  entity_id text,
+  operation text,
+  CONSTRAINT system_log_pkey PRIMARY KEY (systemlog_id)
+);

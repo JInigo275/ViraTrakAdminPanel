@@ -344,16 +344,23 @@ async function assertDriversAvailable(client: ReturnType<typeof requireSupabase>
 export const vehiclesApi = {
   list: async () => {
     const client = requireSupabase();
-    const { data: deviceRows, error: deviceError } = await client
-      .from("device")
-      .select("device_id, vehicle_id");
-    if (deviceError) throw deviceError;
     const { data, error } = await client
       .from("vehicle")
       .select("vehicle_id, plate_number, model, driver_id, secondary_driver_id")
       .order("created_at", { ascending: false });
     if (error) throw error;
-    const devicesByVehicle = new Map((deviceRows ?? []).map((device) => [device.vehicle_id, device.device_id]));
+    const { data: detectionRows, error: detectionError } = await client
+      .from("detection_data")
+      .select("vehicle_id, device_id, created_at")
+      .not("vehicle_id", "is", null)
+      .order("created_at", { ascending: false });
+    if (detectionError) throw detectionError;
+    const devicesByVehicle = new Map<number, string>();
+    for (const detection of detectionRows ?? []) {
+      if (detection.vehicle_id !== null && !devicesByVehicle.has(detection.vehicle_id)) {
+        devicesByVehicle.set(detection.vehicle_id, detection.device_id);
+      }
+    }
     return (data ?? []).map((vehicle) => ({ ...vehicle, device_id: devicesByVehicle.get(vehicle.vehicle_id) ?? null })) as DbVehicle[];
   },
   create: async (vehicle: Pick<DbVehicle, "plate_number" | "model" | "device_id" | "driver_id" | "secondary_driver_id">) => {
@@ -375,13 +382,6 @@ export const vehiclesApi = {
       .select("vehicle_id, plate_number, model, driver_id, secondary_driver_id")
       .single();
     if (error) throw error;
-    const { error: deviceError } = await client
-      .from("device")
-      .upsert({ device_id: vehicle.device_id, vehicle_id: data.vehicle_id }, { onConflict: "device_id" });
-    if (deviceError) {
-      await client.from("vehicle").delete().eq("vehicle_id", data.vehicle_id);
-      throw deviceError;
-    }
     return { ...data, device_id: vehicle.device_id } as DbVehicle;
   },
   update: async (id: number, patch: Partial<Pick<DbVehicle, "plate_number" | "model" | "device_id" | "driver_id" | "secondary_driver_id">>) => {
@@ -430,18 +430,17 @@ export const vehiclesApi = {
       .select("vehicle_id, plate_number, model, driver_id, secondary_driver_id")
       .single();
     if (error) throw error;
-    if (deviceId !== undefined) {
-      const { error: deviceError } = await client
-        .from("device")
-        .upsert({ device_id: deviceId, vehicle_id: id }, { onConflict: "device_id" });
-      if (deviceError) throw deviceError;
-    }
-    const { data: savedDevice } = await client.from("device").select("device_id").eq("vehicle_id", id).maybeSingle();
-    return { ...data, device_id: savedDevice?.device_id ?? null } as DbVehicle;
+    const { data: latestDetection } = await client
+      .from("detection_data")
+      .select("device_id")
+      .eq("vehicle_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return { ...data, device_id: deviceId ?? latestDetection?.device_id ?? null } as DbVehicle;
   },
   remove: async (id: number) => {
     const client = requireSupabase();
-    await client.from("device").update({ vehicle_id: null }).eq("vehicle_id", id);
     const { error } = await client.from("vehicle").delete().eq("vehicle_id", id);
     if (error) throw error;
   },
@@ -470,18 +469,10 @@ export const driverMetricsApi = {
     const vehicleIds = (vehicles ?? []).map((vehicle) => vehicle.vehicle_id as number);
     if (vehicleIds.length === 0) return [];
 
-    const { data: devices, error: deviceError } = await client
-      .from("device")
-      .select("device_id")
-      .in("vehicle_id", vehicleIds);
-    if (deviceError) throw deviceError;
-    const deviceIds = (devices ?? []).map((device) => device.device_id as string);
-    if (deviceIds.length === 0) return [];
-
     let detectionsQuery = client
       .from("detection_data")
       .select("created_at, reported_at, eyes_status, yawn_status, posture_status, head_pose_status")
-      .in("device_id", deviceIds);
+      .in("vehicle_id", vehicleIds);
     if (startAt) detectionsQuery = detectionsQuery.gte("created_at", startAt);
     if (endAt) detectionsQuery = detectionsQuery.lte("created_at", endAt);
     const { data: detections, error: detectionError } = await detectionsQuery.order("created_at", { ascending: true });
@@ -624,7 +615,18 @@ async function fetchAlertsWithRelations(): Promise<RawAlert[]> {
   return rows;
 }
 
-function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: string): DbAlert {
+function buildMetricAlertId(raw: RawAlert, metric: string, index: number): number {
+  const baseId = raw.id ?? raw.alert_id ?? 0;
+  if (index === 0) return baseId;
+  const source = `${baseId}:${metric}:${index}`;
+  let hash = 0;
+  for (let characterIndex = 0; characterIndex < source.length; characterIndex += 1) {
+    hash = (hash * 31 + source.charCodeAt(characterIndex)) | 0;
+  }
+  return Math.abs(hash) || index;
+}
+
+function mapRawAlertToDbAlerts(raw: RawAlert, driverName: string, vehicleName: string): DbAlert[] {
   const viewRow = raw as RecentAlertRow;
   const detection = firstRelation(raw.detection);
   const evidence = firstRelation(detection?.recorded_evidence);
@@ -654,16 +656,18 @@ function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: st
   const imageUrl = firstString(viewRow, ["image_url", "screenshot_url"]);
   const deviceId = firstString(viewRow, ["device_id"]);
   const eventId = firstString(viewRow, ["event_id", "evidence_event_id"]) || (raw.id !== undefined ? String(raw.id) : undefined);
-  const triggeredMetrics = Array.isArray(viewRow.triggered_metrics) ? viewRow.triggered_metrics : [];
+  const triggeredMetrics = Array.isArray(viewRow.triggered_metrics) ? viewRow.triggered_metrics.filter(Boolean) : [];
   const hasEvidence = typeof viewRow.evidence === "boolean"
     ? viewRow.evidence
     : Boolean(evidence || detectionEvent?.screenshot_url || imageUrl);
-  
-  return {
-    id: raw.id ?? raw.alert_id ?? 0,
-    type: raw.alert_type
-      || firstString(viewRow, ["type", "event_type"])
-      || (triggeredMetrics[0] ? formatMetricName(triggeredMetrics[0]) : "Alert"),
+
+  const metrics = triggeredMetrics.length > 0
+    ? triggeredMetrics
+    : [raw.alert_type || firstString(viewRow, ["type", "event_type"]) || "Alert"];
+
+  return metrics.map((metric, index) => ({
+    id: buildMetricAlertId(raw, metric, index),
+    type: formatMetricName(metric),
     driver: driverName,
     vehicle: vehicleName,
     date,
@@ -675,27 +679,24 @@ function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: st
           eventId: detection?.event_id || eventId || "Unavailable",
           timestamp,
           deviceId: evidence?.device_id || detectionEvent?.device_id || deviceId || null,
-          imageUrl: detectionEvent?.screenshot_url || imageUrl || null,
-          triggeredMetrics: detectionEvent?.triggered_metrics || triggeredMetrics,
+          imageUrl: imageUrl || detectionEvent?.screenshot_url || null,
+          triggeredMetrics: [metric],
           driverState: detection?.driver_state || raw.driver_state || null,
         }
       : undefined,
     icon_color: iconMap.color,
     icon_bg: iconMap.bg,
-  };
+  }));
 }
 
 export const alertsApi = {
   list: async () => {
     try {
       const client = requireSupabase();
-      const { data: devices, error: deviceError } = await client.from("device").select("device_id, vehicle_id");
-      if (deviceError) throw deviceError;
-      const vehicleIds = [...new Set((devices ?? []).map((device) => device.vehicle_id).filter((id): id is number => id !== null))];
       const { data: vehicles, error: vehicleError } = await client
         .from("vehicle")
         .select("vehicle_id, plate_number, driver_id, secondary_driver_id")
-        .in("vehicle_id", vehicleIds.length > 0 ? vehicleIds : [-1]);
+        .order("created_at", { ascending: false });
       if (vehicleError) throw vehicleError;
       const driverIds = [...new Set((vehicles ?? []).flatMap((vehicle) => [vehicle.driver_id, vehicle.secondary_driver_id]).filter((id): id is number => id !== null))];
       const { data: drivers, error: driverError } = await client
@@ -708,24 +709,19 @@ export const alertsApi = {
         vehicle: vehicle.plate_number,
         driver: driverMap.get(vehicle.driver_id) || driverMap.get(vehicle.secondary_driver_id) || "Unknown Driver",
       }]));
-      const deviceMap = new Map((devices ?? []).map((device) => {
-        const vehicle = device.vehicle_id === null ? undefined : vehicleMap.get(device.vehicle_id);
-        return [device.device_id, vehicle || { driver: "Unknown Driver", vehicle: "Unknown Vehicle" }] as const;
-      }));
-
       const { data: alerts, error: alertError } = await client
-        .from("recent_alerts")
+        .from("detection_data")
         .select("*")
         .order("created_at", { ascending: false });
       
       if (alertError) throw alertError;
       
-      return (alerts ?? []).map((row) => {
+      return (alerts ?? []).flatMap((row) => {
         const raw = row as RecentAlertRow;
-        const deviceInfo = raw.device_id ? deviceMap.get(raw.device_id) : undefined;
-        const driverName = firstString(raw, ["driver", "driver_name"]) || deviceInfo?.driver || "Unknown Driver";
-        const vehicleName = firstString(raw, ["vehicle", "vehicle_name", "plate_number"]) || deviceInfo?.vehicle || "Unknown Vehicle";
-        return mapRawAlertToDbAlert(
+        const vehicleInfo = raw.vehicle_id === null || raw.vehicle_id === undefined ? undefined : vehicleMap.get(raw.vehicle_id);
+        const driverName = firstString(raw, ["driver", "driver_name"]) || vehicleInfo?.driver || "Unknown Driver";
+        const vehicleName = firstString(raw, ["vehicle", "vehicle_name", "plate_number"]) || vehicleInfo?.vehicle || "Unknown Vehicle";
+        return mapRawAlertToDbAlerts(
           raw,
           driverName,
           vehicleName
@@ -751,7 +747,7 @@ export const alertsApi = {
     if (alertError) throw alertError;
     
     const raw = alert as RawAlert;
-    return mapRawAlertToDbAlert(raw, a.driver, a.vehicle);
+    return mapRawAlertToDbAlerts(raw, a.driver, a.vehicle)[0];
   },
   
   remove: async (id: number) => {

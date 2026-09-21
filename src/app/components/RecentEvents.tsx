@@ -7,8 +7,10 @@ import { EvidencePreviewModal } from "./EvidencePreviewModal";
 
 const typeIconMap: Record<string, typeof Wind> = {
   Yawning: Wind,
+  Yawn: Wind,
   "Eyes Closed": EyeOff,
   Distraction: Zap,
+  Posture: User,
   "Poor Posture": User,
   "Head Pose": Navigation,
   "Micro Sleep": Navigation,

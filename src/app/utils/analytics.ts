@@ -26,14 +26,18 @@ export type DashboardStatCard = {
 
 const EVENT_COLORS: Record<string, string> = {
   Yawning: "#EF4444",
+  Yawn: "#EF4444",
   "Eyes Closed": "#F59E0B",
   Distraction: "#EAB308",
+  Posture: "#10B981",
   "Poor Posture": "#10B981",
-  "Head Pose": "#1D6AE5",
+  "Head Pose": "#8B5CF6",
   "Micro Sleep": "#8B5CF6",
   "Shoulder Elevation": "#10B981",
   "Body Posture": "#10B981",
 };
+
+const FALLBACK_EVENT_COLORS = ["#1D6AE5", "#06B6D4", "#F97316", "#EC4899", "#84CC16"];
 
 const severityWeight: Record<DbAlert["severity"], number> = {
   High: 3,
@@ -120,7 +124,7 @@ export function buildBehaviorSummary(alerts: DbAlert[]): AlertSummaryItem[] {
   const counts = new Map<string, number>();
   alerts.forEach((alert) => counts.set(alert.type, (counts.get(alert.type) ?? 0) + 1));
   return [...counts.entries()]
-    .map(([name, value]) => ({ name, value, color: EVENT_COLORS[name] ?? "#1D6AE5" }))
+    .map(([name, value], index) => ({ name, value, color: EVENT_COLORS[name] ?? FALLBACK_EVENT_COLORS[index % FALLBACK_EVENT_COLORS.length] }))
     .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
 }
 

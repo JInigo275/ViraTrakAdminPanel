@@ -25,9 +25,12 @@ import { alertsApi, DbAlert } from "../../api/viratrak";
 // ============================================================
 const typeIconMap: Record<string, React.ElementType> = {
   "Yawning": Wind,
+  "Yawn": Wind,
   "Eyes Closed": EyeOff,
   "Head Gaze": Zap,
+  "Head Pose": Navigation,
   "Body Tilt": User,
+  "Posture": User,
 };
 
 type AlertRow = DbAlert & { icon: React.ElementType };
