@@ -34,6 +34,7 @@ export interface Vehicle {
   id: number;
   plateNumber: string;
   model: string;
+  deviceId: string | null;
   driverIds: string[];
 }
 
@@ -157,6 +158,7 @@ function mapVehicle(v: DbVehicle): Vehicle {
     id: v.vehicle_id,
     plateNumber: v.plate_number,
     model: v.model ?? "",
+    deviceId: v.device_id,
     driverIds: [v.driver_id, v.secondary_driver_id].filter((id): id is number => id !== null).map(String),
   };
 }
@@ -381,6 +383,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const saved = await vehiclesApi.create({
       plate_number: vehicle.plateNumber,
       model: vehicle.model,
+      device_id: vehicle.deviceId,
       driver_id: vehicle.driverIds[0] ? parseInt(vehicle.driverIds[0], 10) : null,
       secondary_driver_id: vehicle.driverIds[1] ? parseInt(vehicle.driverIds[1], 10) : null,
     });
@@ -391,6 +394,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const saved = await vehiclesApi.update(id, {
       ...(patch.plateNumber === undefined ? {} : { plate_number: patch.plateNumber }),
       ...(patch.model === undefined ? {} : { model: patch.model }),
+      ...(patch.deviceId === undefined ? {} : { device_id: patch.deviceId }),
       ...(patch.driverIds === undefined ? {} : {
         driver_id: patch.driverIds[0] ? parseInt(patch.driverIds[0], 10) : null,
         secondary_driver_id: patch.driverIds[1] ? parseInt(patch.driverIds[1], 10) : null,

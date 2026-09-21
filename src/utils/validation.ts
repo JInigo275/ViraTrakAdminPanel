@@ -3,6 +3,7 @@ const USERNAME_PATTERN = /^[A-Za-z0-9_]+$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
 const PLATE_PATTERN = /^[A-Z0-9]+$/;
+const DEVICE_ID_PATTERN = /^pi-viratrak-[0-9]{2,3}$/;
 
 export function formatName(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -59,6 +60,12 @@ export function validatePlate(value: string) {
   if (formatted.length < 6) return "Vehicle plate must be 6 to 8 characters.";
   if (formatted.length > 8) return "Vehicle plate must be 8 characters or fewer.";
   if (!PLATE_PATTERN.test(formatted)) return "Vehicle plate must contain only letters and numbers.";
+  return null;
+}
+
+export function validateDeviceId(value: string | null) {
+  if (!value?.trim()) return "Device ID is required.";
+  if (!DEVICE_ID_PATTERN.test(value.trim())) return "Device ID must use the pi-viratrak- prefix followed by 2 or 3 digits.";
   return null;
 }
 

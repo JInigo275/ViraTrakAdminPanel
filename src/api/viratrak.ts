@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-import { assertValid, formatName, formatPlate, formatPhone, validateEmail, validateName, validatePassword, validatePhone, validatePlate } from "../utils/validation";
+import { assertValid, formatName, formatPlate, formatPhone, validateDeviceId, validateEmail, validateName, validatePassword, validatePhone, validatePlate } from "../utils/validation";
 
 // ---------- Users ----------
 export type DbUser = {
@@ -125,11 +125,6 @@ type RawDriver = {
 };
 
 type DriverQueryVehicle = { plate_number: string; model: string | null };
-
-type RawDevice = {
-  device_id: string;
-  vehicle_id: number | null;
-};
 
 function normalizeDriverId(value: string | number): number {
   const digits = String(value).replace(/\D/g, "");
@@ -320,6 +315,7 @@ export type DbVehicle = {
   vehicle_id: number;
   plate_number: string;
   model: string | null;
+  device_id: string | null;
   driver_id: number | null;
   secondary_driver_id: number | null;
 };
@@ -348,16 +344,22 @@ async function assertDriversAvailable(client: ReturnType<typeof requireSupabase>
 export const vehiclesApi = {
   list: async () => {
     const client = requireSupabase();
+    const { data: deviceRows, error: deviceError } = await client
+      .from("device")
+      .select("device_id, vehicle_id");
+    if (deviceError) throw deviceError;
     const { data, error } = await client
       .from("vehicle")
       .select("vehicle_id, plate_number, model, driver_id, secondary_driver_id")
       .order("created_at", { ascending: false });
     if (error) throw error;
-    return (data ?? []) as DbVehicle[];
+    const devicesByVehicle = new Map((deviceRows ?? []).map((device) => [device.vehicle_id, device.device_id]));
+    return (data ?? []).map((vehicle) => ({ ...vehicle, device_id: devicesByVehicle.get(vehicle.vehicle_id) ?? null })) as DbVehicle[];
   },
-  create: async (vehicle: Pick<DbVehicle, "plate_number" | "model" | "driver_id" | "secondary_driver_id">) => {
+  create: async (vehicle: Pick<DbVehicle, "plate_number" | "model" | "device_id" | "driver_id" | "secondary_driver_id">) => {
     const client = requireSupabase();
     assertValid(validatePlate(vehicle.plate_number));
+    assertValid(validateDeviceId(vehicle.device_id));
     if (vehicle.driver_id !== null && vehicle.driver_id === vehicle.secondary_driver_id) throw new Error("Select two different drivers.");
     const plate = formatPlate(vehicle.plate_number);
     const { data: duplicate } = await client
@@ -373,18 +375,27 @@ export const vehiclesApi = {
       .select("vehicle_id, plate_number, model, driver_id, secondary_driver_id")
       .single();
     if (error) throw error;
-    return data as DbVehicle;
+    const { error: deviceError } = await client
+      .from("device")
+      .upsert({ device_id: vehicle.device_id, vehicle_id: data.vehicle_id }, { onConflict: "device_id" });
+    if (deviceError) {
+      await client.from("vehicle").delete().eq("vehicle_id", data.vehicle_id);
+      throw deviceError;
+    }
+    return { ...data, device_id: vehicle.device_id } as DbVehicle;
   },
-  update: async (id: number, patch: Partial<Pick<DbVehicle, "plate_number" | "model" | "driver_id" | "secondary_driver_id">>) => {
+  update: async (id: number, patch: Partial<Pick<DbVehicle, "plate_number" | "model" | "device_id" | "driver_id" | "secondary_driver_id">>) => {
     const client = requireSupabase();
-    const dbPatch: Partial<Pick<DbVehicle, "plate_number" | "model" | "driver_id" | "secondary_driver_id">> = { ...patch };
+    const { device_id: deviceId, ...vehiclePatch } = patch;
+    const dbPatch: Partial<Pick<DbVehicle, "plate_number" | "model" | "driver_id" | "secondary_driver_id">> = { ...vehiclePatch };
+    if (deviceId !== undefined) assertValid(validateDeviceId(deviceId));
 
     if (patch.driver_id !== undefined && patch.secondary_driver_id !== undefined && patch.driver_id !== null && patch.driver_id === patch.secondary_driver_id) {
       throw new Error("Select two different drivers.");
     }
 
     const currentVehicle = ((patch.driver_id !== undefined || patch.secondary_driver_id !== undefined)
-      ? await client.from("vehicle").select("vehicle_id, driver_id, secondary_driver_id").eq("vehicle_id", id).maybeSingle()
+      ? (await client.from("vehicle").select("vehicle_id, driver_id, secondary_driver_id").eq("vehicle_id", id).maybeSingle()).data
       : null);
 
     const nextDriverIds = [
@@ -419,10 +430,18 @@ export const vehiclesApi = {
       .select("vehicle_id, plate_number, model, driver_id, secondary_driver_id")
       .single();
     if (error) throw error;
-    return data as DbVehicle;
+    if (deviceId !== undefined) {
+      const { error: deviceError } = await client
+        .from("device")
+        .upsert({ device_id: deviceId, vehicle_id: id }, { onConflict: "device_id" });
+      if (deviceError) throw deviceError;
+    }
+    const { data: savedDevice } = await client.from("device").select("device_id").eq("vehicle_id", id).maybeSingle();
+    return { ...data, device_id: savedDevice?.device_id ?? null } as DbVehicle;
   },
   remove: async (id: number) => {
     const client = requireSupabase();
+    await client.from("device").update({ vehicle_id: null }).eq("vehicle_id", id);
     const { error } = await client.from("vehicle").delete().eq("vehicle_id", id);
     if (error) throw error;
   },
@@ -459,29 +478,21 @@ export const driverMetricsApi = {
     const deviceIds = (devices ?? []).map((device) => device.device_id as string);
     if (deviceIds.length === 0) return [];
 
-    const { data: events, error: eventError } = await client
-      .from("detection_events")
-      .select("id, device_id")
-      .in("device_id", deviceIds);
-    if (eventError) throw eventError;
-    const eventIds = (events ?? []).map((event) => event.id as number);
-    if (eventIds.length === 0) return [];
-
     let detectionsQuery = client
-      .from("detection")
-      .select("timestamp, perclos, blink_rate, yawn, body_posture, head_pose")
-      .in("detection_event_id", eventIds);
-    if (startAt) detectionsQuery = detectionsQuery.gte("timestamp", startAt);
-    if (endAt) detectionsQuery = detectionsQuery.lte("timestamp", endAt);
-    const { data: detections, error: detectionError } = await detectionsQuery.order("timestamp", { ascending: true });
+      .from("detection_data")
+      .select("created_at, reported_at, eyes_status, yawn_status, posture_status, head_pose_status")
+      .in("device_id", deviceIds);
+    if (startAt) detectionsQuery = detectionsQuery.gte("created_at", startAt);
+    if (endAt) detectionsQuery = detectionsQuery.lte("created_at", endAt);
+    const { data: detections, error: detectionError } = await detectionsQuery.order("created_at", { ascending: true });
     if (detectionError) throw detectionError;
     return (detections ?? []).map((reading) => ({
-      timestamp: reading.timestamp,
-      perclos: reading.perclos,
-      blinkRate: reading.blink_rate,
-      yawn: reading.yawn,
-      bodyPosture: reading.body_posture,
-      headPose: reading.head_pose,
+      timestamp: reading.reported_at ?? reading.created_at,
+      perclos: extractStatusMetric(reading.eyes_status),
+      blinkRate: null,
+      yawn: extractStatusMetric(reading.yawn_status),
+      bodyPosture: extractStatusMetric(reading.posture_status),
+      headPose: extractStatusMetric(reading.head_pose_status),
     })) as DriverMetricReading[];
   },
 };
@@ -529,23 +540,62 @@ type RawDetection = {
 };
 
 type RawAlert = {
-  alert_id: number;
+  id?: number;
+  alert_id?: number;
+  created_at?: string;
+  reported_at?: string | null;
   alert_level?: string;
   alert_type?: string;
   timestamp?: string;
+  driver?: string;
+  driver_name?: string;
+  vehicle?: string;
+  vehicle_name?: string;
+  plate_number?: string;
+  evidence?: boolean;
+  image_url?: string | null;
+  device_id?: string | null;
+  triggered_metrics?: string[];
+  driver_state?: string | null;
   detection?: RawDetection | RawDetection[];
 };
 
 type AlertQueryRow = RawAlert;
 
+type RecentAlertRow = RawAlert & Record<string, unknown>;
+
 function firstRelation<T>(relation: T | T[] | null | undefined): T | undefined {
   return Array.isArray(relation) ? relation[0] : relation ?? undefined;
 }
 
+function firstString(row: RecentAlertRow, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = row[key];
+    if (typeof value === "string" && value.trim()) return value;
+  }
+  return undefined;
+}
+
+function formatMetricName(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function normalizeAlertLevel(value?: string | null): string {
+  return (value ?? "").trim().toUpperCase();
+}
+
 const SEVERITY_MAP: Record<string, "High" | "Moderate" | "Low"> = {
-  High: "High",
-  Moderate: "Moderate",
-  Low: "Low",
+  HIGH: "High",
+  MODERATE: "Moderate",
+  MEDIUM: "Moderate",
+  LOW: "Low",
+  ALERT: "High",
+  WARNING: "Moderate",
+  CRITICAL: "High",
+  NORMAL: "Low",
+  INFO: "Low",
 };
 
 const EVENT_ICON_MAP: Record<string, { color: string; bg: string }> = {
@@ -564,24 +614,10 @@ function buildRecordEvidenceId(alertNumber: number) {
 
 async function fetchAlertsWithRelations(): Promise<RawAlert[]> {
   const client = requireSupabase();
-  
-  // Query alerts with nested relations through detection → recorded_evidence → device → vehicle → driver
   const { data, error } = await client
-    .from("alert")
-    .select(`
-      alert_id,
-      alert_level,
-      alert_type,
-      detection(
-        timestamp,
-        event_id,
-        recorded_evidence(
-          timestamp,
-          device_id
-        )
-      )
-    `)
-    .order("alert_id", { ascending: false });
+    .from("detection_data")
+    .select("*")
+    .order("created_at", { ascending: false });
   
   if (error) throw error;
   const rows = (data ?? []) as unknown as AlertQueryRow[];
@@ -589,10 +625,18 @@ async function fetchAlertsWithRelations(): Promise<RawAlert[]> {
 }
 
 function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: string): DbAlert {
+  const viewRow = raw as RecentAlertRow;
   const detection = firstRelation(raw.detection);
   const evidence = firstRelation(detection?.recorded_evidence);
   const detectionEvent = firstRelation(detection?.detection_events);
-  const timestamp = raw.timestamp || detection?.timestamp || evidence?.timestamp || detectionEvent?.created_at || new Date().toISOString();
+  const timestamp = raw.timestamp
+    || firstString(viewRow, ["alert_timestamp", "detection_timestamp", "event_timestamp", "reported_at", "created_at"])
+    || raw.reported_at
+    || raw.created_at
+    || detection?.timestamp
+    || evidence?.timestamp
+    || detectionEvent?.created_at
+    || new Date().toISOString();
   const date = new Date(timestamp).toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
@@ -604,26 +648,36 @@ function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: st
     hour12: false,
   });
   
-  const severity = raw.alert_level ? SEVERITY_MAP[raw.alert_level] || "Low" : "Low";
+  const severityValue = raw.alert_level || firstString(viewRow, ["severity", "level"]);
+  const severity = severityValue ? SEVERITY_MAP[normalizeAlertLevel(severityValue)] || "Low" : "Low";
   const iconMap = EVENT_ICON_MAP[severity];
+  const imageUrl = firstString(viewRow, ["image_url", "screenshot_url"]);
+  const deviceId = firstString(viewRow, ["device_id"]);
+  const eventId = firstString(viewRow, ["event_id", "evidence_event_id"]) || (raw.id !== undefined ? String(raw.id) : undefined);
+  const triggeredMetrics = Array.isArray(viewRow.triggered_metrics) ? viewRow.triggered_metrics : [];
+  const hasEvidence = typeof viewRow.evidence === "boolean"
+    ? viewRow.evidence
+    : Boolean(evidence || detectionEvent?.screenshot_url || imageUrl);
   
   return {
-    id: raw.alert_id,
-    type: raw.alert_type || "Unknown",
+    id: raw.id ?? raw.alert_id ?? 0,
+    type: raw.alert_type
+      || firstString(viewRow, ["type", "event_type"])
+      || (triggeredMetrics[0] ? formatMetricName(triggeredMetrics[0]) : "Alert"),
     driver: driverName,
     vehicle: vehicleName,
     date,
     time,
     severity,
-    evidence: Boolean(evidence || detectionEvent?.screenshot_url),
-    evidenceDetails: evidence || detectionEvent
+    evidence: hasEvidence,
+    evidenceDetails: evidence || detectionEvent || imageUrl || deviceId || eventId
       ? {
-          eventId: detection?.event_id || "Unavailable",
+          eventId: detection?.event_id || eventId || "Unavailable",
           timestamp,
-          deviceId: evidence?.device_id || detectionEvent?.device_id || null,
-          imageUrl: detectionEvent?.screenshot_url || null,
-          triggeredMetrics: detectionEvent?.triggered_metrics || [],
-          driverState: detection?.driver_state || null,
+          deviceId: evidence?.device_id || detectionEvent?.device_id || deviceId || null,
+          imageUrl: detectionEvent?.screenshot_url || imageUrl || null,
+          triggeredMetrics: detectionEvent?.triggered_metrics || triggeredMetrics,
+          driverState: detection?.driver_state || raw.driver_state || null,
         }
       : undefined,
     icon_color: iconMap.color,
@@ -634,77 +688,47 @@ function mapRawAlertToDbAlert(raw: RawAlert, driverName: string, vehicleName: st
 export const alertsApi = {
   list: async () => {
     try {
-      // Resolve device ownership with flat lookups because vehicle has two
-      // foreign keys to driver (primary and secondary).
       const client = requireSupabase();
-      const { data: devices, error: devError } = await client
-        .from("device")
-        .select("device_id, vehicle_id");
-      
-      if (devError) throw devError;
-      const vehicleIds = [...new Set((devices ?? []).map((device: RawDevice) => device.vehicle_id).filter((id): id is number => id !== null))];
+      const { data: devices, error: deviceError } = await client.from("device").select("device_id, vehicle_id");
+      if (deviceError) throw deviceError;
+      const vehicleIds = [...new Set((devices ?? []).map((device) => device.vehicle_id).filter((id): id is number => id !== null))];
       const { data: vehicles, error: vehicleError } = await client
         .from("vehicle")
         .select("vehicle_id, plate_number, driver_id, secondary_driver_id")
         .in("vehicle_id", vehicleIds.length > 0 ? vehicleIds : [-1]);
       if (vehicleError) throw vehicleError;
-
       const driverIds = [...new Set((vehicles ?? []).flatMap((vehicle) => [vehicle.driver_id, vehicle.secondary_driver_id]).filter((id): id is number => id !== null))];
       const { data: drivers, error: driverError } = await client
         .from("driver")
         .select("driver_id, first_name, last_name")
         .in("driver_id", driverIds.length > 0 ? driverIds : [-1]);
       if (driverError) throw driverError;
-
       const driverMap = new Map((drivers ?? []).map((driver) => [driver.driver_id, `${driver.first_name} ${driver.last_name}`]));
       const vehicleMap = new Map((vehicles ?? []).map((vehicle) => [vehicle.vehicle_id, {
         vehicle: vehicle.plate_number,
         driver: driverMap.get(vehicle.driver_id) || driverMap.get(vehicle.secondary_driver_id) || "Unknown Driver",
       }]));
-      const deviceMap = new Map<string, { driver: string; vehicle: string }>();
-      devices?.forEach((device: RawDevice) => {
-        const vehicleInfo = device.vehicle_id === null ? undefined : vehicleMap.get(device.vehicle_id);
-        deviceMap.set(device.device_id, vehicleInfo || { driver: "Unknown Driver", vehicle: "Unknown Vehicle" });
-      });
-      
-      // Now get alerts with detection info
+      const deviceMap = new Map((devices ?? []).map((device) => {
+        const vehicle = device.vehicle_id === null ? undefined : vehicleMap.get(device.vehicle_id);
+        return [device.device_id, vehicle || { driver: "Unknown Driver", vehicle: "Unknown Vehicle" }] as const;
+      }));
+
       const { data: alerts, error: alertError } = await client
-        .from("alert")
-        .select(`
-          alert_id,
-          alert_level,
-          alert_type,
-          detection(
-            timestamp,
-            event_id,
-            driver_state,
-            recorded_evidence(
-              timestamp,
-              device_id
-            ),
-            detection_events(
-              created_at,
-              device_id,
-              screenshot_url,
-              triggered_metrics
-            )
-          )
-        `)
-        .order("alert_id", { ascending: false });
+        .from("recent_alerts")
+        .select("*")
+        .order("created_at", { ascending: false });
       
       if (alertError) throw alertError;
       
-      // Map alerts with driver/vehicle info
-      return (alerts ?? []).map((raw: RawAlert) => {
-        const detection = firstRelation(raw.detection);
-        const evidence = firstRelation(detection?.recorded_evidence);
-        const deviceId = evidence?.device_id;
-        const deviceInfo = deviceId ? deviceMap.get(deviceId) : undefined;
-        
+      return (alerts ?? []).map((row) => {
+        const raw = row as RecentAlertRow;
+        const deviceInfo = raw.device_id ? deviceMap.get(raw.device_id) : undefined;
+        const driverName = firstString(raw, ["driver", "driver_name"]) || deviceInfo?.driver || "Unknown Driver";
+        const vehicleName = firstString(raw, ["vehicle", "vehicle_name", "plate_number"]) || deviceInfo?.vehicle || "Unknown Vehicle";
         return mapRawAlertToDbAlert(
           raw,
-          deviceInfo?.driver || "Unknown Driver",
-          deviceInfo?.vehicle || "Unknown Vehicle"
+          driverName,
+          vehicleName
         );
       });
     } catch (error) {
@@ -715,37 +739,11 @@ export const alertsApi = {
   
   create: async (a: Omit<DbAlert, "id" | "created_at">) => {
     const client = requireSupabase();
-    
-    // Create a recorded_evidence entry first
-    const evidenceEventId = buildRecordEvidenceId(0);
-    const { data: evidence, error: evidError } = await client
-      .from("recorded_evidence")
-      .insert({ event_id: evidenceEventId, timestamp: new Date().toISOString() })
-      .select("event_id")
-      .single();
-    
-    if (evidError || !evidence) throw evidError;
-    
-    // Then create detection
-    const { data: detection, error: detError } = await client
-      .from("detection")
-      .insert({
-        event_id: evidence.event_id,
-        timestamp: new Date().toISOString(),
-        driver_state: "alert",
-      })
-      .select("detection_id")
-      .single();
-    
-    if (detError || !detection) throw detError;
-    
-    // Finally create alert
     const { data: alert, error: alertError } = await client
-      .from("alert")
+      .from("detection_data")
       .insert({
-        detection_id: detection.detection_id,
-        alert_type: a.type,
-        alert_level: a.severity,
+        alert_level: a.severity === "High" ? "ALERT" : a.severity === "Moderate" ? "WARNING" : "normal",
+        triggered_metrics: [a.type],
       })
       .select("*")
       .single();
@@ -758,12 +756,10 @@ export const alertsApi = {
   
   remove: async (id: number) => {
     const client = requireSupabase();
-    
-    // Delete alert (cascade will handle detection and evidence cleanup)
     const { error } = await client
-      .from("alert")
+      .from("detection_data")
       .delete()
-      .eq("alert_id", id);
+      .eq("id", id);
     
     if (error) throw error;
   },
@@ -775,31 +771,53 @@ export type DbMetric = {
   perclos: number | null;
   blink_rate: number | null;
   yawn: number | null;
-  body_posture: number | null;
   head_pose: number | null;
+  eyes_status?: string | null;
+  yawn_status?: string | null;
+  head_pose_status?: string | null;
+  posture_status?: string | null;
 };
+
+function extractStatusMetric(rawValue: string | null): number | null {
+  if (!rawValue) return null;
+  const match = rawValue.match(/-?\d*\.?\d+(?:\.\d+)?/);
+  if (!match) return null;
+  const numericValue = Number(match[0]);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
 
 export const metricsApi = {
   list: async () => {
     const client = requireSupabase();
     const { data, error } = await client
-      .from("detection")
-      .select("timestamp, perclos, blink_rate, yawn, body_posture, head_pose")
-      .order("timestamp", { ascending: false })
+      .from("detection_data")
+      .select("created_at, reported_at, eyes_status, yawn_status, head_pose_status, posture_status, alert_level")
+      .order("reported_at", { ascending: false })
       .limit(30);
 
     if (error) throw error;
-    return (data ?? []) as DbMetric[];
+
+    return (data ?? []).map((row) => ({
+      timestamp: row.reported_at ?? row.created_at,
+      perclos: extractStatusMetric(row.eyes_status),
+      blink_rate: null,
+      yawn: extractStatusMetric(row.yawn_status),
+      body_posture: extractStatusMetric(row.posture_status),
+      head_pose: extractStatusMetric(row.head_pose_status),
+      eyes_status: row.eyes_status ?? null,
+      yawn_status: row.yawn_status ?? null,
+      head_pose_status: row.head_pose_status ?? null,
+      posture_status: row.posture_status ?? null,
+    })) as DbMetric[];
   },
 };
 
 // ---------- System Logs ----------
 export type DbLog = {
   id: number;
-  source: "System" | "Hardware" | "Behavior";
   date: string;
   time: string;
-  level: "INFO" | "WARNING" | "ERROR";
+  level: "INFO" | "ERROR";
   ref: string;
   action: string;
   actor: string;
@@ -810,7 +828,7 @@ type RawSystemLog = {
   message: string;
   log_type: string;
   timestamp: string;
-  device_id: number | null;
+  device_id: string | null;
   actor_role: string | null;
   actor_name: string | null;
   operation: string | null;
@@ -822,13 +840,12 @@ type RawBehaviorLog = {
   timestamp: string;
   date: string;
   alert_id: number | null;
-  device_id: number | null;
+  device_id: string | null;
 };
 
-function determineLogLevel(logType: string): "INFO" | "WARNING" | "ERROR" {
+function determineLogLevel(logType: string): "INFO" | "ERROR" {
   const type = (logType || "").toLowerCase();
   if (type.includes("error") || type.includes("failed")) return "ERROR";
-  if (type.includes("warning") || type.includes("warn")) return "WARNING";
   return "INFO";
 }
 
@@ -856,7 +873,6 @@ function mapSystemLogToDbLog(raw: RawSystemLog): DbLog {
 
   return {
     id: raw.systemlog_id,
-    source: "System",
     date,
     time,
     level: determineLogLevel(raw.log_type),
@@ -868,30 +884,14 @@ function mapSystemLogToDbLog(raw: RawSystemLog): DbLog {
 
 function mapBehaviorLogToDbLog(raw: RawBehaviorLog): DbLog {
   const timestamp = new Date(raw.timestamp);
-  const date = timestamp.toLocaleDateString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-  });
-  const time = timestamp.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-
-  // Behavior logs are a separate source from system/audit logs.
-  // Treating them as System/Hardware causes alert-backed rows like ALERT_15 to
-  // appear in the System Logs source filter and look like a new system event.
   return {
     id: raw.log_id,
-    source: "Behavior",
-    date,
-    time,
+    date: timestamp.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }),
+    time: timestamp.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }),
     level: "INFO",
-    ref: raw.alert_id ? `ALERT_${raw.alert_id}` : "BEHAVIOR",
-    action: raw.message,
-    actor: "System",
+    ref: raw.alert_id ? `ALERT_${raw.alert_id}` : "BEHAVIOR_EVENT",
+    action: raw.message || "Driver behavior event",
+    actor: raw.device_id || "Device",
   };
 }
 
@@ -908,22 +908,13 @@ export const logsApi = {
       
       if (sysError) throw sysError;
       
-      // Fetch behavior logs as secondary source
-      const { data: behaviorLogs, error: behError } = await client
+      const { data: behaviorLogs, error: behaviorError } = await client
         .from("behavior_log")
         .select("log_id, message, timestamp, date, alert_id, device_id")
-        .order("timestamp", { ascending: false })
-        .limit(10); // Limit to avoid too many logs
-      
-      if (behError) throw behError;
-      
-      // Keep system/audit entries and behavior entries separate so the UI can
-      // filter them correctly instead of mixing alert references into the System source.
-      const systemMapped = (sysLogs ?? []).map(mapSystemLogToDbLog);
-      const behaviorMapped = (behaviorLogs ?? []).map(mapBehaviorLogToDbLog);
+        .order("timestamp", { ascending: false });
+      if (behaviorError) throw behaviorError;
 
-      // Merge and sort by timestamp (newest first)
-      const combined = [...systemMapped, ...behaviorMapped].sort((a, b) => {
+      const combined = [...(sysLogs ?? []).map(mapSystemLogToDbLog), ...(behaviorLogs ?? []).map(mapBehaviorLogToDbLog)].sort((a, b) => {
         const aTime = `${a.date}T${a.time}`;
         const bTime = `${b.date}T${b.time}`;
         return bTime.localeCompare(aTime);

@@ -31,7 +31,6 @@ const EVENT_COLORS: Record<string, string> = {
   "Poor Posture": "#10B981",
   "Head Pose": "#1D6AE5",
   "Micro Sleep": "#8B5CF6",
-  "Blink Rate": "#EAB308",
   "Shoulder Elevation": "#10B981",
   "Body Posture": "#10B981",
 };

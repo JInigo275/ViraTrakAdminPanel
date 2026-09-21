@@ -52,7 +52,6 @@ const EVENT_COLORS: Record<string, string> = {
   "Head Pose": "#1D6AE5",
   "Shoulder Elevation": "#10B981",
   "Body Posture": "#10B981",
-  "Blink Rate": "#EAB308",
 };
 
 const PERIODS: Period[] = [
@@ -67,7 +66,7 @@ type EventBreakdown = { event: string; count: number; color: string };
 type SeverityBreakdown = { label: string; count: number; color: string; bg: string };
 type KPI = { label: string; value: string; color: string; note: string };
 type RecentEvent = { event: string; driver: string; time: string; severity: string };
-type DriverComparisonRow = { driver: string; blink: number; perclos: number; ear: number };
+type DriverComparisonRow = { driver: string; alerts: number; low: number; moderate: number; high: number };
 type MetricChartPoint = { time: string; value: number };
 
 function parseAlertTimestamp(alert: DbAlert): Date | null {
@@ -218,31 +217,29 @@ function buildKpis(alerts: DbAlert[], driversCount: number, period: Period): KPI
     { label: "High Severity", value: String(counts.High), color: "#EF4444", note: "Requires attention" },
     { label: "Moderate", value: String(counts.Moderate), color: "#F59E0B", note: "Monitor closely" },
     { label: "Low", value: String(counts.Low), color: "#10B981", note: "Within range" },
-    { label: "Active Drivers", value: String(driversCount), color: "#8B5CF6", note: period.toLowerCase() },
-    { label: "Vehicles", value: String(vehicles.size), color: "#6B7280", note: "Derived from alerts" },
   ];
 }
 
 function buildDriverComparison(alerts: DbAlert[], driverNames: string[]): DriverComparisonRow[] {
-  const counts = new Map<string, { blink: number; perclos: number; ear: number }>();
+  const counts = new Map<string, { alerts: number; low: number; moderate: number; high: number }>();
   const names = new Set<string>(driverNames);
   alerts.forEach((alert) => names.add(alert.driver));
-  names.forEach((name) => counts.set(name, { blink: 0, perclos: 0, ear: 0 }));
+  names.forEach((name) => counts.set(name, { alerts: 0, low: 0, moderate: 0, high: 0 }));
   alerts.forEach((alert) => {
-    const current = counts.get(alert.driver) ?? { blink: 0, perclos: 0, ear: 0 };
-    current.blink += 1;
-    if (alert.severity === "High") current.perclos += 1;
-    if (alert.severity === "Moderate") current.ear += 1;
+    const current = counts.get(alert.driver) ?? { alerts: 0, low: 0, moderate: 0, high: 0 };
+    current.alerts += 1;
+    current[alert.severity.toLowerCase() as "low" | "moderate" | "high"] += 1;
     counts.set(alert.driver, current);
   });
   return [...counts.entries()]
     .map(([driver, metrics]) => ({
       driver,
-      blink: metrics.blink,
-      perclos: metrics.perclos,
-      ear: metrics.ear,
+      alerts: metrics.alerts,
+      low: metrics.low,
+      moderate: metrics.moderate,
+      high: metrics.high,
     }))
-    .sort((a, b) => b.blink - a.blink || a.driver.localeCompare(b.driver))
+    .sort((a, b) => b.alerts - a.alerts || a.driver.localeCompare(b.driver))
     .slice(0, 6);
 }
 
@@ -309,10 +306,10 @@ export function AnalyticsPage() {
   const sevData = useMemo(() => buildSeverityBreakdown(alerts, period), [alerts, period]);
   const kpis = useMemo(() => buildKpis(alerts, drivers.length, period), [alerts, drivers.length, period]);
   const recentEvents = useMemo(() => buildRecentEvents(periodAlerts), [periodAlerts]);
-  const blinkTrend = useMemo(() => ({ [period]: buildSeries(alerts, period, () => 1) } as Record<Period, AlertSeriesPoint[]>), [alerts, period]);
+  const alertVolumeTrend = useMemo(() => ({ [period]: buildSeries(alerts, period, () => 1) } as Record<Period, AlertSeriesPoint[]>), [alerts, period]);
   const perclosTrend = useMemo(() => ({ [period]: buildSeries(alerts, period, (alert) => severityScore(alert.severity)) } as Record<Period, AlertSeriesPoint[]>), [alerts, period]);
   const driverComparison = useMemo(() => buildDriverComparison(periodAlerts, drivers.map((driver) => `${driver.firstName} ${driver.lastName}`.trim()).filter(Boolean)), [periodAlerts, drivers]);
-  const driverChartMax = Math.max(10, Math.ceil(Math.max(totalEvents, ...driverComparison.flatMap((row) => [row.blink, row.perclos, row.ear])) / 10) * 10);
+  const driverChartMax = Math.max(10, Math.ceil(Math.max(totalEvents, ...driverComparison.flatMap((row) => [row.alerts, row.low, row.moderate, row.high])) / 10) * 10);
   const periodMetrics = useMemo(() => metricReadings
     .filter((reading) => {
       const timestamp = new Date(reading.timestamp);
@@ -324,7 +321,6 @@ export function AnalyticsPage() {
     if (value === null) return [];
     return [{ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), value }];
   });
-  const fleetBlink = metricSeries((reading) => reading.blink_rate);
   const fleetPerclos = metricSeries((reading) => reading.perclos);
   const fleetYawn = metricSeries((reading) => reading.yawn);
   const fleetPosture = metricSeries((reading) => reading.body_posture);
@@ -823,9 +819,10 @@ export function AnalyticsPage() {
                     <YAxis domain={[0, driverChartMax]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
                     <Tooltip contentStyle={tooltipStyle} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="blink" name="Alerts" fill="#1D6AE5" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="perclos" name="High severity" fill="#F59E0B" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="ear" name="Moderate severity" fill="#EF4444" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="alerts" name="Alerts" fill="#1D6AE5" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="low" name="Low" fill="#10B981" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="moderate" name="Moderate" fill="#F59E0B" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="high" name="High" fill="#EF4444" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -1138,7 +1135,7 @@ export function AnalyticsPage() {
               width="100%"
               height={isMobile ? 130 : 160}
             >
-              <LineChart data={blinkTrend[period]} margin={{ left: -10, right: 8 }}>
+              <LineChart data={alertVolumeTrend[period]} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke={gridColor}
@@ -1224,18 +1221,6 @@ export function AnalyticsPage() {
           {/* ============================================================ */}
           {/* Fleet metric charts */}
           {/* ============================================================ */}
-          <Card title={`Blink Rate — ${period}`} subtitle="General driver fleet · blinks per minute">
-            <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
-              <LineChart data={fleetBlink} margin={{ left: -10, right: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 25]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value.toFixed(2)} bpm`, "Blink Rate"]} />
-                <Line type="monotone" dataKey="value" name="Blink Rate" stroke="#1D6AE5" strokeWidth={2.5} dot={{ r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-
           <Card title={`PERCLOS — ${period}`} subtitle="General driver fleet · percentage of time eyes closed">
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetPerclos} margin={{ left: -10, right: 8 }}>

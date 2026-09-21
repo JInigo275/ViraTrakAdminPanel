@@ -455,47 +455,70 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                 ))}
               </tr>
             </thead>
-            <tbody>
+              <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: 36, textAlign: "center", color: textSub }}>No drivers match your search.</td>
+                  <td
+                    colSpan={6}
+                    style={{
+                      padding: 36,
+                      textAlign: "center",
+                      color: textSub,
+                      fontSize: 14,
+                    }}>
+                  No drivers match your search.</td>
                 </tr>
-              ) : filtered.map((e, i) => (
-                <tr key={e.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: selected.has(e.id) ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent" }}
-                  onMouseEnter={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
-                  onMouseLeave={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
-                  <td style={{ padding: "11px 16px" }}>
-                    <div onClick={() => toggleOne(e.id)} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${selected.has(e.id) ? "#1D6AE5" : checkBorder}`, background: selected.has(e.id) ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {selected.has(e.id) && <Check size={10} color="#fff" />}
-                    </div>
-                  </td>
-                  <td style={{ padding: "11px 14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                        {(e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
+              ) : (
+                <>
+                  {filtered.map((e, i) => (
+                    <tr key={e.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: selected.has(e.id) ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent" }}
+                      onMouseEnter={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
+                      onMouseLeave={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
+                      <td style={{ padding: "11px 16px" }}>
+                        <div onClick={() => toggleOne(e.id)} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${selected.has(e.id) ? "#1D6AE5" : checkBorder}`, background: selected.has(e.id) ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          {selected.has(e.id) && <Check size={10} color="#fff" />}
+                        </div>
+                      </td>
+                      <td style={{ padding: "11px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                            {(e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
+                          </div>
+                          <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.firstName} {e.lastName}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "11px 14px", fontSize: 13, color: "#1D6AE5", fontFamily: "monospace", fontWeight: 600 }}>{e.id}</td>
+                      <td style={{ padding: "11px 14px", fontSize: 14, color: textMain, fontWeight: 500 }}>{e.vehicle}</td>
+                      <td style={{ padding: "11px 14px", fontSize: 13, color: textSub }}>{e.contact}</td>
+                      <td style={{ width: 235, padding: "11px 14px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 207, whiteSpace: "nowrap" }}>
+                          <button onClick={(event) => { event.stopPropagation(); openEdit(e); }} aria-label={`Edit ${e.firstName} ${e.lastName}`}
+                            style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                            <Edit3 size={12} /> Edit
+                          </button>
+                          {onViewDetail && (
+                            <button onClick={(event) => { event.stopPropagation(); onViewDetail(e.id); }}
+                              style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#ECFDF5", color: "#059669", border: "1px solid #A7F3D0", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                              <BarChart2 size={12} /> View
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td colSpan={6} style={{ padding: "10px 18px 15px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+                        <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: dark ? "#9CA3AF" : "#94A3B8", whiteSpace: "nowrap" }}>
+                          End of table
+                        </span>
+                        <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
                       </div>
-                      <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.firstName} {e.lastName}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: "11px 14px", fontSize: 13, color: "#1D6AE5", fontFamily: "monospace", fontWeight: 600 }}>{e.id}</td>
-                  <td style={{ padding: "11px 14px", fontSize: 14, color: textMain, fontWeight: 500 }}>{e.vehicle}</td>
-                  <td style={{ padding: "11px 14px", fontSize: 13, color: textSub }}>{e.contact}</td>
-                  <td style={{ width: 235, padding: "11px 14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 207, whiteSpace: "nowrap" }}>
-                      <button onClick={(event) => { event.stopPropagation(); openEdit(e); }} aria-label={`Edit ${e.firstName} ${e.lastName}`}
-                        style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-                        <Edit3 size={12} /> Edit
-                      </button>
-                      {onViewDetail && (
-                        <button onClick={(event) => { event.stopPropagation(); onViewDetail(e.id); }}
-                          style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#ECFDF5", color: "#059669", border: "1px solid #A7F3D0", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
-                          <BarChart2 size={12} /> View
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </div>

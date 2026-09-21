@@ -12,7 +12,6 @@ const typeIconMap: Record<string, typeof Wind> = {
   "Poor Posture": User,
   "Head Pose": Navigation,
   "Micro Sleep": Navigation,
-  "Blink Rate": Navigation,
   "Shoulder Elevation": User,
   "Body Posture": User,
 };
@@ -79,7 +78,6 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
   const rowHover = dark ? "#374151" : "#FAFAFA";
   const shadow = dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)";
   const thColor = dark ? "#6B7280" : "#9CA3AF";
-  const cardMaxHeight = isMobile ? "60vh" : "calc(100vh - 260px)";
 
   useEffect(() => {
     alertsApi.list().then((rows) => setEvents(rows.slice().sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`)).slice(0, 5).map(toRow))).catch(console.error);
@@ -88,7 +86,7 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
   const total = useMemo(() => events.length, [events]);
 
   return (
-    <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, fontFamily: "Inter, sans-serif", overflow: "hidden", transition: "background 0.2s", display: "flex", flexDirection: "column", width: "100%", minHeight: 220, maxHeight: cardMaxHeight, flex: 1 }}>
+    <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, fontFamily: "Inter, sans-serif", overflow: "hidden", transition: "background 0.2s", display: "flex", flexDirection: "column", width: "100%", minHeight: 220, height: "100%", flex: 1 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: `1px solid ${headerBorder}`, flexShrink: 0 }}>
         <span style={{ fontSize: 16, fontWeight: 600, color: textMain }}>Recent Alerts</span>
         <button
@@ -100,10 +98,10 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", overflowX: "auto", minHeight: 0 }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: isMobile ? 320 : 420 }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", minWidth: isMobile ? 320 : 520 }}>
           <thead style={{ position: "sticky", top: 0, background: cardBg, zIndex: 1 }}>
-            <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
-              {["Event", "Driver", "Time", "Severity"].map((h) => (
+            <tr>
+              {["Event", "Vehicle", "Time", "Severity"].map((h) => (
                 <th key={h} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "9px 18px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                   {h}
                 </th>
@@ -117,30 +115,45 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
                   No recent alerts available.
                 </td>
               </tr>
-            ) : events.map((e, i) => {
-              const Icon = e.icon;
-              return (
-                <tr
-                  key={i}
-                  style={{ borderBottom: i < events.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", cursor: "pointer" }}
-                  onClick={() => e.alert.evidence && setSelectedAlert(e.alert)}
-                  onMouseEnter={(el) => ((el.currentTarget as HTMLTableRowElement).style.background = rowHover)}
-                  onMouseLeave={(el) => ((el.currentTarget as HTMLTableRowElement).style.background = "transparent")}
-                >
-                  <td style={{ padding: "10px 18px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: 6, background: e.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <Icon size={12} color={e.iconColor} />
-                      </div>
-                      <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.event}</span>
+            ) : (
+              <>
+                {events.map((e, i) => {
+                  const Icon = e.icon;
+                  return (
+                    <tr
+                      key={i}
+                      style={{ borderBottom: i < events.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", cursor: "pointer" }}
+                      onClick={() => e.alert.evidence && setSelectedAlert(e.alert)}
+                      onMouseEnter={(el) => ((el.currentTarget as HTMLTableRowElement).style.background = rowHover)}
+                      onMouseLeave={(el) => ((el.currentTarget as HTMLTableRowElement).style.background = "transparent")}
+                    >
+                      <td style={{ padding: "10px 18px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                          <div style={{ width: 26, height: 26, borderRadius: 6, background: e.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <Icon size={12} color={e.iconColor} />
+                          </div>
+                          <span style={{ fontSize: 14, color: textMain, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.event}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "10px 18px", fontSize: 14, color: textMain, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.vehicle}</td>
+                      <td style={{ padding: "10px 18px", fontSize: 14, color: textSub, textAlign: "left" }}>{e.time}</td>
+                      <td style={{ padding: "10px 18px" }}><SeverityBadge severity={e.severity} /></td>
+                    </tr>
+                  );
+                })}
+                <tr>
+                  <td colSpan={4} style={{ padding: "10px 18px 0" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
+                      <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
+                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: dark ? "#9CA3AF" : "#94A3B8", whiteSpace: "nowrap" }}>
+                        End of table
+                      </span>
+                      <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
                     </div>
                   </td>
-                  <td style={{ padding: "10px 18px", fontSize: 14, color: textMain }}>{e.driver}</td>
-                  <td style={{ padding: "10px 18px", fontSize: 14, color: textSub }}>{e.time}</td>
-                  <td style={{ padding: "10px 18px" }}><SeverityBadge severity={e.severity} /></td>
                 </tr>
-              );
-            })}
+              </>
+            )}
           </tbody>
         </table>
       </div>
