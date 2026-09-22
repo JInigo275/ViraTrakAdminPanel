@@ -222,6 +222,8 @@ export function AlertsPage() {
   const isCompactDesktop = !isMobile && viewportWidth < 1200;
   const [allAlerts, setAllAlerts] = useState<AlertRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [filterType, setFilterType] = useState("");
   const [filterDriver, setFilterDriver] = useState("");
@@ -269,11 +271,16 @@ export function AlertsPage() {
   }, [isMobile]);
 
   useEffect(() => {
+    setLoading(true);
+    setLoadError(null);
     alertsApi.list()
       .then((rows) => setAllAlerts(rows.map(dbToRow)))
-      .catch(console.error)
+      .catch((error) => {
+        console.error(error);
+        setLoadError(error instanceof Error ? error.message : "Unable to load alerts.");
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshKey]);
 
   const types = [...new Set(allAlerts.map((a) => a.type))].sort();
   const drivers = [...new Set(allAlerts.map((a) => a.driver))].sort();
@@ -292,12 +299,8 @@ export function AlertsPage() {
     return true;
   });
 
-  // ============================================================
-  // Alphabetical sort by driver
-
-  // ============================================================
-  filtered = [...filtered].sort((a, b) => a.driver.localeCompare(b.driver));
-  const mobileSummaryText = isMobile ? `${filtered.length} items` : `${filtered.length} records · Sorted A–Z by driver`;
+  filtered = [...filtered].sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`));
+  const mobileSummaryText = isMobile ? `${filtered.length} items` : `${filtered.length} records · Sorted newest first`;
   const compactMobile = isMobile;
 
   useEffect(() => {
@@ -468,6 +471,15 @@ export function AlertsPage() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>Loading alerts…</td></tr>
+              ) : loadError ? (
+                <tr>
+                  <td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>
+                    <div>{loadError}</div>
+                    <button type="button" onClick={() => setRefreshKey((current) => current + 1)} style={{ marginTop: 12, padding: "7px 12px", border: "1px solid #1D6AE5", borderRadius: 7, background: "transparent", color: "#1D6AE5", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                      Retry
+                    </button>
+                  </td>
+                </tr>
               ) : visibleRows.length === 0 ? (
                 <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No records match the selected filters.</td></tr>
               ) : visibleRows.map((e, i) => {

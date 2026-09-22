@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Search, Plus, Trash2, X, Check, BarChart2, Contact, Edit3, ChevronDown } from "lucide-react";
+import { Search, Plus, Trash2, X, Check, BarChart2, Contact, Edit3, ChevronDown, ImagePlus } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, Driver, genDriverId } from "../context/AppContext";
@@ -313,6 +313,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
   const [form, setForm] = useState(emptyForm);
   const [countryCode, setCountryCode] = useState("+63");
   const [formError, setFormError] = useState("");
+  const [driverImage, setDriverImage] = useState("");
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [receipt, setReceipt] = useState<Driver | null>(null);
@@ -355,14 +356,31 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
   function toggleAll() { if (allChecked) setSelected(new Set()); else setSelected(new Set(filtered.map((e) => e.id))); }
   function toggleOne(id: string) { setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
 
-  function openAdd() { setForm(emptyForm); setCountryCode("+63"); setFormError(""); setModal("add"); }
+  function openAdd() { setForm(emptyForm); setDriverImage(""); setCountryCode("+63"); setFormError(""); setModal("add"); }
   function openEdit(e: Driver) {
     setEditTarget(e);
     const digits = e.contact.replace(/\D/g, "");
     const localDigits = digits.startsWith("63") && digits.length > 10 ? digits.slice(2) : digits.replace(/^0/, "");
     setCountryCode(e.contact.trim().startsWith("+63") ? "+63" : "+63");
     setForm({ firstName: e.firstName, lastName: e.lastName, vehicle: e.vehicle, contact: localDigits });
+    setDriverImage(e.avatar ?? "");
     setFormError(""); setModal("edit");
+  }
+
+  function handleDriverImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setFormError("Please choose an image file.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setFormError("Please choose an image smaller than 2 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setDriverImage(typeof reader.result === "string" ? reader.result : "");
+    reader.readAsDataURL(file);
   }
 
   async function handleSave() {
@@ -372,7 +390,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
     const normalized = { firstName: formatName(form.firstName), lastName: formatName(form.lastName), vehicle: form.vehicle && form.vehicle !== "Unassigned" ? formatPlate(form.vehicle) : "", contact: formatPhone(fullContact) };
 
     if (modal === "add") {
-      const newDriver: Driver = { id: genDriverId(drivers), ...normalized };
+      const newDriver: Driver = { id: genDriverId(drivers), ...normalized, avatar: driverImage || undefined };
       try {
         await addDriver(newDriver);
         setModal(null);
@@ -383,7 +401,9 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
       }
     } else if (modal === "edit" && editTarget) {
       try {
-        const driverPatch = normalized.vehicle ? normalized : { firstName: normalized.firstName, lastName: normalized.lastName, contact: normalized.contact };
+        const driverPatch = normalized.vehicle
+          ? { ...normalized, avatar: driverImage || null }
+          : { firstName: normalized.firstName, lastName: normalized.lastName, contact: normalized.contact, avatar: driverImage || null };
         await updateDriver(editTarget.id, driverPatch);
         setModal(null);
         setSuccessMessage("Changes Saved");
@@ -483,8 +503,8 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                       </td>
                       <td style={{ padding: "11px 14px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                            {(e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
+                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0, overflow: "hidden" }}>
+                            {e.avatar ? <img src={e.avatar} alt={`${e.firstName} ${e.lastName}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
                           </div>
                           <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.firstName} {e.lastName}</span>
                         </div>
@@ -537,6 +557,22 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <FloatField label="Driver First Name" value={form.firstName} onChange={(v) => setForm((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Driver Last Name" value={form.lastName} onChange={(v) => setForm((p) => ({ ...p, lastName: v }))} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, border: `1.5px dashed ${dark ? "#4B5563" : "#D1D5DB"}`, borderRadius: 10 }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700, flexShrink: 0, overflow: "hidden" }}>
+                {driverImage ? <img src={driverImage} alt="Driver preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (form.firstName[0] ?? "") + (form.lastName[0] ?? "") || "?"}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: textMain }}>Driver image</div>
+                <div style={{ fontSize: 12, color: textSub, marginTop: 2 }}>{driverImage ? "Update or remove the profile photo" : "Add a photo for the circle avatar"}</div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: dark ? "#374151" : "#F3F4F6", borderRadius: 7, color: dark ? "#F9FAFB" : "#374151", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  <ImagePlus size={14} /> {driverImage ? "Replace" : "Choose image"}
+                  <input type="file" accept="image/*" onChange={handleDriverImageChange} style={{ display: "none" }} />
+                </label>
+                {driverImage && <button type="button" onClick={() => setDriverImage("")} style={{ padding: "7px 10px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#D1D5DB"}`, borderRadius: 7, color: "#EF4444", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>Remove</button>}
+              </div>
             </div>
             <div style={{ position: "relative" }}>
               <select

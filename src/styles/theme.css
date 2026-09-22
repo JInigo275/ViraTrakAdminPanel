@@ -17,6 +17,8 @@
   --muted-foreground: #717182;
   --accent: #e9ebef;
   --accent-foreground: #030213;
+  --panel-glow: rgba(29, 106, 229, 0.10);
+  --panel-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
   --border: rgba(0, 0, 0, 0.1);
@@ -151,9 +153,21 @@
     background-clip: content-box;
   }
 
+  html {
+    background: linear-gradient(180deg, #f6f8fc 0%, #eef3f9 100%);
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-family);
+    background: linear-gradient(180deg, #f6f8fc 0%, #eef3f9 100%);
+    min-height: 100vh;
+    color: #0f172a;
+  }
+
+  #root {
+    min-height: 100vh;
   }
 
   body * {
@@ -187,8 +201,34 @@
     outline-offset: 2px;
   }
 
+  table {
+    border-spacing: 0;
+  }
+
   table tbody tr {
-    transition: background-color 0.16s ease;
+    transition: background-color 0.16s ease, transform 0.16s ease;
+  }
+
+  table tbody tr:hover {
+    transform: translateY(-1px);
+  }
+
+  .page-shell {
+    background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.95));
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(10px);
+  }
+
+  .soft-panel {
+    background: rgba(255,255,255,0.82);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(10px);
+  }
+
+  .soft-divider {
+    background: linear-gradient(90deg, rgba(148,163,184,.25), rgba(148,163,184,.08), rgba(148,163,184,.25));
   }
 
   /**

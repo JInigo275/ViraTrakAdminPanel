@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, ChevronDown, Edit3, Plus, Search, Trash2, Truck, UserRound, X } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, Vehicle } from "../context/AppContext";
+import { deviceIdsApi } from "../../api/viratrak";
 import { formatPlate, validatePlate } from "../../utils/validation";
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
@@ -30,7 +31,8 @@ export function VehiclesPage() {
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [plate, setPlate] = useState("");
   const [model, setModel] = useState("");
-  const [deviceNumber, setDeviceNumber] = useState("");
+  const [deviceId, setDeviceId] = useState("");
+  const [availableDeviceIds, setAvailableDeviceIds] = useState<string[]>([]);
   const [driverIds, setDriverIds] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -46,6 +48,14 @@ export function VehiclesPage() {
   const inputBg = dark ? "#374151" : "#F8F9FA";
   const thColor = dark ? "#6B7280" : "#9CA3AF";
   const checkBorder = dark ? "#4B5563" : "#D1D5DB";
+  const deviceOptions = deviceId && !availableDeviceIds.includes(deviceId)
+    ? [deviceId, ...availableDeviceIds]
+    : availableDeviceIds;
+  useEffect(() => {
+    deviceIdsApi.list().then(setAvailableDeviceIds).catch((loadError) => {
+      console.error("Could not load detection devices:", loadError);
+    });
+  }, []);
   const filtered = vehicles.filter((vehicle) => `${vehicle.plateNumber} ${vehicle.model} ${vehicle.driverIds.map((id) => drivers.find((driver) => driver.id === id)?.firstName ?? "").join(" ")} ${vehicle.driverIds.map((id) => drivers.find((driver) => driver.id === id)?.lastName ?? "").join(" ")}`.toLowerCase().includes(search.toLowerCase()));
   const allChecked = filtered.length > 0 && filtered.every((vehicle) => selectedIds.has(vehicle.id));
   const someChecked = filtered.some((vehicle) => selectedIds.has(vehicle.id));
@@ -60,11 +70,11 @@ export function VehiclesPage() {
   }
 
   function openAdd() {
-    setEditing(null); setPlate(""); setModel(""); setDeviceNumber(""); setDriverIds([]); setError(""); setModal("add");
+    setEditing(null); setPlate(""); setModel(""); setDeviceId(""); setDriverIds([]); setError(""); setModal("add");
   }
 
   function openEdit(vehicle: Vehicle) {
-    setEditing(vehicle); setPlate(vehicle.plateNumber); setModel(vehicle.model); setDeviceNumber(vehicle.deviceId?.replace("pi-viratrak-", "") ?? ""); setDriverIds(vehicle.driverIds); setError(""); setModal("edit");
+    setEditing(vehicle); setPlate(vehicle.plateNumber); setModel(vehicle.model); setDeviceId(vehicle.deviceId ?? ""); setDriverIds(vehicle.driverIds); setError(""); setModal("edit");
   }
 
   async function save() {
@@ -72,10 +82,10 @@ export function VehiclesPage() {
     if (plateError) { setError(plateError); return; }
     if (driverIds.length > 2) { setError("A vehicle can have up to two drivers."); return; }
     if (new Set(driverIds).size !== driverIds.length) { setError("Select two different drivers."); return; }
-    if (!/^\d{2,3}$/.test(deviceNumber)) { setError("Device ID must contain 2 or 3 digits."); return; }
+    if (!deviceId) { setError("Select a device."); return; }
     setSaving(true); setError("");
     try {
-      const patch = { plateNumber: formatPlate(plate), model: model.trim(), deviceId: `pi-viratrak-${deviceNumber}`, driverIds };
+      const patch = { plateNumber: formatPlate(plate), model: model.trim(), deviceId, driverIds };
       if (editing) await updateVehicle(editing.id, patch);
       else await addVehicle(patch);
       setModal(null);
@@ -149,7 +159,15 @@ export function VehiclesPage() {
         {/* Vehicle directory table */}
         {/* ============================================================ */}
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", minWidth: isMobile ? 780 : 900 }}>
+            <colgroup>
+              <col style={{ width: 52 }} />
+              <col style={{ width: 180 }} />
+              <col style={{ width: 175 }} />
+              <col style={{ width: 150 }} />
+              <col style={{ width: 205 }} />
+              <col style={{ width: 230 }} />
+            </colgroup>
             <thead>
               <tr style={{ borderBottom: `1px solid ${border}` }}>
                 <th style={{ padding: "10px 16px", width: 40 }}>
@@ -213,15 +231,24 @@ export function VehiclesPage() {
           <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>Truck model<input value={model} onChange={(event) => setModel(event.target.value)} placeholder="e.g. Volvo FH" style={{ display: "block", width: "100%", marginTop: 6, padding: "11px 12px", border: `1px solid ${border}`, borderRadius: 8, background: dark ? "#374151" : "#fff", color: text }} /></label>
           <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>
             Device ID
-            <div style={{ display: "flex", alignItems: "center", marginTop: 6, border: `1px solid ${border}`, borderRadius: 8, background: dark ? "#374151" : "#fff", overflow: "hidden", transition: "border-color .15s" }}>
-              <span aria-hidden="true" style={{ padding: "11px 0 11px 12px", color: muted, fontSize: 15, whiteSpace: "nowrap" }}>pi-viratrak-</span>
-              <input aria-label="Device ID number" value={deviceNumber} maxLength={2} inputMode="numeric" onChange={(event) => setDeviceNumber(event.target.value.replace(/\D/g, "").slice(0, 3))} placeholder="##" style={{ minWidth: 0, flex: 1, padding: "11px 12px 11px 2px", border: "none", outline: "none", background: "transparent", color: text, fontSize: 15 }} />
+            <div style={{ position: "relative", marginTop: 6 }}>
+              <select
+                aria-label="Device ID"
+                value={deviceId}
+                onChange={(event) => setDeviceId(event.target.value)}
+                style={{ width: "100%", padding: "11px 38px 11px 12px", border: `1px solid ${border}`, borderRadius: 8, background: dark ? "#374151" : "#fff", color: deviceId ? text : muted, appearance: "none", cursor: deviceOptions.length ? "pointer" : "not-allowed", fontFamily: "Inter, sans-serif", fontSize: 15, fontWeight: 400 }}
+                disabled={!deviceOptions.length}
+              >
+                <option value="">{deviceOptions.length ? "Select a device" : "No devices available"}</option>
+                {deviceOptions.map((availableDeviceId) => <option key={availableDeviceId} value={availableDeviceId}>{availableDeviceId}</option>)}
+              </select>
+              <ChevronDown size={16} color={muted} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
             </div>
           </label>
           <div>
             <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>Designated drivers <span style={{ color: muted, fontWeight: 400 }}>(up to 2)</span></label>
             <div style={{ display: "grid", gap: 8, marginTop: 6 }}>
-              {[0, 1].map((index) => {
+              {[0, ...(driverIds[0] ? [1] : [])].map((index) => {
                 const availableDrivers = availableDriversForSlot(index);
                 const hasCurrentDriver = Boolean(driverIds[index]);
                 const noDriversAvailable = availableDrivers.length === 0 && !hasCurrentDriver;

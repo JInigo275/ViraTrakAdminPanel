@@ -28,6 +28,7 @@ export interface Driver {
   lastName: string;
   vehicle: string;
   contact: string;
+  avatar?: string | null;
 }
 
 export interface Vehicle {
@@ -150,6 +151,7 @@ function mapDriver(e: DbDriver): Driver {
     lastName: e.last_name,
     vehicle: e.vehicle,
     contact: e.contact,
+    avatar: e.avatar ?? null,
   };
 }
 
@@ -343,7 +345,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       vehicle: e.vehicle, contact: e.contact,
     };
     const saved = await driversApi.create(db);
-    setDrivers((prev) => [...prev, mapDriver(saved)]);
+    setDrivers((prev) => [...prev, { ...mapDriver(saved), avatar: e.avatar }]);
     if (e.vehicle) {
       setVehicles((prev) => prev.map((vehicle) => vehicle.plateNumber === e.vehicle
         ? { ...vehicle, driverIds: [...vehicle.driverIds, saved.id] }
@@ -358,6 +360,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (patch.lastName !== undefined) dbPatch.last_name = patch.lastName;
     if (patch.vehicle !== undefined) dbPatch.vehicle = patch.vehicle;
     if (patch.contact !== undefined) dbPatch.contact = patch.contact;
+    if (patch.avatar !== undefined) dbPatch.avatar = patch.avatar;
     const saved = await driversApi.update(id, dbPatch);
     setDrivers((prev) => prev.map((e) => e.id === id ? mapDriver(saved) : e));
     if (patch.vehicle !== undefined) {

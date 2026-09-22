@@ -74,7 +74,7 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
 
   return (
     <div style={{ display: "flex", flex: 1, minHeight: 0, height: "100%", overflow: "hidden", flexDirection: isMobile ? "column" : "row" }}>
-      <main style={{ flex: 1, minHeight: 0, height: "100%", overflowY: "auto", overflowX: "hidden", padding: isMobile ? 16 : 20, display: "flex", flexDirection: "column", gap: 16, background: bg, transition: "background 0.2s" }}>
+      <main style={{ flex: 1, minHeight: 0, height: "100%", overflowY: "auto", overflowX: "hidden", padding: isMobile ? 16 : 20, display: "flex", flexDirection: "column", gap: 16, background: dark ? "linear-gradient(180deg, #111827 0%, #0f172a 100%)" : "linear-gradient(180deg, #f8fafc 0%, #eef3f9 100%)", transition: "background 0.2s" }}>
         <PageHeader icon={LayoutDashboard} iconColor="#1D6AE5" title="Dashboard" subtitle="Overview of driver behavior and system status">
           {!isMobile && renderPeriodSelector()}
         </PageHeader>

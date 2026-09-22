@@ -39,7 +39,6 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
     ],
     ["Event ID", details?.eventId || "Unavailable"],
     ["Device", details?.deviceId || "Unavailable"],
-    ["Driver state", details?.driverState || "Unavailable"],
   ];
 
   return (
