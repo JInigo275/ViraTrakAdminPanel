@@ -52,6 +52,7 @@ CREATE TABLE public.vehicle (
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   secondary_driver_id integer,
+  device_id text UNIQUE,
   CONSTRAINT vehicle_pkey PRIMARY KEY (vehicle_id),
   CONSTRAINT vehicle_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES public.driver(driver_id),
   CONSTRAINT vehicle_secondary_driver_id_fkey FOREIGN KEY (secondary_driver_id) REFERENCES public.driver(driver_id)
@@ -64,10 +65,11 @@ CREATE TABLE public.behavior_log (
   alert_id integer,
   device_id text,
   vehicle_id integer,
-  detection_id integer,
+  detection_id bigint,
   event_id text,
   CONSTRAINT behavior_log_pkey PRIMARY KEY (log_id),
-  CONSTRAINT behavior_log_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicle(vehicle_id)
+  CONSTRAINT behavior_log_vehicle_id_fkey FOREIGN KEY (vehicle_id) REFERENCES public.vehicle(vehicle_id),
+  CONSTRAINT behavior_log_detection_id_fkey FOREIGN KEY (detection_id) REFERENCES public.detection_data(id)
 );
 CREATE TABLE public.system_log (
   systemlog_id integer GENERATED ALWAYS AS IDENTITY NOT NULL,

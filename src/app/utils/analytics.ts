@@ -28,11 +28,9 @@ const EVENT_COLORS: Record<string, string> = {
   Yawning: "#EF4444",
   Yawn: "#EF4444",
   "Eyes Closed": "#F59E0B",
-  Distraction: "#EAB308",
+  "Eyes": "#F59E0B",
   Posture: "#10B981",
-  "Poor Posture": "#10B981",
   "Head Pose": "#8B5CF6",
-  "Micro Sleep": "#8B5CF6",
   "Shoulder Elevation": "#10B981",
   "Body Posture": "#10B981",
 };

@@ -319,7 +319,7 @@ export function AnalyticsPage() {
   const metricSeries = (selector: (reading: DbMetric) => number | null): MetricChartPoint[] => periodMetrics.flatMap((reading) => {
     const value = selector(reading);
     if (value === null) return [];
-    return [{ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), value }];
+    return [{ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }), value }];
   });
   const fleetPerclos = metricSeries((reading) => reading.perclos);
   const fleetYawn = metricSeries((reading) => reading.yawn);
@@ -1221,7 +1221,7 @@ export function AnalyticsPage() {
           {/* ============================================================ */}
           {/* Fleet metric charts */}
           {/* ============================================================ */}
-          <Card title={`PERCLOS — ${period}`} subtitle="General driver fleet · percentage of time eyes closed">
+          <Card title={`Percentage of Eye Closure  — ${period}`} subtitle="General driver fleet · percentage of time eyes closed">
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetPerclos} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />

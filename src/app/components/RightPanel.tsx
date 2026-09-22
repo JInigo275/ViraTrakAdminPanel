@@ -56,6 +56,7 @@ export function RightPanel() {
                 <Pie data={donutData} cx="50%" cy="50%" innerRadius={isMobile ? 48 : 66} outerRadius={isMobile ? 70 : 92} dataKey="value" strokeWidth={0} paddingAngle={3}>
                   {donutData.map((entry, idx) => <Cell key={`donut-cell-${idx}`} fill={entry.color} />)}
                 </Pie>
+                <Tooltip contentStyle={tooltipStyle} />
               </PieChart>
             </ResponsiveContainer>
             <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", display: "flex", flexDirection: "column", alignItems: "center", pointerEvents: "none" }}>

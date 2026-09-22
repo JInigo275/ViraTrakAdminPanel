@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Wind, EyeOff, Zap, User, Navigation } from "lucide-react";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
+import { useApp } from "../context/AppContext";
 import { alertsApi, DbAlert } from "../../api/viratrak";
 import { EvidencePreviewModal } from "./EvidencePreviewModal";
 
@@ -69,6 +70,7 @@ interface RecentEventsProps {
 
 export function RecentEvents({ onViewAll }: RecentEventsProps) {
   const { dark } = useTheme();
+  const { currentUser, drivers, vehicles } = useApp();
   const isMobile = useIsMobile();
   const [events, setEvents] = useState<EventRow[]>([]);
   const [selectedAlert, setSelectedAlert] = useState<DbAlert | null>(null);
@@ -82,8 +84,29 @@ export function RecentEvents({ onViewAll }: RecentEventsProps) {
   const thColor = dark ? "#6B7280" : "#9CA3AF";
 
   useEffect(() => {
-    alertsApi.list().then((rows) => setEvents(rows.slice().sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`)).slice(0, 5).map(toRow))).catch(console.error);
-  }, []);
+    if (!currentUser?.id) {
+      setEvents([]);
+      return;
+    }
+
+    let isActive = true;
+    alertsApi.list()
+      .then((rows) => {
+        if (!isActive) return;
+        setEvents(rows
+          .slice()
+          .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))
+          .slice(0, 5)
+          .map(toRow));
+      })
+      .catch((error) => {
+        if (isActive) console.error(error);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser?.id, drivers.length, vehicles.length]);
 
   const total = useMemo(() => events.length, [events]);
 

@@ -114,6 +114,7 @@ export type DbDriver = {
   last_name: string;
   vehicle: string;
   contact: string;
+  avatar?: string | null;
 };
 
 type RawDriver = {
@@ -121,6 +122,7 @@ type RawDriver = {
   first_name: string;
   last_name: string;
   contact_info: string | null;
+  avatar?: string | null;
   vehicle?: { plate_number: string; model: string | null }[];
 };
 
@@ -152,7 +154,7 @@ async function fetchDriversWithVehicles(): Promise<RawDriver[]> {
   const client = requireSupabase();
   const { data: driverRows, error: driverError } = await client
     .from("driver")
-    .select("driver_id, first_name, last_name, contact_info")
+    .select("driver_id, first_name, last_name, contact_info, avatar")
     .order("created_at", { ascending: false });
 
   if (driverError) throw driverError;
@@ -190,6 +192,7 @@ function mapRawDriverToDbDriver(raw: RawDriver): DbDriver {
     last_name: raw.last_name,
     vehicle: raw.vehicle?.[0]?.plate_number || raw.vehicle?.[0]?.model || "Unassigned",
     contact: raw.contact_info || "",
+    avatar: raw.avatar ?? null,
   };
 }
 
@@ -216,8 +219,9 @@ export const driversApi = {
         last_name: formatName(e.last_name),
         license_number: `LIC-${Date.now()}`,
         contact_info: formatPhone(e.contact),
+        avatar: e.avatar ?? null,
       })
-      .select("driver_id, first_name, last_name, contact_info")
+      .select("driver_id, first_name, last_name, contact_info, avatar")
       .single();
 
     if (error) throw error;
@@ -262,9 +266,10 @@ export const driversApi = {
         first_name: patch.first_name === undefined ? undefined : formatName(patch.first_name),
         last_name: patch.last_name === undefined ? undefined : formatName(patch.last_name),
         contact_info: patch.contact === undefined ? undefined : formatPhone(patch.contact),
+        avatar: patch.avatar === undefined ? undefined : patch.avatar ?? null,
       })
       .eq("driver_id", numericId)
-      .select("driver_id, first_name, last_name, contact_info")
+      .select("driver_id, first_name, last_name, contact_info, avatar")
       .single();
 
     if (error) throw error;
@@ -446,6 +451,21 @@ export const vehiclesApi = {
   },
 };
 
+export const deviceIdsApi = {
+  list: async () => {
+    const client = requireSupabase();
+    const { data, error } = await client
+      .from("detection_data")
+      .select("device_id")
+      .not("device_id", "is", null)
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return [...new Set((data ?? [])
+      .map((row) => row.device_id)
+      .filter((deviceId): deviceId is string => Boolean(deviceId?.trim())))];
+  },
+};
+
 export type DriverMetricReading = {
   timestamp: string;
   perclos: number | null;
@@ -533,6 +553,7 @@ type RawDetection = {
 type RawAlert = {
   id?: number;
   alert_id?: number;
+  vehicle_id?: number | null;
   created_at?: string;
   reported_at?: string | null;
   alert_level?: string;
@@ -582,7 +603,7 @@ const SEVERITY_MAP: Record<string, "High" | "Moderate" | "Low"> = {
   MODERATE: "Moderate",
   MEDIUM: "Moderate",
   LOW: "Low",
-  ALERT: "High",
+  ALERT: "Low",
   WARNING: "Moderate",
   CRITICAL: "High",
   NORMAL: "Low",
@@ -647,6 +668,7 @@ function mapRawAlertToDbAlerts(raw: RawAlert, driverName: string, vehicleName: s
   const time = new Date(timestamp).toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     hour12: false,
   });
   
@@ -719,8 +741,8 @@ export const alertsApi = {
       return (alerts ?? []).flatMap((row) => {
         const raw = row as RecentAlertRow;
         const vehicleInfo = raw.vehicle_id === null || raw.vehicle_id === undefined ? undefined : vehicleMap.get(raw.vehicle_id);
-        const driverName = firstString(raw, ["driver", "driver_name"]) || vehicleInfo?.driver || "Unknown Driver";
-        const vehicleName = firstString(raw, ["vehicle", "vehicle_name", "plate_number"]) || vehicleInfo?.vehicle || "Unknown Vehicle";
+        const driverName = vehicleInfo?.driver || firstString(raw, ["driver", "driver_name"]) || "Unknown Driver";
+        const vehicleName = vehicleInfo?.vehicle || firstString(raw, ["vehicle", "vehicle_name", "plate_number"]) || "Unknown Vehicle";
         return mapRawAlertToDbAlerts(
           raw,
           driverName,
@@ -729,7 +751,7 @@ export const alertsApi = {
       });
     } catch (error) {
       console.error("Error fetching alerts from schema2:", error);
-      return [];
+      throw error;
     }
   },
   
@@ -767,6 +789,7 @@ export type DbMetric = {
   perclos: number | null;
   blink_rate: number | null;
   yawn: number | null;
+  body_posture: number | null;
   head_pose: number | null;
   eyes_status?: string | null;
   yawn_status?: string | null;
@@ -788,8 +811,7 @@ export const metricsApi = {
     const { data, error } = await client
       .from("detection_data")
       .select("created_at, reported_at, eyes_status, yawn_status, head_pose_status, posture_status, alert_level")
-      .order("reported_at", { ascending: false })
-      .limit(30);
+      .order("reported_at", { ascending: false });
 
     if (error) throw error;
 

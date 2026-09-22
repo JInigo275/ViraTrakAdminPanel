@@ -10,6 +10,8 @@ type MetricDefinition = {
   color: string;
   unit: string;
   getValue: (metric: DbMetric) => number | null;
+  showGraph?: boolean;
+  isCount?: boolean;
 };
 
 export type DashboardRange = "Today" | "This Week" | "This Month" | "This Year";
@@ -93,6 +95,12 @@ export function StatCards({ range }: StatCardsProps) {
   const cardBg = dark ? "#1F2937" : "#fff";
   const textSub = dark ? "#9CA3AF" : "#6B7280";
   const shadow = dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)";
+  const readingLabel = {
+    Today: "Today's reading",
+    "This Week": "This week's reading",
+    "This Month": "This month's reading",
+    "This Year": "This year's reading",
+  }[range];
 
   useEffect(() => {
     metricsApi.list().then(setMetrics).catch(console.error);
@@ -103,28 +111,64 @@ export function StatCards({ range }: StatCardsProps) {
     [metrics, range],
   );
 
+  const unassignedDrivers = useMemo(
+    () => drivers.filter((driver) => !vehicles.some((vehicle) => vehicle.driverIds.includes(driver.id))).length,
+    [drivers, vehicles],
+  );
+
+  const unassignedVehicles = useMemo(
+    () => vehicles.filter((vehicle) => vehicle.driverIds.length === 0).length,
+    [vehicles],
+  );
+
   const cards = useMemo(() => [...metricDefinitions.map((definition) => ({
     ...definition,
     series: buildMetricSeries(filteredMetrics, definition),
   })), {
-    title: "Active Drivers",
+    title: "Assigned Drivers",
     color: "#1D6AE5",
     unit: "",
-    getValue: () => drivers.length,
-    series: [{ value: drivers.length }],
+    getValue: () => drivers.filter((driver) => vehicles.some((vehicle) => vehicle.driverIds.includes(driver.id))).length,
+    series: [{ value: drivers.filter((driver) => vehicles.some((vehicle) => vehicle.driverIds.includes(driver.id))).length }],
+    showGraph: false,
+    isCount: true,
   }, {
-    title: "Vehicles",
-    color: "#6B7280",
+    title: "Unassigned Drivers",
+    color: "#DC2626",
     unit: "",
-    getValue: () => vehicles.length,
-    series: [{ value: vehicles.length }],
-  }], [filteredMetrics, drivers.length, vehicles.length]);
+    getValue: () => unassignedDrivers,
+    series: [{ value: unassignedDrivers }],
+    showGraph: false,
+    isCount: true,
+  }, {
+    title: "Assigned Vehicles",
+    color: "#16A34A",
+    unit: "",
+    getValue: () => vehicles.filter((vehicle) => vehicle.driverIds.length > 0).length,
+    series: [{ value: vehicles.filter((vehicle) => vehicle.driverIds.length > 0).length }],
+    showGraph: false,
+    isCount: true,
+  }, {
+    title: "Unassigned Vehicles",
+    color: "#7C3AED",
+    unit: "",
+    getValue: () => unassignedVehicles,
+    series: [{ value: unassignedVehicles }],
+    showGraph: false,
+    isCount: true,
+  }], [filteredMetrics, unassignedDrivers, unassignedVehicles, drivers, vehicles]);
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))", gap: isMobile ? 8 : 12, fontFamily: "Inter, sans-serif" }}>
       {cards.map((c) => {
-        const latestValue = c.series.length > 0 ? c.series[c.series.length - 1].value : null;
-        const displayValue = latestValue === null ? "--" : `${latestValue}${c.unit}`;
+        const averageValue = c.series.length > 0
+          ? c.series.reduce((sum, point) => sum + point.value, 0) / c.series.length
+          : null;
+        const displayValue = averageValue === null
+          ? "--"
+          : c.isCount
+            ? `${Math.round(averageValue)}`
+            : `${averageValue.toFixed(2)}${c.unit}`;
         return (
           <div
             key={c.title}
@@ -139,15 +183,27 @@ export function StatCards({ range }: StatCardsProps) {
             }}
           >
             <div style={{ fontSize: 12, color: textSub, fontWeight: 600, letterSpacing: "0.02em" }}>{c.title}</div>
-            <div style={{ fontSize: 25, fontWeight: 700, color: c.color, lineHeight: 1 }}>{displayValue}</div>
-            <div style={{ fontSize: 12, color: textSub }}>Latest reading</div>
-            <div style={{ width: "100%", height: 52 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={c.series.length ? c.series : [{ value: 0 }]} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-                  <Line type="monotone" dataKey="value" stroke={c.color} strokeWidth={2.2} dot={false} connectNulls />
-                </LineChart>
-              </ResponsiveContainer>
+            <div
+              style={{
+                fontSize: 25,
+                fontWeight: 700,
+                color: c.color,
+                lineHeight: 1,
+                ...(c.isCount ? { flex: 1, width: "100%", display: "flex", alignItems: "center", justifyContent: "center" } : {}),
+              }}
+            >
+              {displayValue}
             </div>
+            {!c.isCount && <div style={{ fontSize: 12, color: textSub }}>{readingLabel}</div>}
+            {c.showGraph !== false && (
+              <div style={{ width: "100%", height: 52 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={c.series.length ? c.series : [{ value: 0 }]} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+                    <Line type="monotone" dataKey="value" stroke={c.color} strokeWidth={2.2} dot={false} connectNulls />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         );
       })}
