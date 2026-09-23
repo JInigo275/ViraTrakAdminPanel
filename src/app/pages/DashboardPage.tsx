@@ -73,11 +73,13 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
   );
 
   return (
-    <div style={{ display: "flex", flex: 1, minHeight: 0, height: "100%", overflow: "hidden", flexDirection: isMobile ? "column" : "row" }}>
-      <main style={{ flex: 1, minHeight: 0, height: "100%", overflowY: "auto", overflowX: "hidden", padding: isMobile ? 16 : 20, display: "flex", flexDirection: "column", gap: 16, background: dark ? "linear-gradient(180deg, #111827 0%, #0f172a 100%)" : "linear-gradient(180deg, #f8fafc 0%, #eef3f9 100%)", transition: "background 0.2s" }}>
-        <PageHeader icon={LayoutDashboard} iconColor="#1D6AE5" title="Dashboard" subtitle="Overview of driver behavior and system status">
+    <div style={{ display: "flex", flex: 1, minHeight: 0, height: "100%", overflow: isMobile ? "visible" : "hidden", flexDirection: isMobile ? "column" : "row" }}>
+      <main style={{ flex: 1, minHeight: 0, height: "100%", overflowY: "auto", overflowX: isMobile ? "clip" : "hidden", padding: isMobile ? "8px 8px 0" : 20, display: "flex", flexDirection: "column", gap: 16, background: dark ? "linear-gradient(180deg, #111827 0%, #0f172a 100%)" : "linear-gradient(180deg, #f8fafc 0%, #eef3f9 100%)", transition: "background 0.2s" }}>
+        <div style={{ flexShrink: 0 }}>
+          <PageHeader icon={LayoutDashboard} iconColor="#1D6AE5" title="Dashboard" subtitle="Overview of driver behavior and system status">
           {!isMobile && renderPeriodSelector()}
-        </PageHeader>
+          </PageHeader>
+        </div>
 
         {isMobile && (
           <div style={{ marginBottom: 4 }}>
@@ -86,7 +88,7 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
         )}
 
         <StatCards range={period} />
-        <div style={{ minHeight: 0, flex: 1, display: "flex", height: isMobile ? "100%" : "clamp(300px, 48vh, 520px)", maxHeight: isMobile ? undefined : "520px" }}>
+        <div style={{ minHeight: 0, flex: isMobile ? "none" : 1, display: "flex", height: isMobile ? 420 : "clamp(300px, 48vh, 520px)", maxHeight: isMobile ? undefined : "520px" }}>
           <RecentEvents onViewAll={onNavigate ? () => onNavigate("alerts") : undefined} />
         </div>
 

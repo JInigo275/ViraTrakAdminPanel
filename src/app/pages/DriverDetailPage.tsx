@@ -278,12 +278,12 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 {/* ============================================================ */}
         {/* Period selector */}
         {/* ============================================================ */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: `1px solid ${borderColor}` }}>
+        <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "center", justifyContent: "space-between", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 10 : 0, padding: "12px 18px", borderBottom: `1px solid ${borderColor}` }}>
           <span style={{ fontSize: 15, fontWeight: 600, color: "#000000" }}>Metrics Summary</span>
-          <div style={{ display: "flex", gap: 4 }}>
+          <div style={{ display: "flex", gap: 4, width: isMobile ? "100%" : undefined, flexWrap: "wrap" }}>
             {(["Today", "This Week", "This Month", "This Year"] as PeriodKey[]).map((p) => (
               <button key={p} onClick={() => setPeriod(p)}
-                style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${period === p ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, background: period === p ? "#1D6AE5" : "transparent", color: "#000000", fontSize: 12, fontWeight: period === p ? 600 : 400, cursor: "pointer", fontFamily: "Inter, sans-serif", transition: "all 0.15s", whiteSpace: "nowrap" }}>
+                style={{ flex: isMobile ? "1 1 calc(50% - 4px)" : undefined, padding: "5px 10px", borderRadius: 6, border: `1px solid ${period === p ? "#1D6AE5" : (dark ? "#374151" : "#E5E7EB")}`, background: period === p ? "#1D6AE5" : "transparent", color: "#000000", fontSize: 12, fontWeight: period === p ? 600 : 400, cursor: "pointer", fontFamily: "Inter, sans-serif", transition: "all 0.15s", whiteSpace: "nowrap" }}>
                 {p}
               </button>
             ))}

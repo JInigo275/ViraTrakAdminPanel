@@ -152,13 +152,13 @@ export function SystemLogsPage() {
       {/* ============================================================ */}
       {/* Filters */}
       {/* ============================================================ */}
-      <div style={{ display: "flex", gap: 18, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", minWidth: 220, boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
+      <div style={{ display: "flex", gap: 18, marginBottom: 16, alignItems: isMobile ? "stretch" : "center", flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", minWidth: isMobile ? 0 : 220, width: isMobile ? "100%" : undefined, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
           <Search size={13} color={textSub} />
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search logs…" style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
         </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center", paddingLeft: isMobile ? 0 : 20 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", paddingLeft: isMobile ? 0 : 20, flexWrap: "wrap" }}>
           <span style={{ fontSize: 12, color: thColor, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Type:</span>
           {["All", "INFO", "ERROR"].map((f) => (
             <button key={f} onClick={() => setLevelFilter(f)}
