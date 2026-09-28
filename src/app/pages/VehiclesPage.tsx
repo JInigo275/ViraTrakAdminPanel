@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { Check, ChevronDown, Edit3, Plus, Search, Trash2, Truck, UserRound, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Edit3,
+  Plus,
+  Search,
+  Trash2,
+  Truck,
+  UserRound,
+  X,
+} from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useTheme } from "../context/ThemeContext";
@@ -7,14 +17,62 @@ import { useApp, Vehicle } from "../context/AppContext";
 import { deviceIdsApi } from "../../api/viratrak";
 import { formatPlate, validatePlate } from "../../utils/validation";
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
   const { dark } = useTheme();
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,23,42,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ width: "100%", maxWidth: 460, background: dark ? "#1F2937" : "#fff", borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,.25)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 22px", borderBottom: `1px solid ${dark ? "#374151" : "#E5E7EB"}` }}>
-          <strong style={{ color: dark ? "#F9FAFB" : "#111827", fontSize: 17 }}>{title}</strong>
-          <button onClick={onClose} aria-label="Close" style={{ border: 0, background: "transparent", color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer" }}><X size={18} /></button>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
+        background: "rgba(15,23,42,.45)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 460,
+          background: dark ? "#1F2937" : "#fff",
+          borderRadius: 14,
+          boxShadow: "0 20px 60px rgba(0,0,0,.25)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "18px 22px",
+            borderBottom: `1px solid ${dark ? "#374151" : "#E5E7EB"}`,
+          }}
+        >
+          <strong style={{ color: dark ? "#F9FAFB" : "#111827", fontSize: 17 }}>
+            {title}
+          </strong>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              border: 0,
+              background: "transparent",
+              color: dark ? "#9CA3AF" : "#6B7280",
+              cursor: "pointer",
+            }}
+          >
+            <X size={18} />
+          </button>
         </div>
         <div style={{ padding: 22 }}>{children}</div>
       </div>
@@ -25,7 +83,8 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 export function VehiclesPage() {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
-  const { vehicles, drivers, addVehicle, updateVehicle, removeVehicle } = useApp();
+  const { vehicles, drivers, addVehicle, updateVehicle, removeVehicle } =
+    useApp();
   const [search, setSearch] = useState("");
   const [modal, setModal] = useState<"add" | "edit" | null>(null);
   const [editing, setEditing] = useState<Vehicle | null>(null);
@@ -48,118 +107,316 @@ export function VehiclesPage() {
   const inputBg = dark ? "#374151" : "#F8F9FA";
   const thColor = dark ? "#6B7280" : "#9CA3AF";
   const checkBorder = dark ? "#4B5563" : "#D1D5DB";
-  const deviceOptions = deviceId && !availableDeviceIds.includes(deviceId)
-    ? [deviceId, ...availableDeviceIds]
-    : availableDeviceIds;
+  const deviceOptions =
+    deviceId && !availableDeviceIds.includes(deviceId)
+      ? [deviceId, ...availableDeviceIds]
+      : availableDeviceIds;
   useEffect(() => {
-    deviceIdsApi.list().then(setAvailableDeviceIds).catch((loadError) => {
-      console.error("Could not load detection devices:", loadError);
-    });
+    deviceIdsApi
+      .list()
+      .then(setAvailableDeviceIds)
+      .catch((loadError) => {
+        console.error("Could not load detection devices:", loadError);
+      });
   }, []);
-  const filtered = vehicles.filter((vehicle) => `${vehicle.plateNumber} ${vehicle.model} ${vehicle.driverIds.map((id) => drivers.find((driver) => driver.id === id)?.firstName ?? "").join(" ")} ${vehicle.driverIds.map((id) => drivers.find((driver) => driver.id === id)?.lastName ?? "").join(" ")}`.toLowerCase().includes(search.toLowerCase()));
-  const allChecked = filtered.length > 0 && filtered.every((vehicle) => selectedIds.has(vehicle.id));
+  const filtered = vehicles.filter((vehicle) =>
+    `${vehicle.plateNumber} ${vehicle.model} ${vehicle.driverIds.map((id) => drivers.find((driver) => driver.id === id)?.firstName ?? "").join(" ")} ${vehicle.driverIds.map((id) => drivers.find((driver) => driver.id === id)?.lastName ?? "").join(" ")}`
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  );
+  const allChecked =
+    filtered.length > 0 &&
+    filtered.every((vehicle) => selectedIds.has(vehicle.id));
   const someChecked = filtered.some((vehicle) => selectedIds.has(vehicle.id));
 
   function availableDriversForSlot(index: number) {
-    const selectedInOtherSlot = new Set(driverIds.filter((_, selectedIndex) => selectedIndex !== index));
+    const selectedInOtherSlot = new Set(
+      driverIds.filter((_, selectedIndex) => selectedIndex !== index),
+    );
     return drivers.filter((driver) => {
       if (selectedInOtherSlot.has(driver.id)) return false;
       if (driverIds[index] === driver.id) return true;
-      return !vehicles.some((vehicle) => vehicle.id !== editing?.id && vehicle.driverIds.includes(driver.id));
+      return !vehicles.some(
+        (vehicle) =>
+          vehicle.id !== editing?.id && vehicle.driverIds.includes(driver.id),
+      );
     });
   }
 
   function openAdd() {
-    setEditing(null); setPlate(""); setModel(""); setDeviceId(""); setDriverIds([]); setError(""); setModal("add");
+    setEditing(null);
+    setPlate("");
+    setModel("");
+    setDeviceId("");
+    setDriverIds([]);
+    setError("");
+    setModal("add");
   }
 
   function openEdit(vehicle: Vehicle) {
-    setEditing(vehicle); setPlate(vehicle.plateNumber); setModel(vehicle.model); setDeviceId(vehicle.deviceId ?? ""); setDriverIds(vehicle.driverIds); setError(""); setModal("edit");
+    setEditing(vehicle);
+    setPlate(vehicle.plateNumber);
+    setModel(vehicle.model);
+    setDeviceId(vehicle.deviceId ?? "");
+    setDriverIds(vehicle.driverIds);
+    setError("");
+    setModal("edit");
   }
 
   async function save() {
     const plateError = validatePlate(plate);
-    if (plateError) { setError(plateError); return; }
-    if (driverIds.length > 2) { setError("A vehicle can have up to two drivers."); return; }
-    if (new Set(driverIds).size !== driverIds.length) { setError("Select two different drivers."); return; }
-    if (!deviceId) { setError("Select a device."); return; }
-    setSaving(true); setError("");
+    if (plateError) {
+      setError(plateError);
+      return;
+    }
+    if (driverIds.length > 2) {
+      setError("A vehicle can have up to two drivers.");
+      return;
+    }
+    if (new Set(driverIds).size !== driverIds.length) {
+      setError("Select two different drivers.");
+      return;
+    }
+    if (!deviceId) {
+      setError("Select a device.");
+      return;
+    }
+    setSaving(true);
+    setError("");
     try {
-      const patch = { plateNumber: formatPlate(plate), model: model.trim(), deviceId, driverIds };
+      const patch = {
+        plateNumber: formatPlate(plate),
+        model: model.trim(),
+        deviceId,
+        driverIds,
+      };
       if (editing) await updateVehicle(editing.id, patch);
       else await addVehicle(patch);
       setModal(null);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Could not save vehicle.");
-    } finally { setSaving(false); }
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Could not save vehicle.",
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function unassign(vehicle: Vehicle) {
-    try { await updateVehicle(vehicle.id, { driverIds: [] }); }
-    catch (saveError) { setError(saveError instanceof Error ? saveError.message : "Could not unassign vehicle."); }
+    try {
+      await updateVehicle(vehicle.id, { driverIds: [] });
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Could not unassign vehicle.",
+      );
+    }
   }
 
   async function massDelete() {
-    await Promise.all([...selectedIds].map((id) => removeVehicle(id).catch((deleteError) => setError(deleteError instanceof Error ? deleteError.message : "Could not delete vehicle."))));
+    await Promise.all(
+      [...selectedIds].map((id) =>
+        removeVehicle(id).catch((deleteError) =>
+          setError(
+            deleteError instanceof Error
+              ? deleteError.message
+              : "Could not delete vehicle.",
+          ),
+        ),
+      ),
+    );
     setSelectedIds(new Set());
     setConfirmDelete(false);
   }
 
   function driverName(ids: string[]) {
     if (ids.length === 0) return "Unassigned";
-    return ids.map((id) => {
-      const driver = drivers.find((item) => item.id === id);
-      return driver ? `${driver.firstName} ${driver.lastName}` : "Unknown driver";
-    }).join(" / ");
+    return ids
+      .map((id) => {
+        const driver = drivers.find((item) => item.id === id);
+        return driver
+          ? `${driver.firstName} ${driver.lastName}`
+          : "Unknown driver";
+      })
+      .join(" / ");
   }
 
   function toggleSelected(id: number) {
     setSelectedIds((current) => {
       const next = new Set(current);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
 
   function toggleSelectAll() {
-    setSelectedIds(allChecked ? new Set() : new Set(filtered.map((vehicle) => vehicle.id)));
+    setSelectedIds(
+      allChecked ? new Set() : new Set(filtered.map((vehicle) => vehicle.id)),
+    );
   }
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif" }}>
+    <div
+      style={{
+        flex: 1,
+        overflowY: "auto",
+        padding: isMobile ? 16 : 24,
+        background: bg,
+        fontFamily: "Inter, sans-serif",
+      }}
+    >
       {/* ============================================================ */}
       {/* Vehicle page header and management actions */}
       {/* ============================================================ */}
-      <PageHeader icon={Truck} iconColor="#1D6AE5" title="Vehicle Information" subtitle="Vehicle profiles and driver assignments" />
+      <PageHeader
+        icon={Truck}
+        iconColor="#1D6AE5"
+        title="Vehicle Information"
+        subtitle="Vehicle profiles and driver assignments"
+      />
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 16,
+          flexWrap: "wrap",
+        }}
+      >
         {/* ============================================================ */}
         {/* Vehicle search, bulk actions, and create action */}
         {/* ============================================================ */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 320, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: inputBg,
+            border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`,
+            borderRadius: 8,
+            padding: "8px 12px",
+            width: isMobile ? "100%" : 320,
+            boxSizing: "border-box",
+            boxShadow: dark
+              ? "0 0 0 1px rgba(156,163,175,.12)"
+              : "0 1px 3px rgba(15,23,42,.06)",
+          }}
+        >
           <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search vehicles..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: text, width: "100%", fontFamily: "Inter, sans-serif" }} />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search vehicles..."
+            style={{
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              fontSize: 14,
+              color: text,
+              width: "100%",
+              fontFamily: "Inter, sans-serif",
+            }}
+          />
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : "auto" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginLeft: isMobile ? 0 : "auto",
+            width: isMobile ? "100%" : "auto",
+          }}
+        >
           {selectedIds.size > 0 && (
-            <button onClick={() => setConfirmDelete(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", background: "#FEF2F2", color: "#EF4444", borderRadius: 8, border: "1px solid #FECACA", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", flex: isMobile ? 1 : undefined }}>
+            <button
+              onClick={() => setConfirmDelete(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                padding: "8px 14px",
+                background: "#FEF2F2",
+                color: "#EF4444",
+                borderRadius: 8,
+                border: "1px solid #FECACA",
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+                flex: isMobile ? 1 : undefined,
+              }}
+            >
               <Trash2 size={14} /> Delete {selectedIds.size} Selected
             </button>
           )}
-          <button onClick={openAdd} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", background: "#1D6AE5", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", flex: isMobile ? 1 : undefined }}>
+          <button
+            onClick={openAdd}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              padding: "8px 14px",
+              background: "#1D6AE5",
+              color: "#fff",
+              borderRadius: 8,
+              border: "none",
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "pointer",
+              fontFamily: "Inter, sans-serif",
+              flex: isMobile ? 1 : undefined,
+            }}
+          >
             <Plus size={14} /> Add Vehicle
           </button>
         </div>
       </div>
 
-      {error && !modal && <div style={{ marginBottom: 14, padding: "10px 12px", color: "#B91C1C", background: dark ? "#451A1A" : "#FEF2F2", borderRadius: 8, fontSize: 14 }}>{error}</div>}
+      {error && !modal && (
+        <div
+          style={{
+            marginBottom: 14,
+            padding: "10px 12px",
+            color: "#B91C1C",
+            background: dark ? "#451A1A" : "#FEF2F2",
+            borderRadius: 8,
+            fontSize: 14,
+          }}
+        >
+          {error}
+        </div>
+      )}
 
-      <div style={{ background: card, borderRadius: 12, boxShadow: dark ? "0 1px 4px rgba(0,0,0,.3)" : "0 1px 4px rgba(0,0,0,.07)", overflow: "hidden" }}>
+      <div
+        style={{
+          background: card,
+          borderRadius: 12,
+          boxShadow: dark
+            ? "0 1px 4px rgba(0,0,0,.3)"
+            : "0 1px 4px rgba(0,0,0,.07)",
+          overflow: "hidden",
+        }}
+      >
         {/* ============================================================ */}
         {/* Vehicle directory table */}
         {/* ============================================================ */}
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", minWidth: isMobile ? 780 : 900 }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              tableLayout: "fixed",
+              minWidth: isMobile ? 780 : 900,
+            }}
+          >
             <colgroup>
               <col style={{ width: 52 }} />
               <col style={{ width: 180 }} />
@@ -171,12 +428,56 @@ export function VehiclesPage() {
             <thead>
               <tr style={{ borderBottom: `1px solid ${border}` }}>
                 <th style={{ padding: "10px 16px", width: 40 }}>
-                  <div onClick={toggleSelectAll} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${allChecked ? "#1D6AE5" : checkBorder}`, background: allChecked ? "#1D6AE5" : "transparent", cursor: filtered.length ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div
+                    onClick={toggleSelectAll}
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: 4,
+                      border: `1.5px solid ${allChecked ? "#1D6AE5" : checkBorder}`,
+                      background: allChecked ? "#1D6AE5" : "transparent",
+                      cursor: filtered.length ? "pointer" : "default",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
                     {allChecked && <Check size={10} color="#fff" />}
-                    {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
+                    {!allChecked && someChecked && (
+                      <div
+                        style={{
+                          width: 8,
+                          height: 2,
+                          background: "#1D6AE5",
+                          borderRadius: 1,
+                        }}
+                      />
+                    )}
                   </div>
                 </th>
-                {["Vehicle", "Device ID", "Model", "Assigned Drivers", "Actions"].map((heading) => <th key={heading} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{heading}</th>)}
+                {[
+                  "Vehicle",
+                  "Device ID",
+                  "Model",
+                  "Assigned Drivers",
+                  "Actions",
+                ].map((heading) => (
+                  <th
+                    key={heading}
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: thColor,
+                      textAlign: "left",
+                      padding: "10px 14px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {heading}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -198,23 +499,247 @@ export function VehiclesPage() {
                 <>
                   {filtered.map((vehicle, index) => {
                     const isSelected = selectedIds.has(vehicle.id);
-                    return <tr key={vehicle.id} style={{ borderBottom: index < filtered.length - 1 ? `1px solid ${border}` : "none", transition: "background .1s", background: isSelected ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent", cursor: "pointer" }} onClick={() => toggleSelected(vehicle.id)} onMouseEnter={(event) => { if (!isSelected) event.currentTarget.style.background = rowHover; }} onMouseLeave={(event) => { if (!isSelected) event.currentTarget.style.background = "transparent"; }}>
-                      <td style={{ padding: "11px 16px" }}><div onClick={(event) => { event.stopPropagation(); toggleSelected(vehicle.id); }} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${isSelected ? "#1D6AE5" : checkBorder}`, background: isSelected ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{isSelected && <Check size={10} color="#fff" />}</div></td>
-                      <td style={{ padding: "11px 14px" }}><div style={{ display: "flex", alignItems: "center", gap: 8 }}><div style={{ width: 30, height: 30, borderRadius: 8, background: dark ? "#243B63" : "#EBF2FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#1D6AE5", flexShrink: 0 }}><Truck size={15} /></div><span style={{ fontSize: 14, color: text, fontWeight: 500 }}>{vehicle.plateNumber}</span></div></td>
-                      <td style={{ padding: "11px 14px", fontSize: 14, color: muted, whiteSpace: "nowrap" }}>{vehicle.deviceId || "No device assigned"}</td>
-                      <td style={{ padding: "11px 14px", fontSize: 14, color: muted }}>{vehicle.model || "Model not specified"}</td>
-                      <td style={{ padding: "11px 14px", fontSize: 14, color: vehicle.driverIds.length ? text : muted, fontWeight: 500 }}><div style={{ display: "flex", alignItems: "center", gap: 7 }}><UserRound size={14} color={vehicle.driverIds.length ? "#10B981" : muted} />{driverName(vehicle.driverIds)}</div></td>
-                      <td style={{ width: 190, padding: "11px 14px" }}><div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 162 }}><button onClick={(event) => { event.stopPropagation(); openEdit(vehicle); }} aria-label={`Edit ${vehicle.plateNumber}`} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}><Edit3 size={12} /> Edit</button>{vehicle.driverIds.length > 0 ? <button onClick={(event) => { event.stopPropagation(); void unassign(vehicle); }} style={{ padding: "5px 10px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>Remove driver</button> : <button onClick={(event) => { event.stopPropagation(); openEdit(vehicle); }} style={{ padding: "5px 10px", background: "#ECFDF5", color: "#059669", border: "1px solid #A7F3D0", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", whiteSpace: "nowrap" }}>Select driver</button>}</div></td>
-                    </tr>;
+                    return (
+                      <tr
+                        key={vehicle.id}
+                        style={{
+                          borderBottom:
+                            index < filtered.length - 1
+                              ? `1px solid ${border}`
+                              : "none",
+                          transition: "background .1s",
+                          background: isSelected
+                            ? dark
+                              ? "#1e3a5f"
+                              : "#EBF2FF"
+                            : "transparent",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => toggleSelected(vehicle.id)}
+                        onMouseEnter={(event) => {
+                          if (!isSelected)
+                            event.currentTarget.style.background = rowHover;
+                        }}
+                        onMouseLeave={(event) => {
+                          if (!isSelected)
+                            event.currentTarget.style.background =
+                              "transparent";
+                        }}
+                      >
+                        <td style={{ padding: "11px 16px" }}>
+                          <div
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleSelected(vehicle.id);
+                            }}
+                            style={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: 4,
+                              border: `1.5px solid ${isSelected ? "#1D6AE5" : checkBorder}`,
+                              background: isSelected
+                                ? "#1D6AE5"
+                                : "transparent",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            {isSelected && <Check size={10} color="#fff" />}
+                          </div>
+                        </td>
+                        <td style={{ padding: "11px 14px" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 30,
+                                height: 30,
+                                borderRadius: 8,
+                                background: dark ? "#243B63" : "#EBF2FF",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "#1D6AE5",
+                                flexShrink: 0,
+                              }}
+                            >
+                              <Truck size={15} />
+                            </div>
+                            <span
+                              style={{
+                                fontSize: 14,
+                                color: text,
+                                fontWeight: 500,
+                              }}
+                            >
+                              {vehicle.plateNumber}
+                            </span>
+                          </div>
+                        </td>
+                        <td
+                          style={{
+                            padding: "11px 14px",
+                            fontSize: 14,
+                            color: muted,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {vehicle.deviceId || "No device assigned"}
+                        </td>
+                        <td
+                          style={{
+                            padding: "11px 14px",
+                            fontSize: 14,
+                            color: muted,
+                          }}
+                        >
+                          {vehicle.model || "Model not specified"}
+                        </td>
+                        <td
+                          style={{
+                            padding: "11px 14px",
+                            fontSize: 14,
+                            color: vehicle.driverIds.length ? text : muted,
+                            fontWeight: 500,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 7,
+                            }}
+                          >
+                            <UserRound
+                              size={14}
+                              color={
+                                vehicle.driverIds.length ? "#10B981" : muted
+                              }
+                            />
+                            {driverName(vehicle.driverIds)}
+                          </div>
+                        </td>
+                        <td style={{ width: 190, padding: "11px 14px" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              minWidth: 162,
+                            }}
+                          >
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openEdit(vehicle);
+                              }}
+                              aria-label={`Edit ${vehicle.plateNumber}`}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 5,
+                                padding: "5px 10px",
+                                background: "#EBF2FF",
+                                color: "#1D6AE5",
+                                border: "none",
+                                borderRadius: 6,
+                                fontSize: 13,
+                                fontWeight: 500,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              <Edit3 size={12} /> Edit
+                            </button>
+                            {vehicle.driverIds.length > 0 ? (
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void unassign(vehicle);
+                                }}
+                                style={{
+                                  padding: "5px 10px",
+                                  background: "#FEF2F2",
+                                  color: "#EF4444",
+                                  border: "1px solid #FECACA",
+                                  borderRadius: 6,
+                                  fontSize: 13,
+                                  fontWeight: 500,
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                Remove driver
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  openEdit(vehicle);
+                                }}
+                                style={{
+                                  padding: "5px 10px",
+                                  background: "#ECFDF5",
+                                  color: "#059669",
+                                  border: "1px solid #A7F3D0",
+                                  borderRadius: 6,
+                                  fontSize: 13,
+                                  fontWeight: 500,
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                Select driver
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
                   })}
                   <tr>
                     <td colSpan={6} style={{ padding: "10px 18px 15px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
-                        <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: dark ? "#9CA3AF" : "#94A3B8", whiteSpace: "nowrap" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                          width: "100%",
+                        }}
+                      >
+                        <span
+                          style={{
+                            flex: 1,
+                            height: 1,
+                            background: dark ? "#374151" : "#E5E7EB",
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: "0.12em",
+                            textTransform: "uppercase",
+                            color: dark ? "#9CA3AF" : "#94A3B8",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           End of table
                         </span>
-                        <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
+                        <span
+                          style={{
+                            flex: 1,
+                            height: 1,
+                            background: dark ? "#374151" : "#E5E7EB",
+                          }}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -225,69 +750,285 @@ export function VehiclesPage() {
         </div>
       </div>
 
-      {modal && <Modal title={modal === "add" ? "Add truck vehicle" : "Edit truck vehicle"} onClose={() => setModal(null)}>
-        <div style={{ display: "grid", gap: 14 }}>
-          <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>Plate number<input value={plate} maxLength={8} onChange={(event) => setPlate(formatPlate(event.target.value))} placeholder="e.g. TRK1024" style={{ display: "block", width: "100%", marginTop: 6, padding: "11px 12px", border: `1px solid ${border}`, borderRadius: 8, background: dark ? "#374151" : "#fff", color: text, textTransform: "uppercase" }} /></label>
-          <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>Truck model<input value={model} onChange={(event) => setModel(event.target.value)} placeholder="e.g. Volvo FH" style={{ display: "block", width: "100%", marginTop: 6, padding: "11px 12px", border: `1px solid ${border}`, borderRadius: 8, background: dark ? "#374151" : "#fff", color: text }} /></label>
-          <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>
-            Device ID
-            <div style={{ position: "relative", marginTop: 6 }}>
-              <select
-                aria-label="Device ID"
-                value={deviceId}
-                onChange={(event) => setDeviceId(event.target.value)}
-                style={{ width: "100%", padding: "11px 38px 11px 12px", border: `1px solid ${border}`, borderRadius: 8, background: dark ? "#374151" : "#fff", color: deviceId ? text : muted, appearance: "none", cursor: deviceOptions.length ? "pointer" : "not-allowed", fontFamily: "Inter, sans-serif", fontSize: 15, fontWeight: 400 }}
-                disabled={!deviceOptions.length}
-              >
-                <option value="">{deviceOptions.length ? "Select a device" : "No devices available"}</option>
-                {deviceOptions.map((availableDeviceId) => <option key={availableDeviceId} value={availableDeviceId}>{availableDeviceId}</option>)}
-              </select>
-              <ChevronDown size={16} color={muted} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+      {modal && (
+        <Modal
+          title={modal === "add" ? "Add truck vehicle" : "Edit truck vehicle"}
+          onClose={() => setModal(null)}
+        >
+          <div style={{ display: "grid", gap: 14 }}>
+            <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>
+              Plate number
+              <input
+                value={plate}
+                maxLength={8}
+                onChange={(event) => setPlate(formatPlate(event.target.value))}
+                placeholder="e.g. TRK1024"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  marginTop: 6,
+                  padding: "11px 12px",
+                  border: `1px solid ${border}`,
+                  borderRadius: 8,
+                  background: dark ? "#374151" : "#fff",
+                  color: text,
+                  textTransform: "uppercase",
+                }}
+              />
+            </label>
+            <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>
+              Truck model
+              <input
+                value={model}
+                onChange={(event) => setModel(event.target.value)}
+                placeholder="e.g. Volvo FH"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  marginTop: 6,
+                  padding: "11px 12px",
+                  border: `1px solid ${border}`,
+                  borderRadius: 8,
+                  background: dark ? "#374151" : "#fff",
+                  color: text,
+                }}
+              />
+            </label>
+            <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>
+              Device ID
+              <div style={{ position: "relative", marginTop: 6 }}>
+                <select
+                  aria-label="Device ID"
+                  value={deviceId}
+                  onChange={(event) => setDeviceId(event.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "11px 38px 11px 12px",
+                    border: `1px solid ${border}`,
+                    borderRadius: 8,
+                    background: dark ? "#374151" : "#fff",
+                    color: deviceId ? text : muted,
+                    appearance: "none",
+                    cursor: deviceOptions.length ? "pointer" : "not-allowed",
+                    fontFamily: "Inter, sans-serif",
+                    fontSize: 15,
+                    fontWeight: 400,
+                  }}
+                  disabled={!deviceOptions.length}
+                >
+                  <option value="">
+                    {deviceOptions.length
+                      ? "Select a device"
+                      : "No devices available"}
+                  </option>
+                  {deviceOptions.map((availableDeviceId) => (
+                    <option key={availableDeviceId} value={availableDeviceId}>
+                      {availableDeviceId}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  size={16}
+                  color={muted}
+                  style={{
+                    position: "absolute",
+                    right: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+            </label>
+            <div>
+              <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>
+                Designated drivers{" "}
+                <span style={{ color: muted, fontWeight: 400 }}>(up to 2)</span>
+              </label>
+              <div style={{ display: "grid", gap: 8, marginTop: 6 }}>
+                {[0, ...(driverIds[0] ? [1] : [])].map((index) => {
+                  const availableDrivers = availableDriversForSlot(index);
+                  const hasCurrentDriver = Boolean(driverIds[index]);
+                  const noDriversAvailable =
+                    availableDrivers.length === 0 && !hasCurrentDriver;
+                  return (
+                    <div key={index} style={{ position: "relative" }}>
+                      <select
+                        value={driverIds[index] ?? ""}
+                        disabled={noDriversAvailable}
+                        onChange={(event) =>
+                          setDriverIds((current) => {
+                            const next = [...current];
+                            if (event.target.value)
+                              next[index] = event.target.value;
+                            else next.splice(index, 1);
+                            return next.filter(Boolean);
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "11px 38px 11px 12px",
+                          border: `1px solid ${noDriversAvailable ? (dark ? "#4B5563" : "#D1D5DB") : border}`,
+                          borderRadius: 8,
+                          background: noDriversAvailable
+                            ? dark
+                              ? "#374151"
+                              : "#F3F4F6"
+                            : dark
+                              ? "#374151"
+                              : "#fff",
+                          color: noDriversAvailable
+                            ? dark
+                              ? "#6B7280"
+                              : "#9CA3AF"
+                            : text,
+                          appearance: "none",
+                          cursor: noDriversAvailable
+                            ? "not-allowed"
+                            : "pointer",
+                        }}
+                      >
+                        <option value="">
+                          {noDriversAvailable
+                            ? "No Drivers Available"
+                            : index === 0
+                              ? "Select a driver"
+                              : "Second driver (optional)"}
+                        </option>
+                        {availableDrivers.map((driver) => (
+                          <option key={driver.id} value={driver.id}>
+                            {driver.firstName} {driver.lastName}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        size={16}
+                        color={
+                          noDriversAvailable
+                            ? dark
+                              ? "#6B7280"
+                              : "#9CA3AF"
+                            : muted
+                        }
+                        style={{
+                          position: "absolute",
+                          right: 12,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          pointerEvents: "none",
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </label>
-          <div>
-            <label style={{ color: text, fontSize: 13, fontWeight: 600 }}>Designated drivers <span style={{ color: muted, fontWeight: 400 }}>(up to 2)</span></label>
-            <div style={{ display: "grid", gap: 8, marginTop: 6 }}>
-              {[0, ...(driverIds[0] ? [1] : [])].map((index) => {
-                const availableDrivers = availableDriversForSlot(index);
-                const hasCurrentDriver = Boolean(driverIds[index]);
-                const noDriversAvailable = availableDrivers.length === 0 && !hasCurrentDriver;
-                return (
-                  <div key={index} style={{ position: "relative" }}>
-                    <select
-                      value={driverIds[index] ?? ""}
-                      disabled={noDriversAvailable}
-                      onChange={(event) => setDriverIds((current) => { const next = [...current]; if (event.target.value) next[index] = event.target.value; else next.splice(index, 1); return next.filter(Boolean); })}
-                      style={{ width: "100%", padding: "11px 38px 11px 12px", border: `1px solid ${noDriversAvailable ? (dark ? "#4B5563" : "#D1D5DB") : border}`, borderRadius: 8, background: noDriversAvailable ? (dark ? "#374151" : "#F3F4F6") : (dark ? "#374151" : "#fff"), color: noDriversAvailable ? (dark ? "#6B7280" : "#9CA3AF") : text, appearance: "none", cursor: noDriversAvailable ? "not-allowed" : "pointer" }}
-                    >
-                      <option value="">{noDriversAvailable ? "No Drivers Available" : index === 0 ? "Select a driver" : "Second driver (optional)"}</option>
-                      {availableDrivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.firstName} {driver.lastName}</option>)}
-                    </select>
-                    <ChevronDown size={16} color={noDriversAvailable ? (dark ? "#6B7280" : "#9CA3AF") : muted} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
-                  </div>
-                );
-              })}
-            </div>
+            {error && (
+              <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>
+            )}
+            <button
+              onClick={() => void save()}
+              disabled={saving}
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 7,
+                border: 0,
+                borderRadius: 8,
+                padding: "11px 14px",
+                background: saving ? "#93C5FD" : "#1D6AE5",
+                color: "#fff",
+                fontWeight: 600,
+                cursor: saving ? "wait" : "pointer",
+              }}
+            >
+              {saving ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Check size={16} /> Save vehicle
+                </>
+              )}
+            </button>
           </div>
-          {error && <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>}
-          <button onClick={() => void save()} disabled={saving} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 7, border: 0, borderRadius: 8, padding: "11px 14px", background: saving ? "#93C5FD" : "#1D6AE5", color: "#fff", fontWeight: 600, cursor: saving ? "wait" : "pointer" }}>{saving ? "Saving..." : <><Check size={16} /> Save vehicle</>}</button>
-        </div>
-      </Modal>}
+        </Modal>
+      )}
 
       {confirmDelete && (
         <Modal title="Delete Vehicles" onClose={() => setConfirmDelete(false)}>
-          <p style={{ fontSize: 15, color: dark ? "#D1D5DB" : "#374151", lineHeight: 1.6, marginBottom: 12 }}>
-            Are you sure you want to delete the following vehicles? This action cannot be undone.
+          <p
+            style={{
+              fontSize: 15,
+              color: dark ? "#D1D5DB" : "#374151",
+              lineHeight: 1.6,
+              marginBottom: 12,
+            }}
+          >
+            Are you sure you want to delete the following vehicles? This action
+            cannot be undone.
           </p>
-          <div style={{ maxHeight: 140, overflowY: "auto", display: "grid", gap: 6, marginBottom: 20, padding: 10, background: dark ? "#451A1A" : "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8 }}>
+          <div
+            style={{
+              maxHeight: 140,
+              overflowY: "auto",
+              display: "grid",
+              gap: 6,
+              marginBottom: 20,
+              padding: 10,
+              background: dark ? "#451A1A" : "#FEF2F2",
+              border: "1px solid #FECACA",
+              borderRadius: 8,
+            }}
+          >
             {[...selectedIds].map((id) => {
               const vehicle = vehicles.find((item) => item.id === id);
-              return <strong key={id} style={{ color: dark ? "#FCA5A5" : "#B91C1C", fontSize: 14 }}>{vehicle ? `${vehicle.plateNumber}${vehicle.model ? ` - ${vehicle.model}` : ""}` : id}</strong>;
+              return (
+                <strong
+                  key={id}
+                  style={{ color: dark ? "#FCA5A5" : "#B91C1C", fontSize: 14 }}
+                >
+                  {vehicle
+                    ? `${vehicle.plateNumber}${vehicle.model ? ` - ${vehicle.model}` : ""}`
+                    : id}
+                </strong>
+              );
             })}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>
-            <button onClick={() => void massDelete()} style={{ flex: 1, padding: "11px", background: "#EF4444", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Delete</button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              style={{
+                flex: 1,
+                padding: "11px",
+                background: "transparent",
+                border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`,
+                borderRadius: 8,
+                fontSize: 14,
+                color: dark ? "#9CA3AF" : "#6B7280",
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => void massDelete()}
+              style={{
+                flex: 1,
+                padding: "11px",
+                background: "#EF4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              Delete
+            </button>
           </div>
         </Modal>
       )}

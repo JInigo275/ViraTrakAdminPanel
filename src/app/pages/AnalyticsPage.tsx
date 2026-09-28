@@ -22,8 +22,6 @@ import {
   Legend,
 } from "recharts";
 
-
-
 // ============================================================
 // Helpers and chart data
 // ============================================================
@@ -32,11 +30,7 @@ type JsPdfWithAutoTable = jsPDF & {
   lastAutoTable?: { finalY: number };
 };
 
-type Period =
-  | "Today"
-  | "This Week"
-  | "This Month"
-  | "This Year";
+type Period = "Today" | "This Week" | "This Month" | "This Year";
 
 const sevMap: Record<string, { bg: string; color: string }> = {
   High: { bg: "#FEF2F2", color: "#EF4444" },
@@ -46,7 +40,7 @@ const sevMap: Record<string, { bg: string; color: string }> = {
 
 const EVENT_COLORS: Record<string, string> = {
   "Lane Drift": "#F59E0B",
-  "Yawning": "#EF4444",
+  Yawning: "#EF4444",
   "Eyes Closed": "#F59E0B",
   "Micro Sleep": "#8B5CF6",
   "Head Pose": "#1D6AE5",
@@ -54,37 +48,51 @@ const EVENT_COLORS: Record<string, string> = {
   "Body Posture": "#10B981",
 };
 
-const PERIODS: Period[] = [
-  "Today",
-  "This Week",
-  "This Month",
-  "This Year",
-];
+const PERIODS: Period[] = ["Today", "This Week", "This Month", "This Year"];
 
 type AlertSeriesPoint = { label: string; avg: number };
 type EventBreakdown = { event: string; count: number; color: string };
-type SeverityBreakdown = { label: string; count: number; color: string; bg: string };
+type SeverityBreakdown = {
+  label: string;
+  count: number;
+  color: string;
+  bg: string;
+};
 type KPI = { label: string; value: string; color: string; note: string };
-type RecentEvent = { event: string; driver: string; time: string; severity: string };
-type DriverComparisonRow = { driver: string; alerts: number; low: number; moderate: number; high: number };
+type RecentEvent = {
+  event: string;
+  driver: string;
+  time: string;
+  severity: string;
+};
+type DriverComparisonRow = {
+  driver: string;
+  alerts: number;
+  low: number;
+  moderate: number;
+  high: number;
+};
 type MetricChartPoint = { time: string; value: number };
 
 function parseAlertTimestamp(alert: DbAlert): Date | null {
-
-
-
   // ============================================================
   // Parse "MM/DD/YYYY" and "HH:MM" format
   // ============================================================
-  const dateParts = alert.date.split('/').map(Number);
-  const timeParts = alert.time.split(':').map(Number);
+  const dateParts = alert.date.split("/").map(Number);
+  const timeParts = alert.time.split(":").map(Number);
 
   if (dateParts.length !== 3 || timeParts.length < 2) return null;
 
   const [month, day, year] = dateParts;
   const [hours, minutes] = timeParts;
 
-  if (isNaN(month) || isNaN(day) || isNaN(year) || isNaN(hours) || isNaN(minutes)) {
+  if (
+    isNaN(month) ||
+    isNaN(day) ||
+    isNaN(year) ||
+    isNaN(hours) ||
+    isNaN(minutes)
+  ) {
     return null;
   }
 
@@ -116,10 +124,25 @@ function getPeriodStart(period: Period, now = new Date()) {
 }
 
 function getPeriodLabels(period: Period) {
-  if (period === "Today") return ["00-04", "04-08", "08-12", "12-16", "16-20", "20-24"];
-  if (period === "This Week") return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  if (period === "Today")
+    return ["00-04", "04-08", "08-12", "12-16", "16-20", "20-24"];
+  if (period === "This Week")
+    return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   if (period === "This Month") return ["W1", "W2", "W3", "W4"];
-  return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
 }
 
 function isWithinPeriod(timestamp: Date, period: Period, now = new Date()) {
@@ -127,8 +150,10 @@ function isWithinPeriod(timestamp: Date, period: Period, now = new Date()) {
 }
 
 function getPeriodBucketIndex(timestamp: Date, period: Period) {
-  if (period === "Today") return Math.min(5, Math.floor(timestamp.getHours() / 4));
-  if (period === "This Week") return Math.max(0, Math.min(6, (timestamp.getDay() + 6) % 7));
+  if (period === "Today")
+    return Math.min(5, Math.floor(timestamp.getHours() / 4));
+  if (period === "This Week")
+    return Math.max(0, Math.min(6, (timestamp.getDay() + 6) % 7));
   if (period === "This Month") {
     const day = timestamp.getDate();
     return Math.max(0, Math.min(3, Math.floor((day - 1) / 7)));
@@ -136,7 +161,11 @@ function getPeriodBucketIndex(timestamp: Date, period: Period) {
   return timestamp.getMonth();
 }
 
-function buildSeries(alerts: DbAlert[], period: Period, valueSelector: (alert: DbAlert) => number): AlertSeriesPoint[] {
+function buildSeries(
+  alerts: DbAlert[],
+  period: Period,
+  valueSelector: (alert: DbAlert) => number,
+): AlertSeriesPoint[] {
   const labels = getPeriodLabels(period);
   const buckets = labels.map((label) => ({ label, total: 0, count: 0 }));
   alerts.forEach((alert) => {
@@ -148,10 +177,16 @@ function buildSeries(alerts: DbAlert[], period: Period, valueSelector: (alert: D
     bucket.total += valueSelector(alert);
     bucket.count += 1;
   });
-  return buckets.map((bucket) => ({ label: bucket.label, avg: bucket.count > 0 ? bucket.total / bucket.count : 0 }));
+  return buckets.map((bucket) => ({
+    label: bucket.label,
+    avg: bucket.count > 0 ? bucket.total / bucket.count : 0,
+  }));
 }
 
-function buildEventBreakdown(alerts: DbAlert[], period: Period): EventBreakdown[] {
+function buildEventBreakdown(
+  alerts: DbAlert[],
+  period: Period,
+): EventBreakdown[] {
   const counts = new Map<string, number>();
   alerts.forEach((alert) => {
     const timestamp = parseAlertTimestamp(alert);
@@ -159,11 +194,18 @@ function buildEventBreakdown(alerts: DbAlert[], period: Period): EventBreakdown[
     counts.set(alert.type, (counts.get(alert.type) ?? 0) + 1);
   });
   return [...counts.entries()]
-    .map(([event, count]) => ({ event, count, color: EVENT_COLORS[event] ?? "#1D6AE5" }))
+    .map(([event, count]) => ({
+      event,
+      count,
+      color: EVENT_COLORS[event] ?? "#1D6AE5",
+    }))
     .sort((a, b) => b.count - a.count || a.event.localeCompare(b.event));
 }
 
-function buildSeverityBreakdown(alerts: DbAlert[], period: Period): SeverityBreakdown[] {
+function buildSeverityBreakdown(
+  alerts: DbAlert[],
+  period: Period,
+): SeverityBreakdown[] {
   const counts = { High: 0, Moderate: 0, Low: 0 };
   alerts.forEach((alert) => {
     const timestamp = parseAlertTimestamp(alert);
@@ -190,7 +232,9 @@ function buildRecentEvents(alerts: DbAlert[]): RecentEvent[] {
       alert,
       timestamp: parseAlertTimestamp(alert),
     }))
-    .filter((entry): entry is { alert: DbAlert; timestamp: Date } => Boolean(entry.timestamp))
+    .filter((entry): entry is { alert: DbAlert; timestamp: Date } =>
+      Boolean(entry.timestamp),
+    )
     .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
     .slice(0, 8)
     .map(({ alert }) => ({
@@ -201,7 +245,11 @@ function buildRecentEvents(alerts: DbAlert[]): RecentEvent[] {
     }));
 }
 
-function buildKpis(alerts: DbAlert[], driversCount: number, period: Period): KPI[] {
+function buildKpis(
+  alerts: DbAlert[],
+  driversCount: number,
+  period: Period,
+): KPI[] {
   const periodAlerts = alerts.filter((alert) => {
     const timestamp = parseAlertTimestamp(alert);
     return Boolean(timestamp && isWithinPeriod(timestamp, period));
@@ -213,20 +261,53 @@ function buildKpis(alerts: DbAlert[], driversCount: number, period: Period): KPI
     vehicles.add(alert.vehicle);
   });
   return [
-    { label: "Total Events", value: String(periodAlerts.length), color: "#1D6AE5", note: period.toLowerCase() },
-    { label: "High Severity", value: String(counts.High), color: "#EF4444", note: "Requires attention" },
-    { label: "Moderate", value: String(counts.Moderate), color: "#F59E0B", note: "Monitor closely" },
-    { label: "Low", value: String(counts.Low), color: "#10B981", note: "Within range" },
+    {
+      label: "Total Events",
+      value: String(periodAlerts.length),
+      color: "#1D6AE5",
+      note: period.toLowerCase(),
+    },
+    {
+      label: "High Severity",
+      value: String(counts.High),
+      color: "#EF4444",
+      note: "Requires attention",
+    },
+    {
+      label: "Moderate",
+      value: String(counts.Moderate),
+      color: "#F59E0B",
+      note: "Monitor closely",
+    },
+    {
+      label: "Low",
+      value: String(counts.Low),
+      color: "#10B981",
+      note: "Within range",
+    },
   ];
 }
 
-function buildDriverComparison(alerts: DbAlert[], driverNames: string[]): DriverComparisonRow[] {
-  const counts = new Map<string, { alerts: number; low: number; moderate: number; high: number }>();
+function buildDriverComparison(
+  alerts: DbAlert[],
+  driverNames: string[],
+): DriverComparisonRow[] {
+  const counts = new Map<
+    string,
+    { alerts: number; low: number; moderate: number; high: number }
+  >();
   const names = new Set<string>(driverNames);
   alerts.forEach((alert) => names.add(alert.driver));
-  names.forEach((name) => counts.set(name, { alerts: 0, low: 0, moderate: 0, high: 0 }));
+  names.forEach((name) =>
+    counts.set(name, { alerts: 0, low: 0, moderate: 0, high: 0 }),
+  );
   alerts.forEach((alert) => {
-    const current = counts.get(alert.driver) ?? { alerts: 0, low: 0, moderate: 0, high: 0 };
+    const current = counts.get(alert.driver) ?? {
+      alerts: 0,
+      low: 0,
+      moderate: 0,
+      high: 0,
+    };
     current.alerts += 1;
     current[alert.severity.toLowerCase() as "low" | "moderate" | "high"] += 1;
     counts.set(alert.driver, current);
@@ -243,10 +324,7 @@ function buildDriverComparison(alerts: DbAlert[], driverNames: string[]): Driver
     .slice(0, 6);
 }
 
-
 // End of region comment
-
-
 
 // ============================================================
 // Page logic and UI
@@ -294,33 +372,105 @@ export function AnalyticsPage() {
   };
 
   const periodAlerts = useMemo(
-    () => alerts.filter((alert) => {
-      const timestamp = parseAlertTimestamp(alert);
-      return Boolean(timestamp && isWithinPeriod(timestamp, period));
-    }),
+    () =>
+      alerts.filter((alert) => {
+        const timestamp = parseAlertTimestamp(alert);
+        return Boolean(timestamp && isWithinPeriod(timestamp, period));
+      }),
     [alerts, period],
   );
 
-  const eventSummary = useMemo(() => buildEventBreakdown(alerts, period), [alerts, period]);
+  const eventSummary = useMemo(
+    () => buildEventBreakdown(alerts, period),
+    [alerts, period],
+  );
   const totalEvents = periodAlerts.length;
-  const sevData = useMemo(() => buildSeverityBreakdown(alerts, period), [alerts, period]);
-  const kpis = useMemo(() => buildKpis(alerts, drivers.length, period), [alerts, drivers.length, period]);
-  const recentEvents = useMemo(() => buildRecentEvents(periodAlerts), [periodAlerts]);
-  const alertVolumeTrend = useMemo(() => ({ [period]: buildSeries(alerts, period, () => 1) } as Record<Period, AlertSeriesPoint[]>), [alerts, period]);
-  const perclosTrend = useMemo(() => ({ [period]: buildSeries(alerts, period, (alert) => severityScore(alert.severity)) } as Record<Period, AlertSeriesPoint[]>), [alerts, period]);
-  const driverComparison = useMemo(() => buildDriverComparison(periodAlerts, drivers.map((driver) => `${driver.firstName} ${driver.lastName}`.trim()).filter(Boolean)), [periodAlerts, drivers]);
-  const driverChartMax = Math.max(10, Math.ceil(Math.max(totalEvents, ...driverComparison.flatMap((row) => [row.alerts, row.low, row.moderate, row.high])) / 10) * 10);
-  const periodMetrics = useMemo(() => metricReadings
-    .filter((reading) => {
-      const timestamp = new Date(reading.timestamp);
-      return !Number.isNaN(timestamp.getTime()) && timestamp >= getPeriodStart(period);
-    })
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()), [metricReadings, period]);
-  const metricSeries = (selector: (reading: DbMetric) => number | null): MetricChartPoint[] => periodMetrics.flatMap((reading) => {
-    const value = selector(reading);
-    if (value === null) return [];
-    return [{ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }), value }];
-  });
+  const sevData = useMemo(
+    () => buildSeverityBreakdown(alerts, period),
+    [alerts, period],
+  );
+  const kpis = useMemo(
+    () => buildKpis(alerts, drivers.length, period),
+    [alerts, drivers.length, period],
+  );
+  const recentEvents = useMemo(
+    () => buildRecentEvents(periodAlerts),
+    [periodAlerts],
+  );
+  const alertVolumeTrend = useMemo(
+    () =>
+      ({ [period]: buildSeries(alerts, period, () => 1) }) as Record<
+        Period,
+        AlertSeriesPoint[]
+      >,
+    [alerts, period],
+  );
+  const perclosTrend = useMemo(
+    () =>
+      ({
+        [period]: buildSeries(alerts, period, (alert) =>
+          severityScore(alert.severity),
+        ),
+      }) as Record<Period, AlertSeriesPoint[]>,
+    [alerts, period],
+  );
+  const driverComparison = useMemo(
+    () =>
+      buildDriverComparison(
+        periodAlerts,
+        drivers
+          .map((driver) => `${driver.firstName} ${driver.lastName}`.trim())
+          .filter(Boolean),
+      ),
+    [periodAlerts, drivers],
+  );
+  const driverChartMax = Math.max(
+    10,
+    Math.ceil(
+      Math.max(
+        totalEvents,
+        ...driverComparison.flatMap((row) => [
+          row.alerts,
+          row.low,
+          row.moderate,
+          row.high,
+        ]),
+      ) / 10,
+    ) * 10,
+  );
+  const periodMetrics = useMemo(
+    () =>
+      metricReadings
+        .filter((reading) => {
+          const timestamp = new Date(reading.timestamp);
+          return (
+            !Number.isNaN(timestamp.getTime()) &&
+            timestamp >= getPeriodStart(period)
+          );
+        })
+        .sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        ),
+    [metricReadings, period],
+  );
+  const metricSeries = (
+    selector: (reading: DbMetric) => number | null,
+  ): MetricChartPoint[] =>
+    periodMetrics.flatMap((reading) => {
+      const value = selector(reading);
+      if (value === null) return [];
+      return [
+        {
+          time: new Date(reading.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }),
+          value,
+        },
+      ];
+    });
   const fleetPerclos = metricSeries((reading) => reading.perclos);
   const fleetYawn = metricSeries((reading) => reading.yawn);
   const fleetPosture = metricSeries((reading) => reading.body_posture);
@@ -344,10 +494,7 @@ export function AnalyticsPage() {
     doc.setFontSize(18).setFont("helvetica", "bold");
     doc.text("Analytics Report", 14, y);
     y += 8;
-    doc
-      .setFontSize(10)
-      .setFont("helvetica", "normal")
-      .setTextColor(100);
+    doc.setFontSize(10).setFont("helvetica", "normal").setTextColor(100);
     doc.text(
       `Period: ${period}   ·   Generated: ${generatedAt.toLocaleString()}`,
       14,
@@ -370,15 +517,9 @@ export function AnalyticsPage() {
         .setDrawColor(220)
         .setFillColor(248, 249, 250)
         .roundedRect(x, y, colW, 14, 2, 2, "FD");
-      doc
-        .setFontSize(9)
-        .setFont("helvetica", "normal")
-        .setTextColor(120);
+      doc.setFontSize(9).setFont("helvetica", "normal").setTextColor(120);
       doc.text(k.label, x + 3, y + 5);
-      doc
-        .setFontSize(13)
-        .setFont("helvetica", "bold")
-        .setTextColor(0);
+      doc.setFontSize(13).setFont("helvetica", "bold").setTextColor(0);
       doc.text(k.value, x + 3, y + 11);
     });
     y += 22;
@@ -387,10 +528,7 @@ export function AnalyticsPage() {
     // Events by Type table
 
     // ============================================================
-    doc
-      .setFontSize(12)
-      .setFont("helvetica", "bold")
-      .setTextColor(0);
+    doc.setFontSize(12).setFont("helvetica", "bold").setTextColor(0);
     doc.text("Events by Type", 14, y);
     y += 4;
     autoTable(doc, {
@@ -416,21 +554,13 @@ export function AnalyticsPage() {
     // Recent Events table
 
     // ============================================================
-    doc
-      .setFontSize(12)
-      .setFont("helvetica", "bold")
-      .setTextColor(0);
+    doc.setFontSize(12).setFont("helvetica", "bold").setTextColor(0);
     doc.text("Recent Events", 14, y);
     y += 4;
     autoTable(doc, {
       startY: y,
       head: [["Event", "Driver", "Time", "Severity"]],
-      body: recentEvents.map((e) => [
-        e.event,
-        e.driver,
-        e.time,
-        e.severity,
-      ]),
+      body: recentEvents.map((e) => [e.event, e.driver, e.time, e.severity]),
       styles: { fontSize: 10, cellPadding: 3 },
       headStyles: {
         fillColor: [29, 106, 229],
@@ -446,11 +576,7 @@ export function AnalyticsPage() {
 
   function handlePrint() {
     const generatedAt = new Date();
-    const win = window.open(
-      "",
-      "_blank",
-      "width=900,height=700",
-    );
+    const win = window.open("", "_blank", "width=900,height=700");
     if (!win) return;
     win.document
       .write(`<!DOCTYPE html><html><head><title>Analytics Report — ${period}</title>
@@ -475,11 +601,11 @@ export function AnalyticsPage() {
       <div class="grid">${kpis.map((k) => `<div class="kpi"><div class="kpi-label">${k.label}</div><div class="kpi-value" style="color:${k.color}">${k.value}</div><div class="kpi-note">${k.note}</div></div>`).join("")}</div>
       <table><thead><tr><th>Event</th><th>Driver</th><th>Time</th><th>Severity</th></tr></thead><tbody>
       ${recentEvents
-          .map((e) => {
-            const s = sevMap[e.severity];
-            return `<tr><td>${e.event}</td><td>${e.driver}</td><td>${e.time}</td><td><span class="badge" style="background:${s.bg};color:${s.color}">${e.severity}</span></td></tr>`;
-          })
-          .join("")}
+        .map((e) => {
+          const s = sevMap[e.severity];
+          return `<tr><td>${e.event}</td><td>${e.driver}</td><td>${e.time}</td><td><span class="badge" style="background:${s.bg};color:${s.color}">${e.severity}</span></td></tr>`;
+        })
+        .join("")}
       </tbody></table></body></html>`);
     win.document.close();
     win.focus();
@@ -557,9 +683,6 @@ export function AnalyticsPage() {
       >
         {!isMobile && (
           <>
-
-
-
             {/* ============================================================ */}
             {/* Segmented period control — desktop only inside header */}
             {/* ============================================================ */}
@@ -620,13 +743,41 @@ export function AnalyticsPage() {
             </div>
             <button
               onClick={() => setShowPDFPreview(true)}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8, border: "none", background: "#EF4444", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "7px 12px",
+                borderRadius: 8,
+                border: "none",
+                background: "#EF4444",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+                whiteSpace: "nowrap",
+              }}
             >
               <Download size={13} /> Export
             </button>
             <button
               onClick={handlePrint}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 12px", borderRadius: 8, border: "none", background: "#10B981", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", whiteSpace: "nowrap" }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "7px 12px",
+                borderRadius: 8,
+                border: "none",
+                background: "#10B981",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+                whiteSpace: "nowrap",
+              }}
             >
               <Printer size={13} /> Print
             </button>
@@ -634,20 +785,31 @@ export function AnalyticsPage() {
         )}
       </PageHeader>
 
-
-
       {/* ============================================================ */}
       {/* Mobile-only controls row — period selector + action buttons */}
       {/* ============================================================ */}
       {isMobile && (
-        <div style={{ marginBottom: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-
-
-
+        <div
+          style={{
+            marginBottom: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+          }}
+        >
           {/* ============================================================ */}
           {/* Full-width period selector */}
           {/* ============================================================ */}
-          <div style={{ position: "relative", display: "flex", background: dark ? "#374151" : "#F3F4F6", borderRadius: 8, padding: 3, width: "100%" }}>
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              background: dark ? "#374151" : "#F3F4F6",
+              borderRadius: 8,
+              padding: 3,
+              width: "100%",
+            }}
+          >
             <div
               style={{
                 position: "absolute",
@@ -692,21 +854,49 @@ export function AnalyticsPage() {
             ))}
           </div>
 
-
-
           {/* ============================================================ */}
           {/* Export + Print row */}
           {/* ============================================================ */}
           <div style={{ display: "flex", gap: 10 }}>
             <button
               onClick={() => setShowPDFPreview(true)}
-              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 8, border: "none", background: "#EF4444", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                padding: "9px 12px",
+                borderRadius: 8,
+                border: "none",
+                background: "#EF4444",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+              }}
             >
               <Download size={13} /> Export
             </button>
             <button
               onClick={handlePrint}
-              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 12px", borderRadius: 8, border: "none", background: "#10B981", color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                padding: "9px 12px",
+                borderRadius: 8,
+                border: "none",
+                background: "#10B981",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+              }}
             >
               <Printer size={13} /> Print
             </button>
@@ -728,24 +918,17 @@ export function AnalyticsPage() {
         />
       )}
 
-
-
       {/* ============================================================ */}
       {/* Content to print */}
       {/* ============================================================ */}
       <div ref={printRef} style={{ marginBottom: 0 }}>
-
-
-
         {/* ============================================================ */}
         {/* Fleet KPI row */}
         {/* ============================================================ */}
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: isMobile
-              ? "repeat(2, 1fr)"
-              : "repeat(6, 1fr)",
+            gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(6, 1fr)",
             gap: isMobile ? 8 : 12,
             marginBottom: isMobile ? 12 : 20,
           }}
@@ -799,9 +982,6 @@ export function AnalyticsPage() {
             gap: 16,
           }}
         >
-
-
-
           {/* ============================================================ */}
           {/* Driver comparison */}
           {/* ============================================================ */}
@@ -810,26 +990,75 @@ export function AnalyticsPage() {
             subtitle={`Alert counts and severity by driver · ${totalEvents} total for ${period.toLowerCase()}`}
             span={isMobile ? undefined : "1 / -1"}
           >
-            <div style={{ overflowX: "auto", overflowY: "hidden", WebkitOverflowScrolling: "touch" as const }}>
-              <div style={{ width: isMobile ? Math.max(320, driverComparison.length * 60) : "100%", height: isMobile ? 180 : 200 }}>
-                <ResponsiveContainer key={`bar-${period}`} width="100%" height="100%">
-                  <BarChart data={driverComparison} margin={{ left: -10, right: 8 }}>
+            <div
+              style={{
+                overflowX: "auto",
+                overflowY: "hidden",
+                WebkitOverflowScrolling: "touch" as const,
+              }}
+            >
+              <div
+                style={{
+                  width: isMobile
+                    ? Math.max(320, driverComparison.length * 60)
+                    : "100%",
+                  height: isMobile ? 180 : 200,
+                }}
+              >
+                <ResponsiveContainer
+                  key={`bar-${period}`}
+                  width="100%"
+                  height="100%"
+                >
+                  <BarChart
+                    data={driverComparison}
+                    margin={{ left: -10, right: 8 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                    <XAxis dataKey="driver" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-                    <YAxis domain={[0, driverChartMax]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
+                    <XAxis
+                      dataKey="driver"
+                      tick={{ fontSize: 12, fill: textSub }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[0, driverChartMax]}
+                      tick={{ fontSize: 12, fill: textSub }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={28}
+                    />
                     <Tooltip contentStyle={tooltipStyle} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="alerts" name="Alerts" fill="#1D6AE5" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="low" name="Low" fill="#10B981" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="moderate" name="Moderate" fill="#F59E0B" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="high" name="High" fill="#EF4444" radius={[3, 3, 0, 0]} />
+                    <Bar
+                      dataKey="alerts"
+                      name="Alerts"
+                      fill="#1D6AE5"
+                      radius={[3, 3, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="low"
+                      name="Low"
+                      fill="#10B981"
+                      radius={[3, 3, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="moderate"
+                      name="Moderate"
+                      fill="#F59E0B"
+                      radius={[3, 3, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="high"
+                      name="High"
+                      fill="#EF4444"
+                      radius={[3, 3, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
           </Card>
-
-
 
           {/* ============================================================ */}
           {/* Recent events */}
@@ -869,12 +1098,7 @@ export function AnalyticsPage() {
                       borderBottom: `1px solid ${borderColor}`,
                     }}
                   >
-                    {[
-                      "Event",
-                      "Driver",
-                      "Time",
-                      "Severity",
-                    ].map((h) => (
+                    {["Event", "Driver", "Time", "Severity"].map((h) => (
                       <th
                         key={h}
                         style={{
@@ -895,55 +1119,87 @@ export function AnalyticsPage() {
                 <tbody>
                   {recentEvents.length === 0 ? (
                     <tr>
-                      <td colSpan={4} style={{ padding: "24px 16px", textAlign: "center", color: textSub, fontSize: 14 }}>
+                      <td
+                        colSpan={4}
+                        style={{
+                          padding: "24px 16px",
+                          textAlign: "center",
+                          color: textSub,
+                          fontSize: 14,
+                        }}
+                      >
                         No recent alert records are available.
                       </td>
                     </tr>
-                  ) : recentEvents.map((e, i) => {
-                    const sev = sevMap[e.severity];
-                    return (
-                      <tr
-                        key={i}
-                        style={{
-                          borderBottom:
-                            i < recentEvents.length - 1
-                              ? `1px solid ${borderColor}`
-                              : "none",
-                        }}
-                      >
-                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px", fontSize: 14, fontWeight: 500, color: textMain }}>
-                          {e.event}
-                        </td>
-                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px", fontSize: 14, color: textMain }}>
-                          {e.driver}
-                        </td>
-                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px", fontSize: 14, color: textSub, fontFamily: "monospace" }}>
-                          {e.time}
-                        </td>
-                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px" }}>
-                          <span
+                  ) : (
+                    recentEvents.map((e, i) => {
+                      const sev = sevMap[e.severity];
+                      return (
+                        <tr
+                          key={i}
+                          style={{
+                            borderBottom:
+                              i < recentEvents.length - 1
+                                ? `1px solid ${borderColor}`
+                                : "none",
+                          }}
+                        >
+                          <td
                             style={{
-                              display: "inline-block",
-                              padding: "2px 10px",
-                              borderRadius: 999,
-                              fontSize: 12,
-                              fontWeight: 600,
-                              background: sev.bg,
-                              color: sev.color,
+                              padding: isMobile ? "8px 10px" : "10px 16px",
+                              fontSize: 14,
+                              fontWeight: 500,
+                              color: textMain,
                             }}
                           >
-                            {e.severity}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                            {e.event}
+                          </td>
+                          <td
+                            style={{
+                              padding: isMobile ? "8px 10px" : "10px 16px",
+                              fontSize: 14,
+                              color: textMain,
+                            }}
+                          >
+                            {e.driver}
+                          </td>
+                          <td
+                            style={{
+                              padding: isMobile ? "8px 10px" : "10px 16px",
+                              fontSize: 14,
+                              color: textSub,
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            {e.time}
+                          </td>
+                          <td
+                            style={{
+                              padding: isMobile ? "8px 10px" : "10px 16px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "inline-block",
+                                padding: "2px 10px",
+                                borderRadius: 999,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                background: sev.bg,
+                                color: sev.color,
+                              }}
+                            >
+                              {e.severity}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
           </Card>
-
-
 
           {/* ============================================================ */}
           {/* Event type breakdown */}
@@ -960,83 +1216,90 @@ export function AnalyticsPage() {
               }}
             >
               {eventSummary.length === 0 ? (
-                <div style={{ padding: "18px 0", color: textSub, fontSize: 14 }}>
+                <div
+                  style={{ padding: "18px 0", color: textSub, fontSize: 14 }}
+                >
                   No alert data available for this period.
                 </div>
-              ) : eventSummary.map((e) => (
-                <div
-                  key={e.event}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    height: 24,
-                  }}
-                >
-                  <span
+              ) : (
+                eventSummary.map((e) => (
+                  <div
+                    key={e.event}
                     style={{
-                      fontSize: 13,
-                      color: textMain,
-                      width: isMobile ? 84 : 100,
-                      flexShrink: 0,
                       display: "flex",
                       alignItems: "center",
+                      gap: 10,
+                      height: 24,
                     }}
                   >
-                    {e.event}
-                  </span>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        color: textMain,
+                        width: isMobile ? 84 : 100,
+                        flexShrink: 0,
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {e.event}
+                    </span>
 
-                  <div
-                    style={{
-                      flex: 1,
-                      height: 8,
-                      background: dark ? "#374151" : "#E5E7EB",
-                      borderRadius: 4,
-                      overflow: "hidden",
-                    }}
-                  >
                     <div
                       style={{
-                        width: totalEvents > 0 ? `${(e.count / totalEvents) * 100}%` : "0%",
-                        height: "100%",
-                        background: e.color,
+                        flex: 1,
+                        height: 8,
+                        background: dark ? "#374151" : "#E5E7EB",
                         borderRadius: 4,
+                        overflow: "hidden",
                       }}
-                    />
+                    >
+                      <div
+                        style={{
+                          width:
+                            totalEvents > 0
+                              ? `${(e.count / totalEvents) * 100}%`
+                              : "0%",
+                          height: "100%",
+                          background: e.color,
+                          borderRadius: 4,
+                        }}
+                      />
+                    </div>
+
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: e.color,
+                        width: 40,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      {e.count}
+                    </span>
+
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: textSub,
+                        width: 36,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      {totalEvents > 0
+                        ? `${Math.round((e.count / totalEvents) * 100)}%`
+                        : "0%"}
+                    </span>
                   </div>
-
-                  <span
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: e.color,
-                      width: 40,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    {e.count}
-                  </span>
-
-                  <span
-                    style={{
-                      fontSize: 12,
-                      color: textSub,
-                      width: 36,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    {totalEvents > 0 ? `${Math.round((e.count / totalEvents) * 100)}%` : "0%"}
-                  </span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
-
-
 
           {/* ============================================================ */}
           {/* Severity distribution */}
@@ -1053,75 +1316,73 @@ export function AnalyticsPage() {
               }}
             >
               {sevData.length === 0 ? (
-                <div style={{ padding: "18px 0", color: textSub, fontSize: 14 }}>
+                <div
+                  style={{ padding: "18px 0", color: textSub, fontSize: 14 }}
+                >
                   No severity data available for this period.
                 </div>
-              ) : sevData.map((s) => {
-                const total = sevData.reduce(
-                  (a, b) => a + b.count,
-                  0,
-                );
-                return (
-                  <div
-                    key={s.label}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                    }}
-                  >
-                    <span
-                      style={{
-                        padding: "2px 10px",
-                        borderRadius: 999,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        background: s.bg,
-                        color: s.color,
-                        width: 72,
-                        textAlign: "center",
-                      }}
-                    >
-                      {s.label}
-                    </span>
+              ) : (
+                sevData.map((s) => {
+                  const total = sevData.reduce((a, b) => a + b.count, 0);
+                  return (
                     <div
+                      key={s.label}
                       style={{
-                        flex: 1,
-                        height: 10,
-                        background: dark
-                          ? "#374151"
-                          : "#E5E7EB",
-                        borderRadius: 5,
-                        overflow: "hidden",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
                       }}
                     >
+                      <span
+                        style={{
+                          padding: "2px 10px",
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          background: s.bg,
+                          color: s.color,
+                          width: 72,
+                          textAlign: "center",
+                        }}
+                      >
+                        {s.label}
+                      </span>
                       <div
                         style={{
-                          width: total > 0 ? `${(s.count / total) * 100}%` : "0%",
-                          height: "100%",
-                          background: s.color,
+                          flex: 1,
+                          height: 10,
+                          background: dark ? "#374151" : "#E5E7EB",
                           borderRadius: 5,
+                          overflow: "hidden",
                         }}
-                      />
+                      >
+                        <div
+                          style={{
+                            width:
+                              total > 0 ? `${(s.count / total) * 100}%` : "0%",
+                            height: "100%",
+                            background: s.color,
+                            borderRadius: 5,
+                          }}
+                        />
+                      </div>
+                      <span
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: s.color,
+                          width: 50,
+                          textAlign: "right",
+                        }}
+                      >
+                        {s.count}
+                      </span>
                     </div>
-                    <span
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color: s.color,
-                        width: 50,
-                        textAlign: "right",
-                      }}
-                    >
-                      {s.count}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </Card>
-
-
 
           {/* ============================================================ */}
           {/* Blink trend */}
@@ -1135,11 +1396,11 @@ export function AnalyticsPage() {
               width="100%"
               height={isMobile ? 130 : 160}
             >
-              <LineChart data={alertVolumeTrend[period]} margin={{ left: -10, right: 8 }}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={gridColor}
-                />
+              <LineChart
+                data={alertVolumeTrend[period]}
+                margin={{ left: -10, right: 8 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 12, fill: textSub }}
@@ -1167,8 +1428,6 @@ export function AnalyticsPage() {
             </ResponsiveContainer>
           </Card>
 
-
-
           {/* ============================================================ */}
           {/* PERCLOS trend */}
           {/* ============================================================ */}
@@ -1181,11 +1440,11 @@ export function AnalyticsPage() {
               width="100%"
               height={isMobile ? 130 : 160}
             >
-              <LineChart data={perclosTrend[period]} margin={{ left: -10, right: 8 }}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke={gridColor}
-                />
+              <LineChart
+                data={perclosTrend[period]}
+                margin={{ left: -10, right: 8 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 12, fill: textSub }}
@@ -1216,55 +1475,158 @@ export function AnalyticsPage() {
             </ResponsiveContainer>
           </Card>
 
-
-
           {/* ============================================================ */}
           {/* Fleet metric charts */}
           {/* ============================================================ */}
-          <Card title={`Percentage of Eye Closure  — ${period}`} subtitle="General driver fleet · percentage of time eyes closed">
+          <Card
+            title={`Percentage of Eye Closure  — ${period}`}
+            subtitle="General driver fleet · percentage of time eyes closed"
+          >
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetPerclos} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 35]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value.toFixed(2)}%`, "PERCLOS"]} />
-                <Line type="monotone" dataKey="value" name="PERCLOS" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 3 }} />
+                <XAxis
+                  dataKey="time"
+                  tick={{ fontSize: 12, fill: textSub }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, 35]}
+                  tick={{ fontSize: 12, fill: textSub }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={28}
+                />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(value: number) => [
+                    `${value.toFixed(2)}%`,
+                    "PERCLOS",
+                  ]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name="PERCLOS"
+                  stroke="#F59E0B"
+                  strokeWidth={2.5}
+                  dot={{ r: 3 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </Card>
 
-          <Card title={`Yawn — ${period}`} subtitle="General driver fleet · mouth opening score">
+          <Card
+            title={`Yawn — ${period}`}
+            subtitle="General driver fleet · mouth opening score"
+          >
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetYawn} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 1.5]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [value.toFixed(2), "Yawn"]} />
-                <Line type="monotone" dataKey="value" name="Yawn" stroke="#EF4444" strokeWidth={2.5} dot={{ r: 3 }} />
+                <XAxis
+                  dataKey="time"
+                  tick={{ fontSize: 12, fill: textSub }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, 1.5]}
+                  tick={{ fontSize: 12, fill: textSub }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={28}
+                />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(value: number) => [value.toFixed(2), "Yawn"]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name="Yawn"
+                  stroke="#EF4444"
+                  strokeWidth={2.5}
+                  dot={{ r: 3 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </Card>
 
-          <Card title={`Shoulder Elevation — ${period}`} subtitle="General driver fleet · posture score out of 100">
+          <Card
+            title={`Shoulder Elevation — ${period}`}
+            subtitle="General driver fleet · posture score out of 100"
+          >
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetPosture} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [value.toFixed(2), "Shoulder Elevation"]} />
-                <Line type="monotone" dataKey="value" name="Shoulder Elevation" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} />
+                <XAxis
+                  dataKey="time"
+                  tick={{ fontSize: 12, fill: textSub }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, 100]}
+                  tick={{ fontSize: 12, fill: textSub }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={28}
+                />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(value: number) => [
+                    value.toFixed(2),
+                    "Shoulder Elevation",
+                  ]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name="Shoulder Elevation"
+                  stroke="#10B981"
+                  strokeWidth={2.5}
+                  dot={{ r: 3 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </Card>
 
-          <Card title={`Head Pose — ${period}`} subtitle="General driver fleet · deviation in degrees">
+          <Card
+            title={`Head Pose — ${period}`}
+            subtitle="General driver fleet · deviation in degrees"
+          >
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetHeadPose} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
-                <YAxis domain={[0, 1]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value.toFixed(2)}°`, "Head Pose"]} />
-                <Line type="monotone" dataKey="value" name="Head Pose" stroke="#8B5CF6" strokeWidth={2.5} dot={{ r: 3 }} />
+                <XAxis
+                  dataKey="time"
+                  tick={{ fontSize: 12, fill: textSub }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, 1]}
+                  tick={{ fontSize: 12, fill: textSub }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={28}
+                />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(value: number) => [
+                    `${value.toFixed(2)}°`,
+                    "Head Pose",
+                  ]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name="Head Pose"
+                  stroke="#8B5CF6"
+                  strokeWidth={2.5}
+                  dot={{ r: 3 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </Card>

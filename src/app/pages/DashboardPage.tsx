@@ -11,7 +11,12 @@ interface DashboardPageProps {
   isMobile?: boolean;
 }
 
-const PERIODS: DashboardRange[] = ["Today", "This Week", "This Month", "This Year"];
+const PERIODS: DashboardRange[] = [
+  "Today",
+  "This Week",
+  "This Month",
+  "This Year",
+];
 
 export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
   const { dark } = useTheme();
@@ -23,12 +28,23 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
   const [period, setPeriod] = useState<DashboardRange>("Today");
 
   const renderPeriodSelector = () => (
-    <div style={{ position: "relative", display: "flex", background: dark ? "#374151" : "#F3F4F6", borderRadius: 8, padding: 3, width: isMobile ? "100%" : 340 }}>
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        background: dark ? "#374151" : "#F3F4F6",
+        borderRadius: 8,
+        padding: 3,
+        width: isMobile ? "100%" : 340,
+      }}
+    >
       <div
         style={{
           position: "absolute",
           top: 3,
-          left: isMobile ? `calc(${PERIODS.indexOf(period)} * 25%)` : 3 + PERIODS.indexOf(period) * 83.5,
+          left: isMobile
+            ? `calc(${PERIODS.indexOf(period)} * 25%)`
+            : 3 + PERIODS.indexOf(period) * 83.5,
           width: isMobile ? "25%" : 83.5,
           bottom: 3,
           background: headerAccent,
@@ -73,34 +89,93 @@ export function DashboardPage({ onNavigate, isMobile }: DashboardPageProps) {
   );
 
   return (
-    <div style={{ display: "flex", flex: 1, minHeight: 0, height: "100%", overflow: isMobile ? "visible" : "hidden", flexDirection: isMobile ? "column" : "row" }}>
-      <main style={{ flex: 1, minHeight: 0, height: "100%", overflowY: "auto", overflowX: isMobile ? "clip" : "hidden", padding: isMobile ? "8px 8px 0" : 20, display: "flex", flexDirection: "column", gap: 16, background: dark ? "linear-gradient(180deg, #111827 0%, #0f172a 100%)" : "linear-gradient(180deg, #f8fafc 0%, #eef3f9 100%)", transition: "background 0.2s" }}>
+    <div
+      style={{
+        display: "flex",
+        flex: 1,
+        minHeight: 0,
+        height: "100%",
+        overflow: isMobile ? "visible" : "hidden",
+        flexDirection: isMobile ? "column" : "row",
+      }}
+    >
+      <main
+        style={{
+          flex: 1,
+          minHeight: 0,
+          height: "100%",
+          overflowY: "auto",
+          overflowX: isMobile ? "clip" : "hidden",
+          padding: isMobile ? "8px 8px 0" : 20,
+          display: "flex",
+          flexDirection: "column",
+          gap: 16,
+          background: dark
+            ? "linear-gradient(180deg, #111827 0%, #0f172a 100%)"
+            : "linear-gradient(180deg, #f8fafc 0%, #eef3f9 100%)",
+          transition: "background 0.2s",
+        }}
+      >
         <div style={{ flexShrink: 0 }}>
-          <PageHeader icon={LayoutDashboard} iconColor="#1D6AE5" title="Dashboard" subtitle="Overview of driver behavior and system status">
-          {!isMobile && renderPeriodSelector()}
+          <PageHeader
+            icon={LayoutDashboard}
+            iconColor="#1D6AE5"
+            title="Dashboard"
+            subtitle="Overview of driver behavior and system status"
+          >
+            {!isMobile && renderPeriodSelector()}
           </PageHeader>
         </div>
 
         {isMobile && (
-          <div style={{ marginBottom: 4 }}>
-            {renderPeriodSelector()}
-          </div>
+          <div style={{ marginBottom: 4 }}>{renderPeriodSelector()}</div>
         )}
 
         <StatCards range={period} />
-        <div style={{ minHeight: 0, flex: isMobile ? "none" : 1, display: "flex", height: isMobile ? 420 : "clamp(300px, 48vh, 520px)", maxHeight: isMobile ? undefined : "520px" }}>
-          <RecentEvents onViewAll={onNavigate ? () => onNavigate("alerts") : undefined} />
+        <div
+          style={{
+            minHeight: 0,
+            flex: isMobile ? "none" : 1,
+            display: "flex",
+            height: isMobile ? 420 : "clamp(300px, 48vh, 520px)",
+            maxHeight: isMobile ? undefined : "520px",
+          }}
+        >
+          <RecentEvents
+            onViewAll={onNavigate ? () => onNavigate("alerts") : undefined}
+          />
         </div>
 
         {isMobile && (
-          <div style={{ background: rightBg, borderRadius: 12, padding: 16, transition: "background 0.2s" }}>
+          <div
+            style={{
+              background: rightBg,
+              borderRadius: 12,
+              padding: 16,
+              transition: "background 0.2s",
+            }}
+          >
             <RightPanel />
           </div>
         )}
       </main>
 
       {!isMobile && (
-        <aside style={{ width: 340, minWidth: 340, minHeight: 0, height: "100%", borderLeft: `1px solid ${rightBorder}`, background: rightBg, padding: 16, overflow: "hidden", display: "flex", flexDirection: "column", transition: "background 0.2s" }}>
+        <aside
+          style={{
+            width: 340,
+            minWidth: 340,
+            minHeight: 0,
+            height: "100%",
+            borderLeft: `1px solid ${rightBorder}`,
+            background: rightBg,
+            padding: 16,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            transition: "background 0.2s",
+          }}
+        >
           <RightPanel />
         </aside>
       )}

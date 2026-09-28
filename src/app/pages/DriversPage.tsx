@@ -1,12 +1,29 @@
 import { useState, useEffect } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Search, Plus, Trash2, X, Check, BarChart2, Contact, Edit3, ChevronDown, ImagePlus } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Trash2,
+  X,
+  Check,
+  BarChart2,
+  Contact,
+  Edit3,
+  ChevronDown,
+  ImagePlus,
+} from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, Driver, genDriverId } from "../context/AppContext";
-import { formatName, formatPhone, formatLocalPhoneDisplay, formatPlate, validateName, validatePhone, validatePlate } from "../../utils/validation";
-
-
+import {
+  formatName,
+  formatPhone,
+  formatLocalPhoneDisplay,
+  formatPlate,
+  validateName,
+  validatePhone,
+  validatePlate,
+} from "../../utils/validation";
 
 // ============================================================
 // Helpers and form components
@@ -16,14 +33,70 @@ interface DriversPageProps {
   onViewDetail?: (driverId: string) => void;
 }
 
-function Modal({ title, onClose, children, width }: { title: string; onClose: () => void; children: React.ReactNode; width?: number }) {
+function Modal({
+  title,
+  onClose,
+  children,
+  width,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  width?: number;
+}) {
   const { dark } = useTheme();
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 16 }}>
-      <div style={{ background: dark ? "#1F2937" : "#fff", borderRadius: 14, width: "100%", maxWidth: width ?? 460, boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 22px", borderBottom: `1px solid ${dark ? "#374151" : "#F3F4F6"}` }}>
-          <span style={{ fontSize: 17, fontWeight: 700, color: dark ? "#F9FAFB" : "#111827" }}>{title}</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: dark ? "#6B7280" : "#9CA3AF", display: "flex" }}><X size={18} /></button>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.45)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000,
+        padding: 16,
+      }}
+    >
+      <div
+        style={{
+          background: dark ? "#1F2937" : "#fff",
+          borderRadius: 14,
+          width: "100%",
+          maxWidth: width ?? 460,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "18px 22px",
+            borderBottom: `1px solid ${dark ? "#374151" : "#F3F4F6"}`,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 17,
+              fontWeight: 700,
+              color: dark ? "#F9FAFB" : "#111827",
+            }}
+          >
+            {title}
+          </span>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: dark ? "#6B7280" : "#9CA3AF",
+              display: "flex",
+            }}
+          >
+            <X size={18} />
+          </button>
         </div>
         <div style={{ padding: 22 }}>{children}</div>
       </div>
@@ -31,22 +104,96 @@ function Modal({ title, onClose, children, width }: { title: string; onClose: ()
   );
 }
 
-function FloatField({ label, value, onChange, type = "text", maxLength, placeholder, disabled = false }: { label: string; value: string; onChange: (v: string) => void; type?: string; maxLength?: number; placeholder?: string; disabled?: boolean }) {
+function FloatField({
+  label,
+  value,
+  onChange,
+  type = "text",
+  maxLength,
+  placeholder,
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  maxLength?: number;
+  placeholder?: string;
+  disabled?: boolean;
+}) {
   const [focused, setFocused] = useState(false);
   const { dark } = useTheme();
   const lifted = focused || value.length > 0;
   return (
     <div style={{ position: "relative" }}>
-      <input type={type} value={value} maxLength={maxLength} placeholder={placeholder} disabled={disabled} onChange={(e) => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-        style={{ width: "100%", padding: lifted ? "22px 14px 8px" : "15px 14px", fontSize: 15, color: disabled ? (dark ? "#6B7280" : "#9CA3AF") : dark ? "#F9FAFB" : "#111827", background: disabled ? (dark ? "#374151" : "#F3F4F6") : dark ? "#374151" : "#fff", border: `1.5px solid ${focused ? "#1D6AE5" : dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none", boxSizing: "border-box", transition: "all 0.18s", fontFamily: "Inter, sans-serif", cursor: disabled ? "not-allowed" : "text" }} />
-      <label style={{ position: "absolute", left: 14, top: lifted ? 8 : "50%", transform: lifted ? "none" : "translateY(-50%)", fontSize: lifted ? 12 : 15, fontWeight: lifted ? 500 : 400, color: focused ? "#1D6AE5" : dark ? "#6B7280" : "#9CA3AF", pointerEvents: "none", transition: "all 0.18s ease", fontFamily: "Inter, sans-serif" }}>{label}</label>
+      <input
+        type={type}
+        value={value}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          width: "100%",
+          padding: lifted ? "22px 14px 8px" : "15px 14px",
+          fontSize: 15,
+          color: disabled
+            ? dark
+              ? "#6B7280"
+              : "#9CA3AF"
+            : dark
+              ? "#F9FAFB"
+              : "#111827",
+          background: disabled
+            ? dark
+              ? "#374151"
+              : "#F3F4F6"
+            : dark
+              ? "#374151"
+              : "#fff",
+          border: `1.5px solid ${focused ? "#1D6AE5" : dark ? "#4B5563" : "#E5E7EB"}`,
+          borderRadius: 10,
+          outline: "none",
+          boxSizing: "border-box",
+          transition: "all 0.18s",
+          fontFamily: "Inter, sans-serif",
+          cursor: disabled ? "not-allowed" : "text",
+        }}
+      />
+      <label
+        style={{
+          position: "absolute",
+          left: 14,
+          top: lifted ? 8 : "50%",
+          transform: lifted ? "none" : "translateY(-50%)",
+          fontSize: lifted ? 12 : 15,
+          fontWeight: lifted ? 500 : 400,
+          color: focused ? "#1D6AE5" : dark ? "#6B7280" : "#9CA3AF",
+          pointerEvents: "none",
+          transition: "all 0.18s ease",
+          fontFamily: "Inter, sans-serif",
+        }}
+      >
+        {label}
+      </label>
     </div>
   );
 }
 
-function ReceiptModal({ driver, onClose }: { driver: Driver; onClose: () => void }) {
+function ReceiptModal({
+  driver,
+  onClose,
+}: {
+  driver: Driver;
+  onClose: () => void;
+}) {
   const { dark } = useTheme();
-  const now = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+  const now = new Date().toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
   const textMain = dark ? "#F9FAFB" : "#111827";
   const textSub = dark ? "#9CA3AF" : "#6B7280";
   const rowBg = dark ? "#374151" : "#F8F9FA";
@@ -55,30 +202,113 @@ function ReceiptModal({ driver, onClose }: { driver: Driver; onClose: () => void
   return (
     <Modal title="Driver Added" onClose={onClose} width={380}>
       <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-        <div style={{ textAlign: "center", paddingBottom: 16, borderBottom: `2px dashed ${dark ? "#374151" : "#E5E7EB"}`, marginBottom: 16 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: "#ECFDF5", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+        <div
+          style={{
+            textAlign: "center",
+            paddingBottom: 16,
+            borderBottom: `2px dashed ${dark ? "#374151" : "#E5E7EB"}`,
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              background: "#ECFDF5",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 10px",
+            }}
+          >
             <Check size={22} color="#10B981" />
           </div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: textMain }}>Driver Registered</div>
-          <div style={{ fontSize: 13, color: textSub, marginTop: 2 }}>{now}</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: textMain }}>
+            Driver Registered
+          </div>
+          <div style={{ fontSize: 13, color: textSub, marginTop: 2 }}>
+            {now}
+          </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-          {[["Full Name", fullName], ["Driver ID", driver.id], ["Vehicle", driver.vehicle], ["Contact", driver.contact]].map(([label, val]) => (
-            <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: rowBg, borderRadius: 8 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+            marginBottom: 16,
+          }}
+        >
+          {[
+            ["Full Name", fullName],
+            ["Driver ID", driver.id],
+            ["Vehicle", driver.vehicle],
+            ["Contact", driver.contact],
+          ].map(([label, val]) => (
+            <div
+              key={label}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "8px 12px",
+                background: rowBg,
+                borderRadius: 8,
+              }}
+            >
               <span style={{ fontSize: 13, color: textSub }}>{label}</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: label === "Driver ID" ? "#1D6AE5" : textMain, fontFamily: label === "Driver ID" ? "monospace" : "inherit" }}>{val}</span>
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: label === "Driver ID" ? "#1D6AE5" : textMain,
+                  fontFamily: label === "Driver ID" ? "monospace" : "inherit",
+                }}
+              >
+                {val}
+              </span>
             </div>
           ))}
         </div>
 
-        <div style={{ borderTop: `2px dashed ${dark ? "#374151" : "#E5E7EB"}`, paddingTop: 14, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, color: "#10B981", background: "#ECFDF5", padding: "8px 12px", borderRadius: 8 }}>
+        <div
+          style={{
+            borderTop: `2px dashed ${dark ? "#374151" : "#E5E7EB"}`,
+            paddingTop: 14,
+            marginBottom: 16,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 13,
+              color: "#10B981",
+              background: "#ECFDF5",
+              padding: "8px 12px",
+              borderRadius: 8,
+            }}
+          >
             ✓ Driver ID auto-generated.
           </div>
         </div>
 
-        <button onClick={onClose} style={{ width: "100%", padding: "11px", background: "#10B981", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Done</button>
+        <button
+          onClick={onClose}
+          style={{
+            width: "100%",
+            padding: "11px",
+            background: "#10B981",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: "Inter, sans-serif",
+          }}
+        >
+          Done
+        </button>
       </div>
     </Modal>
   );
@@ -286,15 +516,14 @@ Venezuela|+58
 Vietnam|+84
 Yemen|+967
 Zambia|+260
-Zimbabwe|+263`.split("\n").map((entry) => {
-  const [name, code] = entry.split("|");
-  return { name, code };
-});
-
+Zimbabwe|+263`
+  .split("\n")
+  .map((entry) => {
+    const [name, code] = entry.split("|");
+    return { name, code };
+  });
 
 // End of region comment
-
-
 
 // ============================================================
 // Page logic and UI
@@ -324,7 +553,9 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
   const textMain = dark ? "#F9FAFB" : "#111827";
   const textSub = dark ? "#9CA3AF" : "#6B7280";
   const borderColor = dark ? "#374151" : "#F3F4F6";
-  const shadow = dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)";
+  const shadow = dark
+    ? "0 1px 4px rgba(0,0,0,0.3)"
+    : "0 1px 4px rgba(0,0,0,0.07)";
   const rowHover = dark ? "#374151" : "#FAFAFA";
   const inputBg = dark ? "#374151" : "#F8F9FA";
   const thColor = dark ? "#6B7280" : "#9CA3AF";
@@ -336,15 +567,21 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
     return () => window.clearTimeout(timer);
   }, [successMessage]);
 
-  const filtered = drivers.filter((e) =>
-    `${e.firstName} ${e.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
-    e.id.toLowerCase().includes(search.toLowerCase()) ||
-    e.vehicle.toLowerCase().includes(search.toLowerCase())
+  const filtered = drivers.filter(
+    (e) =>
+      `${e.firstName} ${e.lastName}`
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      e.id.toLowerCase().includes(search.toLowerCase()) ||
+      e.vehicle.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const allChecked = filtered.length > 0 && filtered.every((e) => selected.has(e.id));
+  const allChecked =
+    filtered.length > 0 && filtered.every((e) => selected.has(e.id));
   const someChecked = filtered.some((e) => selected.has(e.id));
-  const hasAvailableVehicleSlot = vehicles.some((vehicle) => vehicle.driverIds.length < 2);
+  const hasAvailableVehicleSlot = vehicles.some(
+    (vehicle) => vehicle.driverIds.length < 2,
+  );
 
   function vehicleSlotAvailable(plate: string) {
     const normalized = formatPlate(plate || "");
@@ -353,18 +590,42 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
     return Boolean(vehicle && vehicle.driverIds.length < 2);
   }
 
-  function toggleAll() { if (allChecked) setSelected(new Set()); else setSelected(new Set(filtered.map((e) => e.id))); }
-  function toggleOne(id: string) { setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
+  function toggleAll() {
+    if (allChecked) setSelected(new Set());
+    else setSelected(new Set(filtered.map((e) => e.id)));
+  }
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const s = new Set(prev);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+  }
 
-  function openAdd() { setForm(emptyForm); setDriverImage(""); setCountryCode("+63"); setFormError(""); setModal("add"); }
+  function openAdd() {
+    setForm(emptyForm);
+    setDriverImage("");
+    setCountryCode("+63");
+    setFormError("");
+    setModal("add");
+  }
   function openEdit(e: Driver) {
     setEditTarget(e);
     const digits = e.contact.replace(/\D/g, "");
-    const localDigits = digits.startsWith("63") && digits.length > 10 ? digits.slice(2) : digits.replace(/^0/, "");
+    const localDigits =
+      digits.startsWith("63") && digits.length > 10
+        ? digits.slice(2)
+        : digits.replace(/^0/, "");
     setCountryCode(e.contact.trim().startsWith("+63") ? "+63" : "+63");
-    setForm({ firstName: e.firstName, lastName: e.lastName, vehicle: e.vehicle, contact: localDigits });
+    setForm({
+      firstName: e.firstName,
+      lastName: e.lastName,
+      vehicle: e.vehicle,
+      contact: localDigits,
+    });
     setDriverImage(e.avatar ?? "");
-    setFormError(""); setModal("edit");
+    setFormError("");
+    setModal("edit");
   }
 
   function handleDriverImageChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -379,18 +640,40 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setDriverImage(typeof reader.result === "string" ? reader.result : "");
+    reader.onload = () =>
+      setDriverImage(typeof reader.result === "string" ? reader.result : "");
     reader.readAsDataURL(file);
   }
 
   async function handleSave() {
     const fullContact = `${countryCode}${form.contact.replace(/\D/g, "")}`;
-    const validationError = validateName(form.firstName, "First name") || validateName(form.lastName, "Last name") || (form.vehicle && form.vehicle !== "Unassigned" ? validatePlate(form.vehicle) : null) || validatePhone(fullContact);
-    if (validationError) { setFormError(validationError); return; }
-    const normalized = { firstName: formatName(form.firstName), lastName: formatName(form.lastName), vehicle: form.vehicle && form.vehicle !== "Unassigned" ? formatPlate(form.vehicle) : "", contact: formatPhone(fullContact) };
+    const validationError =
+      validateName(form.firstName, "First name") ||
+      validateName(form.lastName, "Last name") ||
+      (form.vehicle && form.vehicle !== "Unassigned"
+        ? validatePlate(form.vehicle)
+        : null) ||
+      validatePhone(fullContact);
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+    const normalized = {
+      firstName: formatName(form.firstName),
+      lastName: formatName(form.lastName),
+      vehicle:
+        form.vehicle && form.vehicle !== "Unassigned"
+          ? formatPlate(form.vehicle)
+          : "",
+      contact: formatPhone(fullContact),
+    };
 
     if (modal === "add") {
-      const newDriver: Driver = { id: genDriverId(drivers), ...normalized, avatar: driverImage || undefined };
+      const newDriver: Driver = {
+        id: genDriverId(drivers),
+        ...normalized,
+        avatar: driverImage || undefined,
+      };
       try {
         await addDriver(newDriver);
         setModal(null);
@@ -403,7 +686,12 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
       try {
         const driverPatch = normalized.vehicle
           ? { ...normalized, avatar: driverImage || null }
-          : { firstName: normalized.firstName, lastName: normalized.lastName, contact: normalized.contact, avatar: driverImage || null };
+          : {
+              firstName: normalized.firstName,
+              lastName: normalized.lastName,
+              contact: normalized.contact,
+              avatar: driverImage || null,
+            };
         await updateDriver(editTarget.id, driverPatch);
         setModal(null);
         setSuccessMessage("Changes Saved");
@@ -414,70 +702,243 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
   }
 
   async function deleteOne(id: string) {
-    try { await removeDriver(id); } catch (e) { console.error(e); }
-    setSelected((prev) => { const s = new Set(prev); s.delete(id); return s; });
+    try {
+      await removeDriver(id);
+    } catch (e) {
+      console.error(e);
+    }
+    setSelected((prev) => {
+      const s = new Set(prev);
+      s.delete(id);
+      return s;
+    });
     setConfirmDelete(null);
   }
   async function massDelete() {
-    await Promise.all([...selected].map((id) => removeDriver(id).catch(console.error)));
+    await Promise.all(
+      [...selected].map((id) => removeDriver(id).catch(console.error)),
+    );
     setSelected(new Set());
     setConfirmBulkDelete(false);
   }
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? 16 : 24, background: bg, fontFamily: "Inter, sans-serif", transition: "background 0.2s" }}>
+    <div
+      style={{
+        flex: 1,
+        overflowY: "auto",
+        padding: isMobile ? 16 : 24,
+        background: bg,
+        fontFamily: "Inter, sans-serif",
+        transition: "background 0.2s",
+      }}
+    >
       {/* ============================================================ */}
       {/* Driver page header and account actions */}
       {/* ============================================================ */}
       {successMessage && (
-        <div role="status" style={{ position: "fixed", top: 24, left: "50%", transform: "translateX(-50%)", zIndex: 1100, padding: "11px 18px", background: dark ? "#064E3B" : "#ECFDF5", border: `1px solid ${dark ? "#10B981" : "#A7F3D0"}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.15)", color: dark ? "#D1FAE5" : "#047857", fontSize: 14, fontWeight: 600, animation: "driver-toast-in 180ms ease-out" }}>
+        <div
+          role="status"
+          style={{
+            position: "fixed",
+            top: 24,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1100,
+            padding: "11px 18px",
+            background: dark ? "#064E3B" : "#ECFDF5",
+            border: `1px solid ${dark ? "#10B981" : "#A7F3D0"}`,
+            borderRadius: 10,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+            color: dark ? "#D1FAE5" : "#047857",
+            fontSize: 14,
+            fontWeight: 600,
+            animation: "driver-toast-in 180ms ease-out",
+          }}
+        >
           {successMessage}
           <style>{`@keyframes driver-toast-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }`}</style>
         </div>
       )}
-      <PageHeader icon={Contact} iconColor="#10B981" title="Driver Information" subtitle="Driver profiles and vehicle assignments">
-      </PageHeader>
+      <PageHeader
+        icon={Contact}
+        iconColor="#10B981"
+        title="Driver Information"
+        subtitle="Driver profiles and vehicle assignments"
+      ></PageHeader>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+          marginBottom: 16,
+        }}
+      >
         {/* ============================================================ */}
         {/* Driver search and create actions */}
         {/* ============================================================ */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: inputBg, border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`, borderRadius: 8, padding: "8px 12px", width: isMobile ? "100%" : 320, boxSizing: "border-box", boxShadow: dark ? "0 0 0 1px rgba(156,163,175,.12)" : "0 1px 3px rgba(15,23,42,.06)" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            background: inputBg,
+            border: `1.5px solid ${dark ? "#6B7280" : "#D1D5DB"}`,
+            borderRadius: 8,
+            padding: "8px 12px",
+            width: isMobile ? "100%" : 320,
+            boxSizing: "border-box",
+            boxShadow: dark
+              ? "0 0 0 1px rgba(156,163,175,.12)"
+              : "0 1px 3px rgba(15,23,42,.06)",
+          }}
+        >
           <Search size={15} color={dark ? "#D1D5DB" : "#6B7280"} />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search drivers..." style={{ background: "transparent", border: "none", outline: "none", fontSize: 14, color: textMain, width: "100%", fontFamily: "Inter, sans-serif" }} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search drivers..."
+            style={{
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              fontSize: 14,
+              color: textMain,
+              width: "100%",
+              fontFamily: "Inter, sans-serif",
+            }}
+          />
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: isMobile ? 0 : "auto", width: isMobile ? "100%" : "auto" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginLeft: isMobile ? 0 : "auto",
+            width: isMobile ? "100%" : "auto",
+          }}
+        >
           {selected.size > 0 && (
-            <button onClick={() => setConfirmBulkDelete(true)} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", background: "#FEF2F2", color: "#EF4444", borderRadius: 8, border: "1px solid #FECACA", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", flex: isMobile ? 1 : undefined }}>
+            <button
+              onClick={() => setConfirmBulkDelete(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                padding: "8px 14px",
+                background: "#FEF2F2",
+                color: "#EF4444",
+                borderRadius: 8,
+                border: "1px solid #FECACA",
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+                flex: isMobile ? 1 : undefined,
+              }}
+            >
               <Trash2 size={14} /> Delete {selected.size} Selected
             </button>
           )}
-          <button onClick={openAdd} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", background: "#10B981", color: "#fff", borderRadius: 8, border: "none", fontSize: 14, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif", flex: isMobile ? 1 : undefined }}>
+          <button
+            onClick={openAdd}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              padding: "8px 14px",
+              background: "#10B981",
+              color: "#fff",
+              borderRadius: 8,
+              border: "none",
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "pointer",
+              fontFamily: "Inter, sans-serif",
+              flex: isMobile ? 1 : undefined,
+            }}
+          >
             <Plus size={14} /> Add Driver
           </button>
         </div>
       </div>
 
-      <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden" }}>
+      <div
+        style={{
+          background: cardBg,
+          borderRadius: 12,
+          boxShadow: shadow,
+          overflow: "hidden",
+        }}
+      >
         {/* ============================================================ */}
         {/* Driver directory table */}
         {/* ============================================================ */}
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}>
+          <table
+            style={{ width: "100%", borderCollapse: "collapse", minWidth: 580 }}
+          >
             <thead>
               <tr style={{ borderBottom: `1px solid ${borderColor}` }}>
                 <th style={{ padding: "10px 16px", width: 40 }}>
-                  <div onClick={toggleAll} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${allChecked ? "#1D6AE5" : checkBorder}`, background: allChecked ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div
+                    onClick={toggleAll}
+                    style={{
+                      width: 16,
+                      height: 16,
+                      borderRadius: 4,
+                      border: `1.5px solid ${allChecked ? "#1D6AE5" : checkBorder}`,
+                      background: allChecked ? "#1D6AE5" : "transparent",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
                     {allChecked && <Check size={10} color="#fff" />}
-                    {!allChecked && someChecked && <div style={{ width: 8, height: 2, background: "#1D6AE5", borderRadius: 1 }} />}
+                    {!allChecked && someChecked && (
+                      <div
+                        style={{
+                          width: 8,
+                          height: 2,
+                          background: "#1D6AE5",
+                          borderRadius: 1,
+                        }}
+                      />
+                    )}
                   </div>
                 </th>
-                {["Driver Name", "Driver ID", "Vehicle", "Contact", "Actions"].map((h, i) => (
-                  <th key={i} style={{ fontSize: 12, fontWeight: 600, color: thColor, textAlign: "left", padding: "10px 14px", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{h}</th>
+                {[
+                  "Driver Name",
+                  "Driver ID",
+                  "Vehicle",
+                  "Contact",
+                  "Actions",
+                ].map((h, i) => (
+                  <th
+                    key={i}
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: thColor,
+                      textAlign: "left",
+                      padding: "10px 14px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
-              <tbody>
+            <tbody>
               {filtered.length === 0 ? (
                 <tr>
                   <td
@@ -487,40 +948,196 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                       textAlign: "center",
                       color: textSub,
                       fontSize: 14,
-                    }}>
-                  No drivers match your search.</td>
+                    }}
+                  >
+                    No drivers match your search.
+                  </td>
                 </tr>
               ) : (
                 <>
                   {filtered.map((e, i) => (
-                    <tr key={e.id} style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: selected.has(e.id) ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent" }}
-                      onMouseEnter={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
-                      onMouseLeave={(el) => { if (!selected.has(e.id)) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
+                    <tr
+                      key={e.id}
+                      style={{
+                        borderBottom:
+                          i < filtered.length - 1
+                            ? `1px solid ${borderColor}`
+                            : "none",
+                        transition: "background 0.1s",
+                        background: selected.has(e.id)
+                          ? dark
+                            ? "#1e3a5f"
+                            : "#EBF2FF"
+                          : "transparent",
+                      }}
+                      onMouseEnter={(el) => {
+                        if (!selected.has(e.id))
+                          (
+                            el.currentTarget as HTMLTableRowElement
+                          ).style.background = rowHover;
+                      }}
+                      onMouseLeave={(el) => {
+                        if (!selected.has(e.id))
+                          (
+                            el.currentTarget as HTMLTableRowElement
+                          ).style.background = "transparent";
+                      }}
+                    >
                       <td style={{ padding: "11px 16px" }}>
-                        <div onClick={() => toggleOne(e.id)} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${selected.has(e.id) ? "#1D6AE5" : checkBorder}`, background: selected.has(e.id) ? "#1D6AE5" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          {selected.has(e.id) && <Check size={10} color="#fff" />}
+                        <div
+                          onClick={() => toggleOne(e.id)}
+                          style={{
+                            width: 16,
+                            height: 16,
+                            borderRadius: 4,
+                            border: `1.5px solid ${selected.has(e.id) ? "#1D6AE5" : checkBorder}`,
+                            background: selected.has(e.id)
+                              ? "#1D6AE5"
+                              : "transparent",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {selected.has(e.id) && (
+                            <Check size={10} color="#fff" />
+                          )}
                         </div>
                       </td>
                       <td style={{ padding: "11px 14px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0, overflow: "hidden" }}>
-                            {e.avatar ? <img src={e.avatar} alt={`${e.firstName} ${e.lastName}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 30,
+                              height: 30,
+                              borderRadius: "50%",
+                              background: "#1D6AE5",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#fff",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              flexShrink: 0,
+                              overflow: "hidden",
+                            }}
+                          >
+                            {e.avatar ? (
+                              <img
+                                src={e.avatar}
+                                alt={`${e.firstName} ${e.lastName}`}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                }}
+                              />
+                            ) : (
+                              (e.firstName[0] ?? "") + (e.lastName[0] ?? "")
+                            )}
                           </div>
-                          <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.firstName} {e.lastName}</span>
+                          <span
+                            style={{
+                              fontSize: 14,
+                              color: textMain,
+                              fontWeight: 500,
+                            }}
+                          >
+                            {e.firstName} {e.lastName}
+                          </span>
                         </div>
                       </td>
-                      <td style={{ padding: "11px 14px", fontSize: 13, color: "#1D6AE5", fontFamily: "monospace", fontWeight: 600 }}>{e.id}</td>
-                      <td style={{ padding: "11px 14px", fontSize: 14, color: textMain, fontWeight: 500 }}>{e.vehicle}</td>
-                      <td style={{ padding: "11px 14px", fontSize: 13, color: textSub }}>{e.contact}</td>
+                      <td
+                        style={{
+                          padding: "11px 14px",
+                          fontSize: 13,
+                          color: "#1D6AE5",
+                          fontFamily: "monospace",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {e.id}
+                      </td>
+                      <td
+                        style={{
+                          padding: "11px 14px",
+                          fontSize: 14,
+                          color: textMain,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {e.vehicle}
+                      </td>
+                      <td
+                        style={{
+                          padding: "11px 14px",
+                          fontSize: 13,
+                          color: textSub,
+                        }}
+                      >
+                        {e.contact}
+                      </td>
                       <td style={{ width: 235, padding: "11px 14px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 207, whiteSpace: "nowrap" }}>
-                          <button onClick={(event) => { event.stopPropagation(); openEdit(e); }} aria-label={`Edit ${e.firstName} ${e.lastName}`}
-                            style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#EBF2FF", color: "#1D6AE5", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            minWidth: 207,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openEdit(e);
+                            }}
+                            aria-label={`Edit ${e.firstName} ${e.lastName}`}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 5,
+                              padding: "5px 10px",
+                              background: "#EBF2FF",
+                              color: "#1D6AE5",
+                              border: "none",
+                              borderRadius: 6,
+                              fontSize: 13,
+                              fontWeight: 500,
+                              cursor: "pointer",
+                              fontFamily: "Inter, sans-serif",
+                            }}
+                          >
                             <Edit3 size={12} /> Edit
                           </button>
                           {onViewDetail && (
-                            <button onClick={(event) => { event.stopPropagation(); onViewDetail(e.id); }}
-                              style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", background: "#ECFDF5", color: "#059669", border: "1px solid #A7F3D0", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onViewDetail(e.id);
+                              }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 5,
+                                padding: "5px 10px",
+                                background: "#ECFDF5",
+                                color: "#059669",
+                                border: "1px solid #A7F3D0",
+                                borderRadius: 6,
+                                fontSize: 13,
+                                fontWeight: 500,
+                                cursor: "pointer",
+                                fontFamily: "Inter, sans-serif",
+                              }}
+                            >
                               <BarChart2 size={12} /> View
                             </button>
                           )}
@@ -530,12 +1147,40 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                   ))}
                   <tr>
                     <td colSpan={6} style={{ padding: "10px 18px 15px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
-                        <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
-                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: dark ? "#9CA3AF" : "#94A3B8", whiteSpace: "nowrap" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                          width: "100%",
+                        }}
+                      >
+                        <span
+                          style={{
+                            flex: 1,
+                            height: 1,
+                            background: dark ? "#374151" : "#E5E7EB",
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: "0.12em",
+                            textTransform: "uppercase",
+                            color: dark ? "#9CA3AF" : "#94A3B8",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
                           End of table
                         </span>
-                        <span style={{ flex: 1, height: 1, background: dark ? "#374151" : "#E5E7EB" }} />
+                        <span
+                          style={{
+                            flex: 1,
+                            height: 1,
+                            background: dark ? "#374151" : "#E5E7EB",
+                          }}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -547,105 +1192,511 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
       </div>
 
       {modal && (
-        <Modal title={modal === "add" ? "Add Driver" : "Edit Driver"} onClose={() => setModal(null)}>
+        <Modal
+          title={modal === "add" ? "Add Driver" : "Edit Driver"}
+          onClose={() => setModal(null)}
+        >
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {modal === "add" && (
-              <div style={{ padding: "8px 12px", background: dark ? "#374151" : "#F0F9FF", borderRadius: 8, fontSize: 13, color: dark ? "#93C5FD" : "#0369A1" }}>
+              <div
+                style={{
+                  padding: "8px 12px",
+                  background: dark ? "#374151" : "#F0F9FF",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  color: dark ? "#93C5FD" : "#0369A1",
+                }}
+              >
                 Driver ID is auto-generated.
               </div>
             )}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <FloatField label="Driver First Name" value={form.firstName} onChange={(v) => setForm((p) => ({ ...p, firstName: v }))} />
-              <FloatField label="Driver Last Name" value={form.lastName} onChange={(v) => setForm((p) => ({ ...p, lastName: v }))} />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 10,
+              }}
+            >
+              <FloatField
+                label="Driver First Name"
+                value={form.firstName}
+                onChange={(v) => setForm((p) => ({ ...p, firstName: v }))}
+              />
+              <FloatField
+                label="Driver Last Name"
+                value={form.lastName}
+                onChange={(v) => setForm((p) => ({ ...p, lastName: v }))}
+              />
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, border: `1.5px dashed ${dark ? "#4B5563" : "#D1D5DB"}`, borderRadius: 10 }}>
-              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, fontWeight: 700, flexShrink: 0, overflow: "hidden" }}>
-                {driverImage ? <img src={driverImage} alt="Driver preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (form.firstName[0] ?? "") + (form.lastName[0] ?? "") || "?"}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: 12,
+                border: `1.5px dashed ${dark ? "#4B5563" : "#D1D5DB"}`,
+                borderRadius: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  background: "#1D6AE5",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontSize: 18,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  overflow: "hidden",
+                }}
+              >
+                {driverImage ? (
+                  <img
+                    src={driverImage}
+                    alt="Driver preview"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  (form.firstName[0] ?? "") + (form.lastName[0] ?? "") || "?"
+                )}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: textMain }}>Driver image</div>
-                <div style={{ fontSize: 12, color: textSub, marginTop: 2 }}>{driverImage ? "Update or remove the profile photo" : "Add a photo for the circle avatar"}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: textMain }}>
+                  Driver image
+                </div>
+                <div style={{ fontSize: 12, color: textSub, marginTop: 2 }}>
+                  {driverImage
+                    ? "Update or remove the profile photo"
+                    : "Add a photo for the circle avatar"}
+                </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: dark ? "#374151" : "#F3F4F6", borderRadius: 7, color: dark ? "#F9FAFB" : "#374151", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
-                  <ImagePlus size={14} /> {driverImage ? "Replace" : "Choose image"}
-                  <input type="file" accept="image/*" onChange={handleDriverImageChange} style={{ display: "none" }} />
+                <label
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "7px 10px",
+                    background: dark ? "#374151" : "#F3F4F6",
+                    borderRadius: 7,
+                    color: dark ? "#F9FAFB" : "#374151",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  <ImagePlus size={14} />{" "}
+                  {driverImage ? "Replace" : "Choose image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleDriverImageChange}
+                    style={{ display: "none" }}
+                  />
                 </label>
-                {driverImage && <button type="button" onClick={() => setDriverImage("")} style={{ padding: "7px 10px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#D1D5DB"}`, borderRadius: 7, color: "#EF4444", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>Remove</button>}
+                {driverImage && (
+                  <button
+                    type="button"
+                    onClick={() => setDriverImage("")}
+                    style={{
+                      padding: "7px 10px",
+                      background: "transparent",
+                      border: `1px solid ${dark ? "#4B5563" : "#D1D5DB"}`,
+                      borderRadius: 7,
+                      color: "#EF4444",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Remove
+                  </button>
+                )}
               </div>
             </div>
             <div style={{ position: "relative" }}>
               <select
                 value={form.vehicle === "Unassigned" ? "" : form.vehicle}
                 disabled={!hasAvailableVehicleSlot && !form.vehicle}
-                onChange={(e) => setForm((p) => ({ ...p, vehicle: e.target.value }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, vehicle: e.target.value }))
+                }
                 aria-label="Vehicle"
-                style={{ width: "100%", padding: "15px 44px 15px 14px", fontSize: 15, color: !hasAvailableVehicleSlot && !form.vehicle ? (dark ? "#6B7280" : "#9CA3AF") : form.vehicle ? (dark ? "#F9FAFB" : "#111827") : (dark ? "#9CA3AF" : "#9CA3AF"), background: !hasAvailableVehicleSlot && !form.vehicle ? (dark ? "#374151" : "#F3F4F6") : (dark ? "#374151" : "#fff"), border: `1.5px solid ${!hasAvailableVehicleSlot && !form.vehicle ? (dark ? "#4B5563" : "#D1D5DB") : (dark ? "#4B5563" : "#E5E7EB")}`, borderRadius: 10, outline: "none", boxSizing: "border-box", fontFamily: "Inter, sans-serif", appearance: "none", cursor: !hasAvailableVehicleSlot && !form.vehicle ? "not-allowed" : "pointer" }}
+                style={{
+                  width: "100%",
+                  padding: "15px 44px 15px 14px",
+                  fontSize: 15,
+                  color:
+                    !hasAvailableVehicleSlot && !form.vehicle
+                      ? dark
+                        ? "#6B7280"
+                        : "#9CA3AF"
+                      : form.vehicle
+                        ? dark
+                          ? "#F9FAFB"
+                          : "#111827"
+                        : dark
+                          ? "#9CA3AF"
+                          : "#9CA3AF",
+                  background:
+                    !hasAvailableVehicleSlot && !form.vehicle
+                      ? dark
+                        ? "#374151"
+                        : "#F3F4F6"
+                      : dark
+                        ? "#374151"
+                        : "#fff",
+                  border: `1.5px solid ${!hasAvailableVehicleSlot && !form.vehicle ? (dark ? "#4B5563" : "#D1D5DB") : dark ? "#4B5563" : "#E5E7EB"}`,
+                  borderRadius: 10,
+                  outline: "none",
+                  boxSizing: "border-box",
+                  fontFamily: "Inter, sans-serif",
+                  appearance: "none",
+                  cursor:
+                    !hasAvailableVehicleSlot && !form.vehicle
+                      ? "not-allowed"
+                      : "pointer",
+                }}
               >
-                <option value="">{modal === "add" && !hasAvailableVehicleSlot ? "No Vehicles Available" : "Unassigned"}</option>
-                {vehicles.filter((vehicle) => vehicle.driverIds.length < 2 || (modal === "edit" && vehicle.plateNumber === form.vehicle)).map((vehicle) => (
-                  <option key={vehicle.id} value={vehicle.plateNumber}>{vehicle.plateNumber}{vehicle.model ? ` - ${vehicle.model}` : ""}</option>
+                <option value="">
+                  {modal === "add" && !hasAvailableVehicleSlot
+                    ? "No Vehicles Available"
+                    : "Unassigned"}
+                </option>
+                {vehicles
+                  .filter(
+                    (vehicle) =>
+                      vehicle.driverIds.length < 2 ||
+                      (modal === "edit" &&
+                        vehicle.plateNumber === form.vehicle),
+                  )
+                  .map((vehicle) => (
+                    <option key={vehicle.id} value={vehicle.plateNumber}>
+                      {vehicle.plateNumber}
+                      {vehicle.model ? ` - ${vehicle.model}` : ""}
+                    </option>
+                  ))}
+              </select>
+              <ChevronDown
+                size={18}
+                color={
+                  !hasAvailableVehicleSlot && !form.vehicle
+                    ? dark
+                      ? "#6B7280"
+                      : "#9CA3AF"
+                    : dark
+                      ? "#D1D5DB"
+                      : "#4B5563"
+                }
+                style={{
+                  position: "absolute",
+                  right: 14,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  pointerEvents: "none",
+                }}
+              />
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(145px, 0.9fr) 1.4fr",
+                gap: 8,
+              }}
+            >
+              <select
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                aria-label="Country code"
+                style={{
+                  width: "100%",
+                  padding: "0 10px",
+                  fontSize: 14,
+                  color: dark ? "#F9FAFB" : "#111827",
+                  background: dark ? "#374151" : "#fff",
+                  border: `1.5px solid ${dark ? "#4B5563" : "#E5E7EB"}`,
+                  borderRadius: 10,
+                  outline: "none",
+                }}
+              >
+                {countries.map((country) => (
+                  <option
+                    key={`${country.name}-${country.code}`}
+                    value={country.code}
+                  >
+                    {country.name} ({country.code})
+                  </option>
                 ))}
               </select>
-              <ChevronDown size={18} color={!hasAvailableVehicleSlot && !form.vehicle ? (dark ? "#6B7280" : "#9CA3AF") : (dark ? "#D1D5DB" : "#4B5563")} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+              <FloatField
+                label="Contact Number"
+                value={formatLocalPhoneDisplay(form.contact)}
+                maxLength={12}
+                onChange={(v) =>
+                  setForm((p) => ({
+                    ...p,
+                    contact: v.replace(/\D/g, "").slice(0, 10),
+                  }))
+                }
+              />
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(145px, 0.9fr) 1.4fr", gap: 8 }}>
-              <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} aria-label="Country code"
-                style={{ width: "100%", padding: "0 10px", fontSize: 14, color: dark ? "#F9FAFB" : "#111827", background: dark ? "#374151" : "#fff", border: `1.5px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 10, outline: "none" }}>
-                {countries.map((country) => <option key={`${country.name}-${country.code}`} value={country.code}>{country.name} ({country.code})</option>)}
-              </select>
-              <FloatField label="Contact Number" value={formatLocalPhoneDisplay(form.contact)} maxLength={12} onChange={(v) => setForm((p) => ({ ...p, contact: v.replace(/\D/g, "").slice(0, 10) }))} />
-            </div>
-            {formError && <div style={{ fontSize: 14, color: "#EF4444", background: "#FEF2F2", padding: "8px 12px", borderRadius: 8 }}>{formError}</div>}
+            {formError && (
+              <div
+                style={{
+                  fontSize: 14,
+                  color: "#EF4444",
+                  background: "#FEF2F2",
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                }}
+              >
+                {formError}
+              </div>
+            )}
             <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-              <button onClick={() => setModal(null)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>
-              <button onClick={handleSave} style={{ flex: 1, padding: "11px", background: "#1D6AE5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>{modal === "add" ? "Add Driver" : "Save Changes"}</button>
+              <button
+                onClick={() => setModal(null)}
+                style={{
+                  flex: 1,
+                  padding: "11px",
+                  background: "transparent",
+                  border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`,
+                  borderRadius: 8,
+                  fontSize: 14,
+                  color: dark ? "#9CA3AF" : "#6B7280",
+                  cursor: "pointer",
+                  fontFamily: "Inter, sans-serif",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                style={{
+                  flex: 1,
+                  padding: "11px",
+                  background: "#1D6AE5",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "Inter, sans-serif",
+                }}
+              >
+                {modal === "add" ? "Add Driver" : "Save Changes"}
+              </button>
             </div>
-            {modal === "edit" && editTarget && <>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14, marginBottom: 14, color: dark ? "#9CA3AF" : "#6B7280", fontSize: 12, fontWeight: 600, textTransform: "uppercase" }}>
-                <div style={{ flex: 1, borderTop: `1px dashed ${dark ? "#4B5563" : "#D1D5DB"}` }} />
-                <span>or</span>
-                <div style={{ flex: 1, borderTop: `1px dashed ${dark ? "#4B5563" : "#D1D5DB"}` }} />
-              </div>
-              <div>
-                <button onClick={() => { setModal(null); setConfirmDelete(editTarget.id); }} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "11px 14px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, fontSize: 14, color: "#EF4444", cursor: "pointer", fontFamily: "Inter, sans-serif" }}><Trash2 size={14} />  Delete Driver Details</button>
-              </div>
-            </>}
+            {modal === "edit" && editTarget && (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    marginTop: 14,
+                    marginBottom: 14,
+                    color: dark ? "#9CA3AF" : "#6B7280",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: 1,
+                      borderTop: `1px dashed ${dark ? "#4B5563" : "#D1D5DB"}`,
+                    }}
+                  />
+                  <span>or</span>
+                  <div
+                    style={{
+                      flex: 1,
+                      borderTop: `1px dashed ${dark ? "#4B5563" : "#D1D5DB"}`,
+                    }}
+                  />
+                </div>
+                <div>
+                  <button
+                    onClick={() => {
+                      setModal(null);
+                      setConfirmDelete(editTarget.id);
+                    }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      padding: "11px 14px",
+                      background: "#FEF2F2",
+                      border: "1px solid #FECACA",
+                      borderRadius: 8,
+                      fontSize: 14,
+                      color: "#EF4444",
+                      cursor: "pointer",
+                      fontFamily: "Inter, sans-serif",
+                    }}
+                  >
+                    <Trash2 size={14} /> Delete Driver Details
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </Modal>
       )}
 
       {confirmDelete && (
         <Modal title="Delete Driver" onClose={() => setConfirmDelete(null)}>
-          <p style={{ fontSize: 15, color: dark ? "#D1D5DB" : "#374151", lineHeight: 1.6, marginBottom: 20 }}>
-            Are you sure you want to delete <strong style={{ color: "#EF4444" }}>{drivers.find((e) => e.id === confirmDelete)?.firstName} {drivers.find((e) => e.id === confirmDelete)?.lastName}</strong>? This action cannot be undone.
+          <p
+            style={{
+              fontSize: 15,
+              color: dark ? "#D1D5DB" : "#374151",
+              lineHeight: 1.6,
+              marginBottom: 20,
+            }}
+          >
+            Are you sure you want to delete{" "}
+            <strong style={{ color: "#EF4444" }}>
+              {drivers.find((e) => e.id === confirmDelete)?.firstName}{" "}
+              {drivers.find((e) => e.id === confirmDelete)?.lastName}
+            </strong>
+            ? This action cannot be undone.
           </p>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>
-            <button onClick={() => deleteOne(confirmDelete)} style={{ flex: 1, padding: "11px", background: "#EF4444", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Delete</button>
+            <button
+              onClick={() => setConfirmDelete(null)}
+              style={{
+                flex: 1,
+                padding: "11px",
+                background: "transparent",
+                border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`,
+                borderRadius: 8,
+                fontSize: 14,
+                color: dark ? "#9CA3AF" : "#6B7280",
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => deleteOne(confirmDelete)}
+              style={{
+                flex: 1,
+                padding: "11px",
+                background: "#EF4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              Delete
+            </button>
           </div>
         </Modal>
       )}
 
       {confirmBulkDelete && (
-        <Modal title="Delete Drivers" onClose={() => setConfirmBulkDelete(false)}>
-          <p style={{ fontSize: 15, color: dark ? "#D1D5DB" : "#374151", lineHeight: 1.6, marginBottom: 12 }}>
-            Are you sure you want to delete the following drivers? This action cannot be undone.
+        <Modal
+          title="Delete Drivers"
+          onClose={() => setConfirmBulkDelete(false)}
+        >
+          <p
+            style={{
+              fontSize: 15,
+              color: dark ? "#D1D5DB" : "#374151",
+              lineHeight: 1.6,
+              marginBottom: 12,
+            }}
+          >
+            Are you sure you want to delete the following drivers? This action
+            cannot be undone.
           </p>
-          <div style={{ maxHeight: 140, overflowY: "auto", display: "grid", gap: 6, marginBottom: 20, padding: 10, background: dark ? "#451A1A" : "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8 }}>
+          <div
+            style={{
+              maxHeight: 140,
+              overflowY: "auto",
+              display: "grid",
+              gap: 6,
+              marginBottom: 20,
+              padding: 10,
+              background: dark ? "#451A1A" : "#FEF2F2",
+              border: "1px solid #FECACA",
+              borderRadius: 8,
+            }}
+          >
             {[...selected].map((id) => {
               const driver = drivers.find((item) => item.id === id);
-              return <strong key={id} style={{ color: dark ? "#FCA5A5" : "#B91C1C", fontSize: 14 }}>{driver ? `${driver.firstName} ${driver.lastName} (${driver.id})` : id}</strong>;
+              return (
+                <strong
+                  key={id}
+                  style={{ color: dark ? "#FCA5A5" : "#B91C1C", fontSize: 14 }}
+                >
+                  {driver
+                    ? `${driver.firstName} ${driver.lastName} (${driver.id})`
+                    : id}
+                </strong>
+              );
             })}
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => setConfirmBulkDelete(false)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 14, color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Cancel</button>
-            <button onClick={() => void massDelete()} style={{ flex: 1, padding: "11px", background: "#EF4444", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Delete</button>
+            <button
+              onClick={() => setConfirmBulkDelete(false)}
+              style={{
+                flex: 1,
+                padding: "11px",
+                background: "transparent",
+                border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`,
+                borderRadius: 8,
+                fontSize: 14,
+                color: dark ? "#9CA3AF" : "#6B7280",
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => void massDelete()}
+              style={{
+                flex: 1,
+                padding: "11px",
+                background: "#EF4444",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "Inter, sans-serif",
+              }}
+            >
+              Delete
+            </button>
           </div>
         </Modal>
       )}
 
-      {receipt && <ReceiptModal driver={receipt} onClose={() => setReceipt(null)} />}
+      {receipt && (
+        <ReceiptModal driver={receipt} onClose={() => setReceipt(null)} />
+      )}
     </div>
   );
 }
