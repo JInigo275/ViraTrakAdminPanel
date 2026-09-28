@@ -122,7 +122,38 @@ This ensures uniqueness for evidence records and avoids collisions in the primar
 - Avoid duplicate schema files or legacy SQL definitions
 - Use strict types in TypeScript and handle Supabase errors gracefully
 
+## Contributors
+
+Developed by:
+
+- Johann Inigo Emmanuel Mercado
+- Rine Nathan Cabusao
+- Irish Dianne Macapagal
+- Uriz Soliman
+
+## Copyright
+
+© 2026 ViraTrak Admin Panel. All rights reserved.
+
+This project and its source code, design, branding, components, and related materials are the intellectual property of the ViraTrak project owner and contributors. No part of this software may be reproduced, distributed, modified, or used for commercial purposes without prior written permission, unless otherwise stated by a separate license agreement.
+
+### Third-Party Assets
+
+This project includes third-party libraries, frameworks, icons, and UI components subject to their own licenses. Their use is governed by the respective package licenses and attribution requirements.
+
 ## License
 
+<<<<<<< Updated upstream
 This repository is provided as a development and admin dashboard asset. Update licensing information as needed for your project.
   
+=======
+This project is currently structured as an internal application and does not include a project license file. If you plan to distribute or commercialize it, add the appropriate license before release.
+
+## Contributing
+
+1. Create a feature branch.
+2. Keep changes scoped and well-tested.
+3. Update related documentation when schema or app workflows change.
+4. Verify the app builds successfully before submitting changes.
+
+>>>>>>> Stashed changes
