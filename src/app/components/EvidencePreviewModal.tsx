@@ -9,7 +9,10 @@ interface EvidencePreviewModalProps {
   onClose: () => void;
 }
 
-export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalProps) {
+export function EvidencePreviewModal({
+  alert,
+  onClose,
+}: EvidencePreviewModalProps) {
   const { dark } = useTheme();
   const isMobile = useIsMobile();
   const details = alert.evidenceDetails;
@@ -24,11 +27,12 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
     Moderate: { background: dark ? "#451A03" : "#FFF7ED", color: "#F59E0B" },
     Low: { background: dark ? "#064E3B" : "#ECFDF5", color: "#10B981" },
   }[alert.severity];
-  const formatMetricLabel = (metric: string) => metric
-    .split(/[_-]+/)
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
+  const formatMetricLabel = (metric: string) =>
+    metric
+      .split(/[_-]+/)
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
   const metrics = details?.triggeredMetrics ?? [];
   const metadata = [
     [
@@ -227,14 +231,18 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
                 <span>Evidence file could not be found in storage.</span>
               </div>
             ) : (
-              <div style={{ color: textSub, fontSize: 14 }}>No image URL is attached to this event.</div>
+              <div style={{ color: textSub, fontSize: 14 }}>
+                No image URL is attached to this event.
+              </div>
             )}
           </div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(180px, 1fr))",
+              gridTemplateColumns: isMobile
+                ? "1fr"
+                : "repeat(auto-fit, minmax(180px, 1fr))",
               gap: 10,
               marginTop: 16,
             }}

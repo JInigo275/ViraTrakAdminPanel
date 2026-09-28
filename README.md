@@ -1,114 +1,143 @@
 # ViraTrak Admin Panel
 
+A Vite + React administrative dashboard for managing ViraTrak operations, including drivers, vehicles, alerts, analytics, and system activity. The app is backed by Supabase and is designed for internal monitoring and operational workflows.
+
 ## Overview
 
-ViraTrak Admin Panel is a React + Supabase admin dashboard for managing drivers, vehicles, alerts, recorded evidence, and system logs. It is built with modern frontend tooling and a normalized PostgreSQL schema in `schema2.sql`.
+This project provides a responsive admin interface for reviewing live operational data and managing core entities in the ViraTrak ecosystem. It includes dashboard widgets, alert review screens, user management, driver and vehicle records, and system log visibility.
 
-This repository is intended for developers and administrators who need a clean, maintainable interface to create, inspect, and manage the core data model behind the ViraTrak system.
+The frontend is built in TypeScript with shared application components and custom CSS.
 
-## Key Features
+## Features
 
-- Driver and vehicle management
-- Alert creation and evidence recording
-- Behavioral event logging and system logs
-- Supabase-backed database operations
-- Responsive admin UI with components, forms, and tables
-- Detailed schema support via `schema2.sql`
+- Dashboard with KPI cards and recent activity
+- Alerts and evidence review workflow
+- Driver and vehicle management screens
+- System logs and analytics views
+- User access management and role-based restrictions
+- Supabase integration for data access and authentication
+- Responsive layout for desktop and mobile use
 
 ## Tech Stack
 
-- Frontend: React with Vite
-- Styling: Tailwind CSS
-- Backend: Supabase (PostgreSQL + client)
+- Frontend: React + Vite
 - Language: TypeScript
-- UI primitives: custom component library under `src/app/components/ui`
+- Styling: custom CSS + Tailwind utility patterns
+- Backend/data: Supabase (PostgreSQL)
+- Charts and data display: Recharts
+- PDF/export support: jsPDF / xlsx
 
 ## Project Structure
 
-- `src/main.tsx` — Application entry point
-- `src/app/App.tsx` — Main app layout and routing
-- `src/app/pages/` — Page components for Alerts, Drivers, Users, Settings, and Test utilities
-- `src/api/` — Supabase client and API helpers (`supabaseClient.ts`, `viratrak.ts`)
-- `src/app/components/` — Shared UI components, page headers, sidebars, and panels
-- `src/app/components/ui/` — Design system primitives and reusable UI building blocks
-- `schema2.sql` — Primary database schema for the normalized ViraTrak data model
-- `SCHEMA2_SETUP.md` — Setup guide for applying the schema
-
-## Setup and Development
-
-1. Install dependencies
-
-```bash
-npm install
+```text
+.
+├── src/
+│   ├── api/
+│   │   ├── supabaseClient.ts
+│   │   └── viratrak.ts
+│   ├── app/
+│   │   ├── App.tsx
+│   │   ├── components/
+│   │   ├── context/
+│   │   ├── pages/
+│   │   └── utils/
+│   ├── main.tsx
+│   └── utils/
+├── supabase/
+│   └── functions/
+├── index.html
+├── package.json
+├── vite.config.ts
+├── ERD.sql
+├── README.md
+└── pnpm-lock.yaml
 ```
 
-2. Start development server
+## Prerequisites
+
+- Node.js 18+ recommended
+- pnpm
+- A Supabase project with the required tables and auth configuration
+
+## Environment Setup
+
+This app expects Supabase environment variables to be defined in the browser environment.
+
+Create a local environment file from the example:
 
 ```bash
-npm run dev
+cp .env.example .env
 ```
 
-3. Open the local URL shown in the terminal
+Example:
 
-4. Use the Supabase project connection settings in `supabaseinfo.env` or your local environment to configure the client
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_SUPABASE_SCHEMA=public
+```
 
-## Database and Schema
+The client is initialized in `src/api/supabaseClient.ts`, and it will warn in the console if the required variables are missing.
 
-This repository uses a normalized PostgreSQL schema defined in `schema2.sql`.
+## Installation
 
-- `driver` — Driver records and profile data
-- `vehicle` — Vehicle records linked to drivers
-- `device` — Device records linked to vehicles
-- `recorded_evidence` — Evidence records with unique `event_id`
-- `detection` — Detection events linked to `recorded_evidence`
-- `alert` — Alerts linked to detections
-- `behavior_log` — Behavior log entries for event tracking
-- `system_log` — System-level logs
+```bash
+pnpm install
+```
 
-### Important note
+## Running the App
 
-The legacy `viratrak_schema.sql` file has been removed from this repository. `schema2.sql` is the single source of truth for schema creation and schema-related setup.
+Development server:
 
-## Working with Supabase
+```bash
+pnpm dev
+```
 
-- `src/api/supabaseClient.ts` initializes the Supabase client
-- `src/api/viratrak.ts` contains reusable API helpers for CRUD operations and normalized query logic
-- `src/app/pages/TestPage.tsx` contains sample insertion workflows and evidence generation logic
+Production build:
 
-## Evidence ID Generation
+```bash
+pnpm build
+```
 
-Recorded evidence IDs are generated as a deterministic string, composed of:
+Then open the local Vite URL shown in the terminal.
 
-- current date (`YYYYMMDD`)
-- current time (`HHMMSS`)
-- alert index or alert number
-- random alphanumeric suffix
+## Database and Supabase Notes
 
-This ensures uniqueness for evidence records and avoids collisions in the primary key.
+The frontend depends on a Supabase-backed database. `ERD.sql` is a structure reference only, not a migration script; `pre_migration_backup.sql` is a historical backup.
 
-## How to Use
+Key integration points:
 
-- `AlertsPage` — Browse, filter, and preview alerts with evidence status
-- `DriversPage` — View and manage driver data
-- `UsersPage` — Admin user management
-- `SettingsPage` — Application-level settings and configuration
-- `TestPage` — Development and test utilities for data creation and workflow validation
+- `src/api/supabaseClient.ts` creates the Supabase client
+- `src/api/viratrak.ts` contains DB access helpers and validation logic
+- the app expects tables like users, driver, vehicle, alerts, and system logging data to exist in the configured schema
 
-## Recommended Workflow
+If your Supabase project is not fully configured yet, the app may fall back to demo/admin account behavior in some flows.
 
-1. Apply `schema2.sql` in Supabase or your PostgreSQL instance
-2. Use `npm run dev` to start the dashboard
-3. Log in using seeded or admin credentials if available
-4. Interact with alerts, evidence, and logs through the UI
+## Main App Pages
 
-## Notes for Contributors
+- Dashboard — KPI overview and recent activity
+- Alerts — alert review and evidence status tracking
+- Analytics — reporting and trend views
+- Drivers — employee/driver record management
+- Vehicles — assigned vehicle tracking
+- Users — admin user management
+- Settings — app configuration and account preferences
+- System Logs — platform and operational event logging
 
-- Keep schema changes in `schema2.sql`
-- Keep UI primitives reusable under `src/app/components/ui`
-- Avoid duplicate schema files or legacy SQL definitions
-- Use strict types in TypeScript and handle Supabase errors gracefully
+## Development Notes
+
+- Keep UI components reusable and consistent with the existing design system.
+- Validate new data flows in the Supabase schema before wiring them into the frontend.
+- Prefer typed helper functions and centralized data access instead of in-page database logic.
+- Be careful with environment variables and schema names when working across local and production Supabase projects.
 
 ## License
 
-This repository is provided as a development and admin dashboard asset. Update licensing information as needed for your project.
-  
+This project is currently structured as an internal application and does not include a project license file. If you plan to distribute or commercialize it, add the appropriate license before release.
+
+## Contributing
+
+1. Create a feature branch.
+2. Keep changes scoped and well-tested.
+3. Update related documentation when schema or app workflows change.
+4. Verify the app builds successfully before submitting changes.

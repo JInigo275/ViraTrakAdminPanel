@@ -2,14 +2,14 @@
 
 :root {
   --font-size: 16px;
-  --font-family: 'Hind Vadodara', sans-serif;
+  --font-family: "Hind Vadodara", sans-serif;
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #1D6AE5;
+  --primary: #1d6ae5;
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.95 0.0058 264.53);
   --secondary-foreground: #030213;
@@ -17,7 +17,7 @@
   --muted-foreground: #717182;
   --accent: #e9ebef;
   --accent-foreground: #030213;
-  --panel-glow: rgba(29, 106, 229, 0.10);
+  --panel-glow: rgba(29, 106, 229, 0.1);
   --panel-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
@@ -128,8 +128,8 @@
   }
 
   ::selection {
-    background: #DDEAFE;
-    color: #0F172A;
+    background: #ddeafe;
+    color: #0f172a;
   }
 
   ::-webkit-scrollbar {
@@ -142,14 +142,14 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #CBD5E1;
+    background: #cbd5e1;
     border: 3px solid transparent;
     border-radius: 999px;
     background-clip: content-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #94A3B8;
+    background: #94a3b8;
     background-clip: content-box;
   }
 
@@ -182,7 +182,10 @@
   }
 
   button {
-    transition: filter 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    transition:
+      filter 0.18s ease,
+      transform 0.18s ease,
+      box-shadow 0.18s ease;
   }
 
   button:hover:not(:disabled) {
@@ -206,7 +209,9 @@
   }
 
   table tbody tr {
-    transition: background-color 0.16s ease, transform 0.16s ease;
+    transition:
+      background-color 0.16s ease,
+      transform 0.16s ease;
   }
 
   table tbody tr:hover {
@@ -214,21 +219,30 @@
   }
 
   .page-shell {
-    background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.95));
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.7),
+      rgba(255, 255, 255, 0.95)
+    );
     border: 1px solid rgba(148, 163, 184, 0.18);
     box-shadow: var(--panel-shadow);
     backdrop-filter: blur(10px);
   }
 
   .soft-panel {
-    background: rgba(255,255,255,0.82);
+    background: rgba(255, 255, 255, 0.82);
     border: 1px solid rgba(148, 163, 184, 0.18);
     box-shadow: var(--panel-shadow);
     backdrop-filter: blur(10px);
   }
 
   .soft-divider {
-    background: linear-gradient(90deg, rgba(148,163,184,.25), rgba(148,163,184,.08), rgba(148,163,184,.25));
+    background: linear-gradient(
+      90deg,
+      rgba(148, 163, 184, 0.25),
+      rgba(148, 163, 184, 0.08),
+      rgba(148, 163, 184, 0.25)
+    );
   }
 
   /**

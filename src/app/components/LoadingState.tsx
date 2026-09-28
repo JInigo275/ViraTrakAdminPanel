@@ -1,6 +1,10 @@
 import { useTheme } from "../context/ThemeContext";
 
-export function LoadingState({ label = "Loading ViraTrak data..." }: { label?: string }) {
+export function LoadingState({
+  label = "Loading ViraTrak data...",
+}: {
+  label?: string;
+}) {
   const { dark } = useTheme();
   const text = dark ? "#F9FAFB" : "#111827";
   const muted = dark ? "#9CA3AF" : "#6B7280";
@@ -45,9 +49,7 @@ export function LoadingState({ label = "Loading ViraTrak data..." }: { label?: s
         <div style={{ color: text, fontSize: 15, fontWeight: 600 }}>
           {label}
         </div>
-        <div style={{ color: muted, fontSize: 13 }}>
-          Please wait a moment.
-        </div>
+        <div style={{ color: muted, fontSize: 13 }}>Please wait a moment.</div>
         <style>{`
           .viratrak-loader {
             position: relative;

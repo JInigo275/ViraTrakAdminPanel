@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 
 export type ThemeMode = "system" | "light" | "dark";
 
@@ -8,12 +14,16 @@ interface ThemeContextType {
   setMode: (m: ThemeMode) => void;
 }
 
-const ThemeContext = createContext<ThemeContextType>({ mode: "light", dark: false, setMode: () => {} });
+const ThemeContext = createContext<ThemeContextType>({
+  mode: "light",
+  dark: false,
+  setMode: () => {},
+});
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<ThemeMode>("light");
-  const [systemDark, setSystemDark] = useState(() =>
-    window.matchMedia("(prefers-color-scheme: dark)").matches
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
   );
 
   useEffect(() => {

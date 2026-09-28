@@ -10,10 +10,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey, {
-      db: {
-        schema: supabaseSchema,
-      },
-    })
-  : null;
+export const supabase =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        db: {
+          schema: supabaseSchema,
+        },
+      })
+    : null;
