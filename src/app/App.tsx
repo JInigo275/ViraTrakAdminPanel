@@ -85,12 +85,12 @@ function AppInner() {
   const isMobile = windowWidth < 768;
   const zoom = isMobile ? 1
     : windowWidth < 1400 ? 0.93
-    : windowWidth < 1200 ? 0.86
-    : windowWidth < 1000 ? 0.77
-    : 1;
+      : windowWidth < 1200 ? 0.86
+        : windowWidth < 1000 ? 0.77
+          : 1;
 
   if (!loggedIn) return <LoginPage onLogin={() => { setCurrentPage("dashboard"); setDriverDetailId(null); setLoggedIn(true); }} />;
-  if (currentUser?.mustChangePassword) return <ChangePasswordPage onDone={() => {}} />;
+  if (currentUser?.mustChangePassword) return <ChangePasswordPage onDone={() => { }} />;
   if (!dbReady) return <LoadingState label="Connecting to ViraTrak..." />;
 
   function handleLogout() {
@@ -117,17 +117,17 @@ function AppInner() {
       return <DriverDetailPage driverId={driverDetailId} onBack={() => setDriverDetailId(null)} />;
     }
     switch (currentPage) {
-      case "dashboard":  return <DashboardPage onNavigate={navigate} isMobile={isMobile} />;
-      case "alerts":     return <AlertsPage />;
-      case "analytics":  return <AnalyticsPage />;
-      case "users":      return canManageUsers(currentUser?.role ?? "Supervisor")
+      case "dashboard": return <DashboardPage onNavigate={navigate} isMobile={isMobile} />;
+      case "alerts": return <AlertsPage />;
+      case "analytics": return <AnalyticsPage />;
+      case "users": return canManageUsers(currentUser?.role ?? "Supervisor")
         ? <UsersPage />
         : <DashboardPage onNavigate={navigate} isMobile={isMobile} />;
-      case "employees":  return <DriversPage onViewDetail={(id) => setDriverDetailId(id)} />;
-      case "vehicles":   return <VehiclesPage />;
-      case "logs":       return <SystemLogsPage />;
-      case "settings":   return <SettingsPage />;
-      default:           return <DashboardPage isMobile={isMobile} />;
+      case "employees": return <DriversPage onViewDetail={(id) => setDriverDetailId(id)} />;
+      case "vehicles": return <VehiclesPage />;
+      case "logs": return <SystemLogsPage />;
+      case "settings": return <SettingsPage />;
+      default: return <DashboardPage isMobile={isMobile} />;
     }
   };
 

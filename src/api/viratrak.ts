@@ -76,7 +76,20 @@ export const usersApi = {
         password: u.password,
       },
     });
-    if (error) throw error;
+    if (error) {
+      if (error.context instanceof Response) {
+        const response = error.context;
+        const responseBody: unknown = await response.clone().json().catch(() => null);
+        if (responseBody && typeof responseBody === "object" && "error" in responseBody && typeof responseBody.error === "string") {
+          throw new Error(responseBody.error);
+        }
+        if (responseBody && typeof responseBody === "object" && "message" in responseBody && typeof responseBody.message === "string") {
+          throw new Error(responseBody.message);
+        }
+        throw new Error(`create-user returned ${response.status}${response.statusText ? ` ${response.statusText}` : ""}.`);
+      }
+      throw error;
+    }
     if (data?.error) throw new Error(data.error);
     return { ...data.profile, password: "" } as DbUser;
   },
@@ -491,6 +504,7 @@ export const driverMetricsApi = {
 // ---------- Alerts ----------
 export type DbAlert = {
   id: number;
+  recipientId?: number;
   type: string;
   driver: string;
   vehicle: string;
@@ -582,7 +596,7 @@ const SEVERITY_MAP: Record<string, "High" | "Moderate" | "Low"> = {
   MODERATE: "Moderate",
   MEDIUM: "Moderate",
   LOW: "Low",
-  ALERT: "High",
+  ALERT: "Low",
   WARNING: "Moderate",
   CRITICAL: "High",
   NORMAL: "Low",
@@ -626,7 +640,7 @@ function buildMetricAlertId(raw: RawAlert, metric: string, index: number): numbe
   return Math.abs(hash) || index;
 }
 
-function mapRawAlertToDbAlerts(raw: RawAlert, driverName: string, vehicleName: string): DbAlert[] {
+function mapRawAlertToDbAlerts(raw: RawAlert, driverName: string, vehicleName: string, recipientId?: number): DbAlert[] {
   const viewRow = raw as RecentAlertRow;
   const detection = firstRelation(raw.detection);
   const evidence = firstRelation(detection?.recorded_evidence);
@@ -667,6 +681,7 @@ function mapRawAlertToDbAlerts(raw: RawAlert, driverName: string, vehicleName: s
 
   return metrics.map((metric, index) => ({
     id: buildMetricAlertId(raw, metric, index),
+    recipientId,
     type: formatMetricName(metric),
     driver: driverName,
     vehicle: vehicleName,
@@ -707,7 +722,10 @@ export const alertsApi = {
       const driverMap = new Map((drivers ?? []).map((driver) => [driver.driver_id, `${driver.first_name} ${driver.last_name}`]));
       const vehicleMap = new Map((vehicles ?? []).map((vehicle) => [vehicle.vehicle_id, {
         vehicle: vehicle.plate_number,
-        driver: driverMap.get(vehicle.driver_id) || driverMap.get(vehicle.secondary_driver_id) || "Unknown Driver",
+        drivers: [vehicle.driver_id, vehicle.secondary_driver_id]
+          .filter((id): id is number => id !== null)
+          .map((id) => ({ id, name: driverMap.get(id) }))
+          .filter((driver): driver is { id: number; name: string } => Boolean(driver.name)),
       }]));
       const { data: alerts, error: alertError } = await client
         .from("detection_data")
@@ -719,13 +737,16 @@ export const alertsApi = {
       return (alerts ?? []).flatMap((row) => {
         const raw = row as RecentAlertRow;
         const vehicleInfo = raw.vehicle_id === null || raw.vehicle_id === undefined ? undefined : vehicleMap.get(raw.vehicle_id);
-        const driverName = firstString(raw, ["driver", "driver_name"]) || vehicleInfo?.driver || "Unknown Driver";
         const vehicleName = firstString(raw, ["vehicle", "vehicle_name", "plate_number"]) || vehicleInfo?.vehicle || "Unknown Vehicle";
-        return mapRawAlertToDbAlerts(
+        const recipients = vehicleInfo?.drivers.length
+          ? vehicleInfo.drivers
+          : [{ id: undefined, name: firstString(raw, ["driver", "driver_name"]) || "Unknown Driver" }];
+        return recipients.flatMap((recipient) => mapRawAlertToDbAlerts(
           raw,
-          driverName,
-          vehicleName
-        );
+          recipient.name,
+          vehicleName,
+          recipient.id
+        ));
       });
     } catch (error) {
       console.error("Error fetching alerts from schema2:", error);

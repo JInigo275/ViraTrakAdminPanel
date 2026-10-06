@@ -39,6 +39,10 @@ function dbToRow(a: DbAlert): AlertRow {
   return { ...a, icon: typeIconMap[a.type] ?? Zap };
 }
 
+function alertRowKey(alert: DbAlert): string {
+  return `${alert.id}:${alert.recipientId ?? "none"}`;
+}
+
 const sevStyle: Record<string, { bg: string; color: string }> = {
   High: { bg: "#FEF2F2", color: "#EF4444" },
   Moderate: { bg: "#FFF7ED", color: "#F59E0B" },
@@ -232,7 +236,7 @@ export function AlertsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [perPage, setPerPage] = useState(10);
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showDeselectAll, setShowDeselectAll] = useState(false);
   const [showPDFPreview, setShowPDFPreview] = useState(false);
   const [selectedEvidence, setSelectedEvidence] = useState<AlertRow | null>(null);
@@ -309,13 +313,13 @@ export function AlertsPage() {
 
   function clearFilters() { setFilterType(""); setFilterDriver(""); setFilterVehicle(""); setFilterDate(""); setFilterSeverity(""); setPage(1); }
 
-  function toggleOne(id: number) { setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
-  function selectAll() { setSelected(new Set(visibleRows.map((a) => a.id))); setShowDeselectAll(true); }
+  function toggleOne(id: string) { setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
+  function selectAll() { setSelected(new Set(visibleRows.map(alertRowKey))); setShowDeselectAll(true); }
   function deselectAll() { setSelected(new Set()); setShowDeselectAll(false); }
-  const allChecked = visibleRows.length > 0 && visibleRows.every((a) => selected.has(a.id));
-  const someChecked = visibleRows.some((a) => selected.has(a.id));
+  const allChecked = visibleRows.length > 0 && visibleRows.every((a) => selected.has(alertRowKey(a)));
+  const someChecked = visibleRows.some((a) => selected.has(alertRowKey(a)));
 
-  const printData = selected.size > 0 ? filtered.filter((a) => selected.has(a.id)) : filtered;
+  const printData = selected.size > 0 ? filtered.filter((a) => selected.has(alertRowKey(a))) : filtered;
 
   function buildPDF() {
     const doc = new jsPDF();
@@ -472,14 +476,15 @@ export function AlertsPage() {
                 <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", fontSize: 15, color: textSub }}>No records match the selected filters.</td></tr>
               ) : visibleRows.map((e, i) => {
                 const Icon = e.icon;
-                const checked = selected.has(e.id);
+                const rowKey = alertRowKey(e);
+                const checked = selected.has(rowKey);
                 return (
-                  <tr key={e.id} style={{ borderBottom: i < visibleRows.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: checked ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent", cursor: "pointer" }}
-                    onClick={() => toggleOne(e.id)}
+                  <tr key={rowKey} style={{ borderBottom: i < visibleRows.length - 1 ? `1px solid ${borderColor}` : "none", transition: "background 0.1s", background: checked ? (dark ? "#1e3a5f" : "#EBF2FF") : "transparent", cursor: "pointer" }}
+                    onClick={() => toggleOne(rowKey)}
                     onMouseEnter={(el) => { if (!checked) (el.currentTarget as HTMLTableRowElement).style.background = rowHover; }}
                     onMouseLeave={(el) => { if (!checked) (el.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
                     <td style={{ padding: "10px 16px" }}>
-                      <div onClick={(event) => { event.stopPropagation(); toggleOne(e.id); }} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${checked ? "#1D6AE5" : checkBorder}`, background: checked ? "#1D6AE5" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                      <div onClick={(event) => { event.stopPropagation(); toggleOne(rowKey); }} style={{ width: 16, height: 16, borderRadius: 4, border: `1.5px solid ${checked ? "#1D6AE5" : checkBorder}`, background: checked ? "#1D6AE5" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
                         {checked && <Check size={10} color="#fff" />}
                       </div>
                     </td>

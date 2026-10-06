@@ -67,7 +67,7 @@ type SeverityBreakdown = { label: string; count: number; color: string; bg: stri
 type KPI = { label: string; value: string; color: string; note: string };
 type RecentEvent = { event: string; driver: string; time: string; severity: string };
 type DriverComparisonRow = { driver: string; alerts: number; low: number; moderate: number; high: number };
-type MetricChartPoint = { time: string; value: number };
+type MetricChartPoint = { time: string; value: number | null };
 
 function parseAlertTimestamp(alert: DbAlert): Date | null {
 
@@ -134,6 +134,34 @@ function getPeriodBucketIndex(timestamp: Date, period: Period) {
     return Math.max(0, Math.min(3, Math.floor((day - 1) / 7)));
   }
   return timestamp.getMonth();
+}
+
+function getMetricPeriodLabels(period: Period, now = new Date()) {
+  if (period === "Today") return Array.from({ length: 24 }, (_, hour) => `${String(hour).padStart(2, "0")}:00`);
+  if (period === "This Week") return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  if (period === "This Month") {
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, day) => String(day + 1));
+  }
+  return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+}
+
+function getMetricPeriodBucketIndex(timestamp: Date, period: Period) {
+  if (period === "Today") return timestamp.getHours();
+  if (period === "This Week") return (timestamp.getDay() + 6) % 7;
+  if (period === "This Month") return timestamp.getDate() - 1;
+  return timestamp.getMonth();
+}
+
+function getMetricAxisTicks(period: Period) {
+  if (period !== "This Month") return undefined;
+  const labels = getMetricPeriodLabels(period);
+  const interval = Math.ceil(labels.length / 7);
+  const ticks = labels.filter((_, index) => index % interval === 0);
+  if (labels.includes("24")) ticks.push("24");
+  const lastLabel = labels[labels.length - 1];
+  if (lastLabel) ticks.push(lastLabel);
+  return [...new Set(ticks)].sort((left, right) => Number(left) - Number(right));
 }
 
 function buildSeries(alerts: DbAlert[], period: Period, valueSelector: (alert: DbAlert) => number): AlertSeriesPoint[] {
@@ -214,9 +242,9 @@ function buildKpis(alerts: DbAlert[], driversCount: number, period: Period): KPI
   });
   return [
     { label: "Total Events", value: String(periodAlerts.length), color: "#1D6AE5", note: period.toLowerCase() },
-    { label: "High Severity", value: String(counts.High), color: "#EF4444", note: "Requires attention" },
-    { label: "Moderate", value: String(counts.Moderate), color: "#F59E0B", note: "Monitor closely" },
     { label: "Low", value: String(counts.Low), color: "#10B981", note: "Within range" },
+    { label: "Moderate", value: String(counts.Moderate), color: "#F59E0B", note: "Monitor closely" },
+    { label: "High Severity", value: String(counts.High), color: "#EF4444", note: "Requires attention" },
   ];
 }
 
@@ -313,18 +341,31 @@ export function AnalyticsPage() {
   const periodMetrics = useMemo(() => metricReadings
     .filter((reading) => {
       const timestamp = new Date(reading.timestamp);
-      return !Number.isNaN(timestamp.getTime()) && timestamp >= getPeriodStart(period);
+      return !Number.isNaN(timestamp.getTime()) && timestamp >= getPeriodStart(period) && timestamp <= new Date();
     })
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()), [metricReadings, period]);
-  const metricSeries = (selector: (reading: DbMetric) => number | null): MetricChartPoint[] => periodMetrics.flatMap((reading) => {
-    const value = selector(reading);
-    if (value === null) return [];
-    return [{ time: new Date(reading.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), value }];
-  });
+  const metricSeries = (selector: (reading: DbMetric & { body_posture?: number | null }) => number | null): MetricChartPoint[] => {
+    const labels = getMetricPeriodLabels(period);
+    const buckets = labels.map(() => ({ total: 0, count: 0 }));
+    periodMetrics.forEach((reading) => {
+      const value = selector(reading);
+      if (value === null) return;
+      const timestamp = new Date(reading.timestamp);
+      const bucket = buckets[getMetricPeriodBucketIndex(timestamp, period)];
+      if (!bucket) return;
+      bucket.total += value;
+      bucket.count += 1;
+    });
+    return buckets.map((bucket, index) => ({
+      time: labels[index],
+      value: bucket.count > 0 ? Number((bucket.total / bucket.count).toFixed(2)) : 0,
+    }));
+  };
   const fleetPerclos = metricSeries((reading) => reading.perclos);
   const fleetYawn = metricSeries((reading) => reading.yawn);
-  const fleetPosture = metricSeries((reading) => reading.body_posture);
+  const fleetPosture = metricSeries((reading) => (reading as DbMetric & { body_posture?: number | null }).body_posture ?? null);
   const fleetHeadPose = metricSeries((reading) => reading.head_pose);
+  const metricAxisTicks = getMetricAxisTicks(period);
 
   if (dataLoading) return <LoadingState label="Loading analytics data..." />;
 
@@ -854,8 +895,15 @@ export function AnalyticsPage() {
                   borderCollapse: "collapse",
                   minWidth: isMobile ? 280 : 380,
                   width: "100%",
+                  tableLayout: "fixed",
                 }}
               >
+                <colgroup>
+                  <col style={{ width: "30%" }} />
+                  <col style={{ width: "30%" }} />
+                  <col style={{ width: "22%" }} />
+                  <col style={{ width: "18%" }} />
+                </colgroup>
                 <thead
                   style={{
                     position: "sticky",
@@ -878,6 +926,7 @@ export function AnalyticsPage() {
                       <th
                         key={h}
                         style={{
+                          ...(h === "Severity" ? { position: "sticky", right: 0, zIndex: 3, background: cardBg, boxShadow: dark ? "-4px 0 8px rgba(0,0,0,0.18)" : "-4px 0 8px rgba(0,0,0,0.06)" } : {}),
                           fontSize: 12,
                           fontWeight: 600,
                           color: textSub,
@@ -920,7 +969,7 @@ export function AnalyticsPage() {
                         <td style={{ padding: isMobile ? "8px 10px" : "10px 16px", fontSize: 14, color: textSub, fontFamily: "monospace" }}>
                           {e.time}
                         </td>
-                        <td style={{ padding: isMobile ? "8px 10px" : "10px 16px" }}>
+                        <td style={{ position: "sticky", right: 0, zIndex: 2, background: cardBg, boxShadow: dark ? "-4px 0 8px rgba(0,0,0,0.18)" : "-4px 0 8px rgba(0,0,0,0.06)", padding: isMobile ? "8px 10px" : "10px 16px" }}>
                           <span
                             style={{
                               display: "inline-block",
@@ -1225,7 +1274,7 @@ export function AnalyticsPage() {
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetPerclos} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="time" ticks={metricAxisTicks} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 35]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value.toFixed(2)}%`, "PERCLOS"]} />
                 <Line type="monotone" dataKey="value" name="PERCLOS" stroke="#F59E0B" strokeWidth={2.5} dot={{ r: 3 }} />
@@ -1237,7 +1286,7 @@ export function AnalyticsPage() {
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetYawn} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="time" ticks={metricAxisTicks} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 1.5]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [value.toFixed(2), "Yawn"]} />
                 <Line type="monotone" dataKey="value" name="Yawn" stroke="#EF4444" strokeWidth={2.5} dot={{ r: 3 }} />
@@ -1249,7 +1298,7 @@ export function AnalyticsPage() {
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetPosture} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="time" ticks={metricAxisTicks} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [value.toFixed(2), "Shoulder Elevation"]} />
                 <Line type="monotone" dataKey="value" name="Shoulder Elevation" stroke="#10B981" strokeWidth={2.5} dot={{ r: 3 }} />
@@ -1261,7 +1310,7 @@ export function AnalyticsPage() {
             <ResponsiveContainer width="100%" height={isMobile ? 130 : 160}>
               <LineChart data={fleetHeadPose} margin={{ left: -10, right: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                <XAxis dataKey="time" tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="time" ticks={metricAxisTicks} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} />
                 <YAxis domain={[0, 1]} tick={{ fontSize: 12, fill: textSub }} axisLine={false} tickLine={false} width={28} />
                 <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [`${value.toFixed(2)}°`, "Head Pose"]} />
                 <Line type="monotone" dataKey="value" name="Head Pose" stroke="#8B5CF6" strokeWidth={2.5} dot={{ r: 3 }} />
