@@ -213,8 +213,8 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
       {/* Profile card */}
       {/* ============================================================ */}
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, padding: "18px 22px", marginBottom: 16, display: "flex", flexDirection: isMobile ? "column" : "row", alignItems: isMobile ? "flex-start" : "center", gap: 16 }}>
-        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 19, fontWeight: 700, flexShrink: 0 }}>
-          {(emp.firstName[0] ?? "") + (emp.lastName[0] ?? "")}
+        <div style={{ width: 52, height: 52, borderRadius: "50%", background: emp.avatar ? "transparent" : "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 19, fontWeight: 700, flexShrink: 0, overflow: "hidden", border: emp.avatar ? "1px solid rgba(29,106,229,0.15)" : "none" }}>
+          {emp.avatar ? <img src={emp.avatar} alt={`${fullName}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <>{(emp.firstName[0] ?? "") + (emp.lastName[0] ?? "")}</>}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: textMain }}>{fullName}</div>
@@ -270,10 +270,10 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {[
-              { label: "Avg Percentage of Eye Closure (PERCLOS)", value: `${formatMetric(summary.avgPerclos)}%`, note: "Threshold: 60% and over " },
-              { label: "Avg Yawn", value: formatMetric(averageYawn), note: "Alert above: 0.70" },
-              { label: "Avg Shoulder Elevation", value: formatMetric(averageBodyPosture), note: "Postural score out of 100" },
-              { label: "Avg Head Pose", value: `${formatMetric(averageHeadPose)}°`, note: "Average deviation" },
+                { label: "Avg Percentage of Eye Closure (PERCLOS)", value: `${formatMetric(summary.avgPerclos)}%`, note: "Alert above: 60% closed" },
+                { label: "Avg Yawn", value: formatMetric(averageYawn), note: "Alert above: 60% open" },
+                { label: "Avg Shoulder Elevation", value: formatMetric(averageBodyPosture), note: "Alert below: 167° or above: 192° tilted" },
+                { label: "Avg Head Pose", value: `${formatMetric(averageHeadPose)}°`, note: "Alert above: 70% tilted" },
             ].map(({ label, value, note }, i, arr) => {
               const rowBg = dark ? "#374151" : "#F8F9FA";
               return (
@@ -297,7 +297,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 
         {/* PERCLOS */}
         {/* ============================================================ */}
-        <Card title="Percentage of Eye Closure (PERCLOS)" subtitle="% time eyes closed — threshold: 10%">
+        <Card title="Percentage of Eye Closure (PERCLOS)" subtitle="% time eyes closed — alert above 60%">
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.perclos}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -314,7 +314,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 {/* ============================================================ */}
   {/* Yawn */}
         {/* ============================================================ */}
-        <Card title="Yawn" subtitle="Mouth opening score — alert above 0.7">
+        <Card title="Yawn" subtitle="Mouth opening score — alert above 60% open">
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.mar}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -331,7 +331,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 {/* ============================================================ */}
   {/* Shoulder Elevation */}
         {/* ============================================================ */}
-        <Card title="Shoulder Elevation" subtitle="Postural score by time">
+        <Card title="Shoulder Elevation" subtitle="Postural score by time — alert below 167° or above 192°">
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.posture.map((point) => ({ time: point.metric, value: point.score }))}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
@@ -348,7 +348,7 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
 {/* ============================================================ */}
         {/* Head Pose */}
         {/* ============================================================ */}
-        <Card title="Head Pose" subtitle="Pitch, Yaw, Roll deviation (degrees)">
+        <Card title="Head Pose" subtitle="Pitch, Yaw, Roll deviation (degrees) — alert above 70% tilted">
           <ResponsiveContainer width="100%" height={150}>
             <LineChart data={data.headPose}>
               <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />

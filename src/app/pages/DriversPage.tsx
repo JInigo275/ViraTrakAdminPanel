@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useIsMobile } from "../hooks/useIsMobile";
-import { Search, Plus, Trash2, X, Check, BarChart2, Contact, Edit3, ChevronDown } from "lucide-react";
+import { Search, Plus, Trash2, X, Check, BarChart2, Contact, Edit3, ChevronDown, Camera } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { useTheme } from "../context/ThemeContext";
 import { useApp, Driver, genDriverId } from "../context/AppContext";
@@ -84,7 +84,260 @@ function ReceiptModal({ driver, onClose }: { driver: Driver; onClose: () => void
   );
 }
 
-const emptyForm = { firstName: "", lastName: "", vehicle: "", contact: "" };
+function AvatarCropModal({ src, onApply, onClose }: { src: string; onApply: (croppedImage: string) => void; onClose: () => void }) {
+  const { dark } = useTheme();
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const dragStart = useRef<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
+  const [zoom, setZoom] = useState(1.15);
+  const [imageOffset, setImageOffset] = useState({ x: 0, y: 0 });
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [preview, setPreview] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState(true);
+
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+  function getRenderedImageSize(image: HTMLImageElement) {
+    const frameSize = frameRef.current?.clientWidth ?? 360;
+    const fitScale = Math.min(frameSize / image.naturalWidth, frameSize / image.naturalHeight);
+    return {
+      width: image.naturalWidth * fitScale * zoom,
+      height: image.naturalHeight * fitScale * zoom,
+    };
+  }
+
+  function getCropRect(image: HTMLImageElement) {
+    const frameSize = frameRef.current?.clientWidth ?? 360;
+    const rendered = getRenderedImageSize(image);
+    const scaledWidth = rendered.width * zoom;
+    const scaledHeight = rendered.height * zoom;
+    const left = frameSize / 2 - scaledWidth / 2 + imageOffset.x;
+    const top = frameSize / 2 - scaledHeight / 2 + imageOffset.y;
+    const visibleLeft = Math.max(0, -left);
+    const visibleTop = Math.max(0, -top);
+    const visibleRight = Math.min(scaledWidth, frameSize - left);
+    const visibleBottom = Math.min(scaledHeight, frameSize - top);
+
+    if (visibleRight <= visibleLeft || visibleBottom <= visibleTop) {
+      return { x: 0, y: 0, width: image.naturalWidth, height: image.naturalHeight };
+    }
+
+    return {
+      x: (visibleLeft / scaledWidth) * image.naturalWidth,
+      y: (visibleTop / scaledHeight) * image.naturalHeight,
+      width: ((visibleRight - visibleLeft) / scaledWidth) * image.naturalWidth,
+      height: ((visibleBottom - visibleTop) / scaledHeight) * image.naturalHeight,
+    };
+  }
+
+  function buildCroppedDataUrl(image: HTMLImageElement) {
+    const rect = getCropRect(image);
+    const canvas = document.createElement("canvas");
+    const outputSize = 512;
+    canvas.width = outputSize;
+    canvas.height = outputSize;
+    const context = canvas.getContext("2d");
+    if (!context) return src;
+
+    context.clearRect(0, 0, outputSize, outputSize);
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, outputSize, outputSize);
+    context.drawImage(
+      image,
+      rect.x,
+      rect.y,
+      rect.width,
+      rect.height,
+      0,
+      0,
+      outputSize,
+      outputSize,
+    );
+    return canvas.toDataURL("image/jpeg", 0.92);
+  }
+
+  useEffect(() => {
+    if (!src) return;
+    setIsProcessing(true);
+    const image = new Image();
+    image.onload = () => {
+      setImageSize({ width: image.naturalWidth, height: image.naturalHeight });
+      setPreview(buildCroppedDataUrl(image));
+      setIsProcessing(false);
+    };
+    image.onerror = () => {
+      setPreview("");
+      setIsProcessing(false);
+    };
+    image.src = src;
+  }, [src, zoom, imageOffset]);
+
+  useEffect(() => {
+    setImageOffset({ x: 0, y: 0 });
+    setZoom(1.15);
+  }, [src]);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    dragStart.current = {
+      x: event.clientX,
+      y: event.clientY,
+      offsetX: imageOffset.x,
+      offsetY: imageOffset.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragStart.current || !frameRef.current) return;
+    const frame = frameRef.current;
+    const rect = frame.getBoundingClientRect();
+    const dx = event.clientX - dragStart.current.x;
+    const dy = event.clientY - dragStart.current.y;
+    const maxMove = 110 * (zoom - 0.85);
+
+    setImageOffset({
+      x: clamp(dragStart.current.offsetX + dx * 1.2, -maxMove, maxMove),
+      y: clamp(dragStart.current.offsetY + dy * 1.2, -maxMove, maxMove),
+    });
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    dragStart.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  };
+
+  const applyCrop = () => {
+    if (!src || isProcessing) return;
+    const image = new Image();
+    image.onload = () => {
+      onApply(buildCroppedDataUrl(image));
+      onClose();
+    };
+    image.onerror = () => {
+      onApply(src);
+      onClose();
+    };
+    image.src = src;
+  };
+
+  const frameSize = frameRef.current?.clientWidth ?? 360;
+  const displaySize = imageSize.width && imageSize.height
+    ? getRenderedImageSize({ naturalWidth: imageSize.width, naturalHeight: imageSize.height } as HTMLImageElement)
+    : { width: frameSize, height: frameSize };
+
+  return (
+    <Modal title="Crop Avatar" onClose={onClose} width={520}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ fontSize: 13, color: dark ? "#9CA3AF" : "#6B7280" }}>
+          Drag the image to position the face inside the square.
+        </div>
+
+        <div
+          ref={frameRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={() => { dragStart.current = null; }}
+          style={{
+            position: "relative",
+            width: "100%",
+            aspectRatio: "1 / 1",
+            maxHeight: 360,
+            borderRadius: 16,
+            overflow: "hidden",
+            background: dark ? "#111827" : "#F3F4F6",
+            border: `1px solid ${dark ? "#374151" : "#E5E7EB"}`,
+            cursor: "grab",
+            userSelect: "none",
+            touchAction: "none",
+            boxShadow: "inset 0 0 0 2px rgba(255,255,255,0.7)",
+          }}
+        >
+          <div style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: 16 }}>
+            <img
+              src={src}
+              alt="Avatar preview"
+              onPointerDown={handlePointerDown}
+              style={{
+                display: "block",
+                width: `${displaySize.width}px`,
+                height: `${displaySize.height}px`,
+                position: "absolute",
+                left: "50%",
+                top: "50%",
+                transform: `translate(${imageOffset.x}px, ${imageOffset.y}px)`,
+                marginLeft: `${-displaySize.width / 2}px`,
+                marginTop: `${-displaySize.height / 2}px`,
+                objectFit: "contain",
+                cursor: "grab",
+                transition: "transform 0.08s ease-out",
+              }}
+            />
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              border: "2px solid #ffffff",
+              borderRadius: 16,
+              boxShadow: "0 0 0 9999px rgba(17,24,39,0.5)",
+              pointerEvents: "none",
+            }}
+          />
+        </div>
+
+        {preview && (
+          <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 2 }}>
+            <div style={{ fontSize: 12, color: dark ? "#D1D5DB" : "#374151", fontWeight: 600 }}>Live preview</div>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", overflow: "hidden", border: `2px solid ${dark ? "#374151" : "#E5E7EB"}`, background: "#fff" }}>
+              <img src={preview} alt="Crop preview" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: 12, color: dark ? "#D1D5DB" : "#374151", fontWeight: 600 }}>Zoom</span>
+              <span style={{ fontSize: 12, color: dark ? "#D1D5DB" : "#374151", fontWeight: 600 }}>{zoom.toFixed(1)}x</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={2.5}
+              step={0.1}
+              value={zoom}
+              onChange={(event) => {
+                const nextZoom = Number(event.target.value);
+                setZoom(nextZoom);
+                setImageOffset((current) => ({
+                  x: clamp(current.x, -90, 90),
+                  y: clamp(current.y, -90, 90),
+                }));
+              }}
+              style={{ width: "100%", accentColor: "#1D6AE5" }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <div style={{ flex: 1 }} />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button type="button" onClick={onClose} style={{ padding: "10px 14px", borderRadius: 8, border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, background: "transparent", color: dark ? "#9CA3AF" : "#6B7280", cursor: "pointer" }}>Cancel</button>
+            <button type="button" onClick={applyCrop} disabled={isProcessing} style={{ padding: "10px 16px", borderRadius: 8, background: isProcessing ? (dark ? "#4B5563" : "#D1D5DB") : "#1D6AE5", border: "none", color: "#fff", cursor: isProcessing ? "not-allowed" : "pointer", fontWeight: 600, opacity: isProcessing ? 0.8 : 1 }}>
+              {isProcessing ? "Processing..." : "Use Crop"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+const emptyForm = { firstName: "", lastName: "", vehicle: "", contact: "", avatar: "" };
 
 function getSaveError(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -313,6 +566,8 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
   const [form, setForm] = useState(emptyForm);
   const [countryCode, setCountryCode] = useState("+63");
   const [formError, setFormError] = useState("");
+  const [cropSource, setCropSource] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [receipt, setReceipt] = useState<Driver | null>(null);
@@ -355,13 +610,48 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
   function toggleAll() { if (allChecked) setSelected(new Set()); else setSelected(new Set(filtered.map((e) => e.id))); }
   function toggleOne(id: string) { setSelected((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; }); }
 
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const acceptedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!acceptedTypes.includes(file.type.toLowerCase())) {
+      setFormError("Please upload a JPG, PNG, or WebP image.");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      const blob = new Blob([await file.arrayBuffer()], { type: file.type });
+      const bitmap = await (createImageBitmap as typeof createImageBitmap)(blob, { imageOrientation: "from-image" } as any);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext("2d");
+      if (!context) {
+        throw new Error("Image processing unavailable.");
+      }
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(bitmap, 0, 0);
+      const mime = file.type === "image/png" ? "image/png" : file.type === "image/webp" ? "image/webp" : "image/jpeg";
+      const dataUrl = canvas.toDataURL(mime, 0.92);
+      setCropSource(dataUrl);
+      setFormError("");
+    } catch (error) {
+      console.error("Avatar crop source load failed", error);
+      setFormError("This image could not be processed. Please try a different file.");
+    }
+
+    e.target.value = "";
+  }
+
   function openAdd() { setForm(emptyForm); setCountryCode("+63"); setFormError(""); setModal("add"); }
   function openEdit(e: Driver) {
     setEditTarget(e);
     const digits = e.contact.replace(/\D/g, "");
     const localDigits = digits.startsWith("63") && digits.length > 10 ? digits.slice(2) : digits.replace(/^0/, "");
     setCountryCode(e.contact.trim().startsWith("+63") ? "+63" : "+63");
-    setForm({ firstName: e.firstName, lastName: e.lastName, vehicle: e.vehicle, contact: localDigits });
+    setForm({ firstName: e.firstName, lastName: e.lastName, vehicle: e.vehicle, contact: localDigits, avatar: e.avatar ?? "" });
     setFormError(""); setModal("edit");
   }
 
@@ -369,7 +659,13 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
     const fullContact = `${countryCode}${form.contact.replace(/\D/g, "")}`;
     const validationError = validateName(form.firstName, "First name") || validateName(form.lastName, "Last name") || (form.vehicle && form.vehicle !== "Unassigned" ? validatePlate(form.vehicle) : null) || validatePhone(fullContact);
     if (validationError) { setFormError(validationError); return; }
-    const normalized = { firstName: formatName(form.firstName), lastName: formatName(form.lastName), vehicle: form.vehicle && form.vehicle !== "Unassigned" ? formatPlate(form.vehicle) : "", contact: formatPhone(fullContact) };
+    const normalized = {
+      firstName: formatName(form.firstName),
+      lastName: formatName(form.lastName),
+      vehicle: form.vehicle && form.vehicle !== "Unassigned" ? formatPlate(form.vehicle) : "",
+      contact: formatPhone(fullContact),
+      avatar: form.avatar || null,
+    };
 
     if (modal === "add") {
       const newDriver: Driver = { id: genDriverId(drivers), ...normalized };
@@ -383,7 +679,7 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
       }
     } else if (modal === "edit" && editTarget) {
       try {
-        const driverPatch = normalized.vehicle ? normalized : { firstName: normalized.firstName, lastName: normalized.lastName, contact: normalized.contact };
+        const driverPatch = normalized.vehicle ? { ...normalized } : { firstName: normalized.firstName, lastName: normalized.lastName, contact: normalized.contact, avatar: normalized.avatar };
         await updateDriver(editTarget.id, driverPatch);
         setModal(null);
         setSuccessMessage("Changes Saved");
@@ -483,8 +779,8 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                       </td>
                       <td style={{ padding: "11px 14px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                            {(e.firstName[0] ?? "") + (e.lastName[0] ?? "")}
+                          <div style={{ width: 30, height: 30, borderRadius: "50%", background: e.avatar ? "transparent" : "#1D6AE5", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 700, flexShrink: 0, overflow: "hidden", border: e.avatar ? "1px solid rgba(29,106,229,0.15)" : "none" }}>
+                            {e.avatar ? <img src={e.avatar} alt={`${e.firstName} ${e.lastName}`} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <>{(e.firstName[0] ?? "") + (e.lastName[0] ?? "")}</>}
                           </div>
                           <span style={{ fontSize: 14, color: textMain, fontWeight: 500 }}>{e.firstName} {e.lastName}</span>
                         </div>
@@ -534,6 +830,21 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
                 Driver ID is auto-generated.
               </div>
             )}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 4 }}>
+              <div style={{ position: "relative" }}>
+                <div style={{ width: 64, height: 64, borderRadius: "50%", background: form.avatar ? "transparent" : "#1D6AE5", overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center", border: `2px solid ${dark ? "#374151" : "#E5E7EB"}` }}>
+                  {form.avatar ? <img src={form.avatar} alt="Driver avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ color: "#fff", fontWeight: 700, fontSize: 20 }}>{((form.firstName[0] ?? "") + (form.lastName[0] ?? "") || "D")}</span>}
+                </div>
+                <button type="button" onClick={() => fileInputRef.current?.click()} style={{ position: "absolute", right: -2, bottom: -2, width: 22, height: 22, borderRadius: "50%", background: "#1D6AE5", border: "2px solid #fff", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                  <Camera size={11} />
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: "none" }} />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <button type="button" onClick={() => fileInputRef.current?.click()} style={{ padding: "8px 12px", background: dark ? "#374151" : "#F3F4F6", color: dark ? "#F9FAFB" : "#111827", border: "1px solid transparent", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Upload Photo</button>
+                {form.avatar && <button type="button" onClick={() => setForm((prev) => ({ ...prev, avatar: "" }))} style={{ padding: "8px 12px", background: "transparent", border: `1px solid ${dark ? "#4B5563" : "#E5E7EB"}`, borderRadius: 8, fontSize: 13, color: dark ? "#D1D5DB" : "#374151", cursor: "pointer" }}>Remove Photo</button>}
+              </div>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <FloatField label="Driver First Name" value={form.firstName} onChange={(v) => setForm((p) => ({ ...p, firstName: v }))} />
               <FloatField label="Driver Last Name" value={form.lastName} onChange={(v) => setForm((p) => ({ ...p, lastName: v }))} />
@@ -607,6 +918,17 @@ export function DriversPage({ onViewDetail }: DriversPageProps) {
             <button onClick={() => void massDelete()} style={{ flex: 1, padding: "11px", background: "#EF4444", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "Inter, sans-serif" }}>Delete</button>
           </div>
         </Modal>
+      )}
+
+      {cropSource && (
+        <AvatarCropModal
+          src={cropSource}
+          onClose={() => setCropSource(null)}
+          onApply={(croppedImage) => {
+            setForm((prev) => ({ ...prev, avatar: croppedImage }));
+            setCropSource(null);
+          }}
+        />
       )}
 
       {receipt && <ReceiptModal driver={receipt} onClose={() => setReceipt(null)} />}
