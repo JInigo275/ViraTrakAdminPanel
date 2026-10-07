@@ -174,7 +174,11 @@ export function DriverDetailPage({ driverId, onBack }: Props) {
   if (liveData === null) return <LoadingState label="Loading driver analytics..." />;
 
   const fullName = `${emp.firstName} ${emp.lastName}`;
-  const alertHistory = liveAlerts ?? data.alerts;
+  const getAlertSortValue = (alert: { date: string; time: string }) => {
+    const timestamp = new Date(`${alert.date} ${alert.time}`).getTime();
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  };
+  const alertHistory = [...(liveAlerts ?? data.alerts)].sort((a, b) => getAlertSortValue(b) - getAlertSortValue(a));
   const average = (values: (number | null)[]) => {
     const availableValues = values.filter((value): value is number => value !== null);
     return availableValues.length ? availableValues.reduce((sum, value) => sum + value, 0) / availableValues.length : 0;

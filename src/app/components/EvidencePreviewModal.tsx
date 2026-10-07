@@ -24,12 +24,93 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
     Moderate: { background: dark ? "#451A03" : "#FFF7ED", color: "#F59E0B" },
     Low: { background: dark ? "#064E3B" : "#ECFDF5", color: "#10B981" },
   }[alert.severity];
+  const detectedCardStyle = {
+    High: {
+      border: "1px solid rgba(239, 68, 68, 0.9)",
+      background: dark ? "rgba(127, 29, 29, 0.16)" : "#FDF2F2",
+      pillBackground: dark ? "rgba(254, 202, 202, 0.18)" : "#FCE7E7",
+      pillColor: "#EF4444",
+    },
+    Moderate: {
+      border: "1px solid rgba(245, 158, 11, 0.9)",
+      background: dark ? "rgba(120, 53, 15, 0.16)" : "#FFF7ED",
+      pillBackground: dark ? "rgba(254, 215, 170, 0.18)" : "#FFEDD5",
+      pillColor: "#F59E0B",
+    },
+    Low: {
+      border: "1px solid rgba(16, 185, 129, 0.9)",
+      background: dark ? "rgba(6, 78, 59, 0.2)" : "#ECFDF5",
+      pillBackground: dark ? "rgba(134, 239, 172, 0.18)" : "#D1FAE5",
+      pillColor: "#10B981",
+    },
+  }[alert.severity];
   const formatMetricLabel = (metric: string) => metric
     .split(/[_-]+/)
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
   const metrics = details?.triggeredMetrics ?? [];
+  const formatValue = (value: number, suffix: string) => {
+    if (!Number.isFinite(value)) return null;
+    const formatted = Number.isInteger(value) ? value.toString() : value.toFixed(2);
+    return `${formatted}${suffix}`;
+  };
+
+  const parseMetricValue = (metric: string, raw: string | null | undefined) => {
+    if (!raw) return null;
+
+    const normalized = raw.replace(/\s+/g, " ").trim();
+    const metricKey = metric.toLowerCase();
+
+    const targetedPatterns = [
+      metricKey.includes("head") ? /(?:head\s*(?:pose|tilt)|tilt|pitch|yaw)[^\n]*?(-?\d*\.?\d+(?:\.\d+)?)\s*(?:°|deg|degrees|%)/i : null,
+      metricKey.includes("perclos") || metricKey.includes("eye") ? /(?:perclos|eyes?|blink)[^\n]*?(-?\d*\.?\d+(?:\.\d+)?)\s*%/i : null,
+      metricKey.includes("yawn") ? /(?:yawn)[^\n]*?(-?\d*\.?\d+(?:\.\d+)?)\s*%/i : null,
+      metricKey.includes("posture") || metricKey.includes("shoulder") ? /(?:posture|shoulder|body\s*pose)[^\n]*?(-?\d*\.?\d+(?:\.\d+)?)\s*(?:°|deg|degrees|%)/i : null,
+    ].filter((pattern): pattern is RegExp => Boolean(pattern));
+
+    for (const pattern of targetedPatterns) {
+      const match = normalized.match(pattern);
+      if (match) {
+        const value = Number(match[1]);
+        if (metricKey.includes("head") || metricKey.includes("posture") || metricKey.includes("shoulder")) {
+          return formatValue(value, /°|deg|degrees/i.test(match[0]) ? "°" : "%");
+        }
+        return formatValue(value, "%");
+      }
+    }
+
+    const percentMatch = normalized.match(/(-?\d*\.?\d+(?:\.\d+)?)\s*%/i);
+    if (percentMatch) {
+      const value = Number(percentMatch[1]);
+      return formatValue(value, "%");
+    }
+
+    const angleMatch = normalized.match(/(-?\d*\.?\d+(?:\.\d+)?)\s*(?:°|deg|degrees)/i);
+    if (angleMatch) {
+      const value = Number(angleMatch[1]);
+      return formatValue(value, "°");
+    }
+
+    const fallbackMatch = normalized.match(/-?\d*\.?\d+(?:\.\d+)?/);
+    if (!fallbackMatch) return null;
+
+    const value = Number(fallbackMatch[0]);
+    return formatValue(value, "");
+  };
+
+  const metricTags = metrics.length > 0
+    ? metrics.map((metric) => {
+        const label = formatMetricLabel(metric);
+        const value = parseMetricValue(metric, details?.driverState ?? null);
+        return value ? `${label}: ${value}` : label;
+      })
+    : ["Alert"];
+  const primaryMetric = metrics[0] ?? "Alert";
+  const primaryMetricLabel = formatMetricLabel(primaryMetric);
+  const primaryMetricValue = parseMetricValue(primaryMetric, details?.driverState ?? null) ?? "100%";
+  const primaryTitle = `${primaryMetricLabel} Detected`;
+  const summarySentence = `A ${primaryMetricLabel.toLowerCase()} behavior was detected during the monitoring session and recorded by the VIRATRAK device.`;
   const metadata = [
     [
       "Captured",
@@ -39,7 +120,6 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
     ],
     ["Event ID", details?.eventId || "Unavailable"],
     ["Device", details?.deviceId || "Unavailable"],
-    ["Driver state", details?.driverState || "Unavailable"],
   ];
 
   return (
@@ -101,9 +181,10 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                border: "2px solid #93C5FD",
+                border: `2px solid ${dark ? "rgba(147,197,253,0.55)" : "#BFDBFE"}`,
                 borderRadius: isMobile ? 9 : 14,
-                background: dark ? "#172554" : "#EFF6FF",
+                background: dark ? "linear-gradient(135deg, rgba(59,130,246,0.22), rgba(30,41,59,0.95))" : "linear-gradient(135deg, #EFF6FF, #DBEAFE)",
+                boxShadow: dark ? "inset 0 0 0 1px rgba(147,197,253,0.1)" : "inset 0 0 0 1px rgba(59,130,246,0.08)",
               }}
             >
               <Camera size={isMobile ? 16 : 24} color="#1D6AE5" />
@@ -245,9 +326,10 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
                 key={label}
                 style={{
                   padding: "12px 14px",
-                  border: `1px solid ${border}`,
-                  borderRadius: 8,
-                  background: dark ? "#111827" : "#FAFAFA",
+                  border: `1px solid ${dark ? "rgba(148,163,184,0.24)" : "#E5E7EB"}`,
+                  borderRadius: 10,
+                  background: dark ? "rgba(15, 23, 42, 0.82)" : "#F8FAFC",
+                  boxShadow: dark ? "inset 0 1px 0 rgba(255,255,255,0.02)" : "inset 0 1px 0 rgba(255,255,255,0.45)",
                 }}
               >
                 <div
@@ -278,10 +360,66 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
 
           <div
             style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 14,
+              marginTop: 18,
+              padding: "18px 18px 18px 14px",
+              borderRadius: 14,
+              border: detectedCardStyle.border,
+              background: detectedCardStyle.background,
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  color: textMain,
+                  fontSize: 18,
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                }}
+              >
+                {primaryTitle}
+              </div>
+              <div
+                style={{
+                  marginTop: 4,
+                  color: textMain,
+                  fontSize: 13,
+                  opacity: 0.9,
+                }}
+              >
+                Detection value: {primaryMetricValue}
+              </div>
+            </div>
+
+            <div
+              style={{
+                minWidth: 84,
+                height: 42,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 999,
+                background: detectedCardStyle.pillBackground,
+                color: detectedCardStyle.pillColor,
+                fontWeight: 800,
+                fontSize: 18,
+                flexShrink: 0,
+              }}
+            >
+              {primaryMetricValue}
+            </div>
+          </div>
+
+          <div
+            style={{
               marginTop: 18,
               padding: "13px 14px",
-              borderRadius: 8,
-              background: dark ? "#172554" : "#EFF6FF",
+              borderRadius: 10,
+              background: dark ? "rgba(17, 24, 39, 0.16)" : "#F3F4F6",
+              border: `1px solid ${dark ? "rgba(148,163,184,0.25)" : "#E5E7EB"}`,
               color: textSub,
               fontSize: 13,
             }}
@@ -292,32 +430,21 @@ export function EvidencePreviewModal({ alert, onClose }: EvidencePreviewModalPro
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.04em",
-                marginBottom: 7,
+                marginBottom: 9,
+                color: dark ? "#D1D5DB" : "#4B5563",
               }}
             >
-              Triggered metrics
+              Detection Summary
             </div>
-            {metrics.length > 0 ? (
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                {metrics.map((metric) => (
-                  <span
-                    key={metric}
-                    style={{
-                      padding: "5px 10px",
-                      borderRadius: 999,
-                      background: dark ? "#1E40AF" : "#DBEAFE",
-                      color: dark ? "#DBEAFE" : "#1E3A8A",
-                      fontSize: 13,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {formatMetricLabel(metric)}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <strong style={{ color: textMain }}>None recorded</strong>
-            )}
+            <div
+              style={{
+                color: textMain,
+                fontSize: 15,
+                lineHeight: 1.5,
+              }}
+            >
+              {summarySentence}
+            </div>
           </div>
           {imageUrl && (
             <a

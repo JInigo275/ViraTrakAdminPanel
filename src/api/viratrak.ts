@@ -568,6 +568,10 @@ type RawAlert = {
   device_id?: string | null;
   triggered_metrics?: string[];
   driver_state?: string | null;
+  eyes_status?: string | null;
+  yawn_status?: string | null;
+  head_pose_status?: string | null;
+  posture_status?: string | null;
   detection?: RawDetection | RawDetection[];
 };
 
@@ -685,6 +689,14 @@ function mapRawAlertToDbAlerts(raw: RawAlert, driverName: string, vehicleName: s
     ? triggeredMetrics
     : [raw.alert_type || firstString(viewRow, ["type", "event_type"]) || "Alert"];
 
+  const observedState = detection?.driver_state
+    || raw.driver_state
+    || raw.head_pose_status
+    || raw.posture_status
+    || raw.yawn_status
+    || raw.eyes_status
+    || null;
+
   return metrics.map((metric, index) => ({
     id: buildMetricAlertId(raw, metric, index),
     recipientId,
@@ -702,7 +714,7 @@ function mapRawAlertToDbAlerts(raw: RawAlert, driverName: string, vehicleName: s
           deviceId: evidence?.device_id || detectionEvent?.device_id || deviceId || null,
           imageUrl: imageUrl || detectionEvent?.screenshot_url || null,
           triggeredMetrics: [metric],
-          driverState: detection?.driver_state || raw.driver_state || null,
+          driverState: observedState,
         }
       : undefined,
     icon_color: iconMap.color,

@@ -283,6 +283,11 @@ export function AlertsPage() {
   const drivers = [...new Set(allAlerts.map((a) => a.driver))].sort();
   const vehicles = [...new Set(allAlerts.map((a) => a.vehicle))].sort();
 
+  function getAlertSortValue(alert: Pick<DbAlert, "date" | "time">) {
+    const timestamp = new Date(`${alert.date} ${alert.time}`).getTime();
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  }
+
   const activeFilters = [filterType, filterDriver, filterVehicle, filterDate, filterSeverity].filter(Boolean).length;
 
   let filtered = allAlerts.filter((a) => {
@@ -297,11 +302,10 @@ export function AlertsPage() {
   });
 
   // ============================================================
-  // Alphabetical sort by driver
-
+  // Sort by newest alert first
   // ============================================================
-  filtered = [...filtered].sort((a, b) => a.driver.localeCompare(b.driver));
-  const mobileSummaryText = isMobile ? `${filtered.length} items` : `${filtered.length} records · Sorted A–Z by driver`;
+  filtered = [...filtered].sort((a, b) => getAlertSortValue(b) - getAlertSortValue(a));
+  const mobileSummaryText = isMobile ? `${filtered.length} items` : `${filtered.length} records · Sorted newest first`;
   const compactMobile = isMobile;
 
   useEffect(() => {
