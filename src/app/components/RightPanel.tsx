@@ -46,7 +46,7 @@ export function RightPanel() {
       {/* Behavior Summary */}
       <div style={{ background: cardBg, borderRadius: 12, boxShadow: shadow, overflow: "hidden", transition: "background 0.2s", flexShrink: 0 }}>
         <div style={{ padding: "12px 16px", borderBottom: `1px solid ${borderColor}` }}>
-          <span style={{ fontSize: 15, fontWeight: 600, color: textMain }}>Behavior Summary (Today)</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: textMain }}>Overall Behavior Summary</span>
         </div>
 
         <div style={{ display: "flex", justifyContent: "center", padding: "14px 16px 8px", position: "relative" }}>

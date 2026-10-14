@@ -10,6 +10,7 @@ type MetricDefinition = {
   color: string;
   unit: string;
   getValue: (metric: DbMetric) => number | null;
+  showChart?: boolean;
 };
 
 export type DashboardRange = "Today" | "This Week" | "This Month" | "This Year";
@@ -54,31 +55,26 @@ function buildMetricSeries(metrics: DbMetric[], definition: MetricDefinition) {
 
 function matchesRange(timestamp: string, range: DashboardRange): boolean {
   const eventTime = new Date(timestamp);
-  if (Number.isNaN(eventTime.getTime())) return true;
+  if (Number.isNaN(eventTime.getTime())) return false;
 
   const now = new Date();
+  if (eventTime > now) return false;
   const start = new Date(now);
 
   if (range === "Today") {
     start.setHours(0, 0, 0, 0);
-    return eventTime >= start && eventTime <= now;
-  }
-
-  if (range === "This Week") {
-    start.setDate(now.getDate() - 6);
+  } else if (range === "This Week") {
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
     start.setHours(0, 0, 0, 0);
-    return eventTime >= start && eventTime <= now;
-  }
-
-  if (range === "This Month") {
-    start.setDate(now.getDate() - 29);
+  } else if (range === "This Month") {
+    start.setDate(1);
     start.setHours(0, 0, 0, 0);
-    return eventTime >= start && eventTime <= now;
+  } else {
+    start.setMonth(0, 1);
+    start.setHours(0, 0, 0, 0);
   }
 
-  start.setFullYear(now.getFullYear(), 0, 1);
-  start.setHours(0, 0, 0, 0);
-  return eventTime >= start && eventTime <= now;
+  return eventTime >= start;
 }
 
 interface StatCardsProps {
@@ -110,12 +106,14 @@ export function StatCards({ range }: StatCardsProps) {
     title: "Active Drivers",
     color: "#1D6AE5",
     unit: "",
+    showChart: false,
     getValue: () => drivers.length,
     series: [{ value: drivers.length }],
   }, {
     title: "Vehicles",
     color: "#6B7280",
     unit: "",
+    showChart: false,
     getValue: () => vehicles.length,
     series: [{ value: vehicles.length }],
   }], [filteredMetrics, drivers.length, vehicles.length]);
@@ -141,13 +139,15 @@ export function StatCards({ range }: StatCardsProps) {
             <div style={{ fontSize: 12, color: textSub, fontWeight: 600, letterSpacing: "0.02em" }}>{c.title}</div>
             <div style={{ fontSize: 25, fontWeight: 700, color: c.color, lineHeight: 1 }}>{displayValue}</div>
             <div style={{ fontSize: 12, color: textSub }}>Latest reading</div>
-            <div style={{ width: "100%", height: 52 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={c.series.length ? c.series : [{ value: 0 }]} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
-                  <Line type="monotone" dataKey="value" stroke={c.color} strokeWidth={2.2} dot={false} connectNulls />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            {c.showChart !== false && (
+              <div style={{ width: "100%", height: 52 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={c.series.length ? c.series : [{ value: 0 }]} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+                    <Line type="monotone" dataKey="value" stroke={c.color} strokeWidth={2.2} dot={false} connectNulls />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         );
       })}
