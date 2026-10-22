@@ -822,17 +822,36 @@ function extractStatusMetric(rawValue: string | null): number | null {
 }
 
 export const metricsApi = {
-  list: async () => {
+  list: async (startAt?: string, endAt?: string) => {
     const client = requireSupabase();
-    const { data, error } = await client
+    let query = client
       .from("detection_data")
       .select("created_at, reported_at, eyes_status, yawn_status, head_pose_status, posture_status, alert_level")
       .order("reported_at", { ascending: false })
-      .limit(30);
+      .order("id", { ascending: false });
 
-    if (error) throw error;
+    if (startAt && endAt) {
+      query = query.or(
+        `and(reported_at.gte.${startAt},reported_at.lte.${endAt}),and(reported_at.is.null,created_at.gte.${startAt},created_at.lte.${endAt})`,
+      );
+    }
 
-    return (data ?? []).map((row) => ({
+    const rows = [];
+    if (startAt && endAt) {
+      const pageSize = 1000;
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await query.range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        rows.push(...(data ?? []));
+        if (!data || data.length < pageSize) break;
+      }
+    } else {
+      const { data, error } = await query.limit(30);
+      if (error) throw error;
+      rows.push(...(data ?? []));
+    }
+
+    return rows.map((row) => ({
       timestamp: row.reported_at ?? row.created_at,
       perclos: extractStatusMetric(row.eyes_status),
       blink_rate: null,

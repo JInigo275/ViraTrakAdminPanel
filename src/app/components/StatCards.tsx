@@ -48,17 +48,12 @@ function extractMetricValue(rawValue: string | null): number | null {
 function buildMetricSeries(metrics: DbMetric[], definition: MetricDefinition) {
   return metrics
     .slice()
-    .reverse()
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
     .map((metric) => ({ value: definition.getValue(metric) }))
     .filter((point): point is { value: number } => point.value !== null && Number.isFinite(point.value));
 }
 
-function matchesRange(timestamp: string, range: DashboardRange): boolean {
-  const eventTime = new Date(timestamp);
-  if (Number.isNaN(eventTime.getTime())) return false;
-
-  const now = new Date();
-  if (eventTime > now) return false;
+function getRangeBounds(range: DashboardRange, now = new Date()) {
   const start = new Date(now);
 
   if (range === "Today") {
@@ -74,7 +69,18 @@ function matchesRange(timestamp: string, range: DashboardRange): boolean {
     start.setHours(0, 0, 0, 0);
   }
 
-  return eventTime >= start;
+  return { start, end: now };
+}
+
+function matchesRange(timestamp: string, range: DashboardRange, now = new Date()): boolean {
+  const eventTime = new Date(timestamp);
+  const { start, end } = getRangeBounds(range, now);
+  return !Number.isNaN(eventTime.getTime()) && eventTime >= start && eventTime <= end;
+}
+
+function averageSeries(series: { value: number }[]): number | null {
+  if (series.length === 0) return null;
+  return Number((series.reduce((total, point) => total + point.value, 0) / series.length).toFixed(2));
 }
 
 interface StatCardsProps {
@@ -91,8 +97,20 @@ export function StatCards({ range }: StatCardsProps) {
   const shadow = dark ? "0 1px 4px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.07)";
 
   useEffect(() => {
-    metricsApi.list().then(setMetrics).catch(console.error);
-  }, []);
+    let active = true;
+    const { start, end } = getRangeBounds(range);
+    setMetrics([]);
+    metricsApi.list(start.toISOString(), end.toISOString())
+      .then((data) => {
+        if (active) setMetrics(data);
+      })
+      .catch((error) => {
+        if (active) console.error(error);
+      });
+    return () => {
+      active = false;
+    };
+  }, [range]);
 
   const filteredMetrics = useMemo(
     () => metrics.filter((metric) => matchesRange(metric.timestamp, range)),
@@ -121,8 +139,8 @@ export function StatCards({ range }: StatCardsProps) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))", gap: isMobile ? 8 : 12, fontFamily: "Inter, sans-serif" }}>
       {cards.map((c) => {
-        const latestValue = c.series.length > 0 ? c.series[c.series.length - 1].value : null;
-        const displayValue = latestValue === null ? "--" : `${latestValue}${c.unit}`;
+        const value = c.showChart === false ? c.series[0]?.value ?? null : averageSeries(c.series);
+        const displayValue = value === null ? "--" : `${value}${c.unit}`;
         return (
           <div
             key={c.title}
@@ -138,7 +156,9 @@ export function StatCards({ range }: StatCardsProps) {
           >
             <div style={{ fontSize: 12, color: textSub, fontWeight: 600, letterSpacing: "0.02em" }}>{c.title}</div>
             <div style={{ fontSize: 25, fontWeight: 700, color: c.color, lineHeight: 1 }}>{displayValue}</div>
-            <div style={{ fontSize: 12, color: textSub }}>Latest reading</div>
+            <div style={{ fontSize: 12, color: textSub }}>
+              {c.showChart === false ? "Current total" : value === null ? "No readings in period" : "Period average"}
+            </div>
             {c.showChart !== false && (
               <div style={{ width: "100%", height: 52 }}>
                 <ResponsiveContainer width="100%" height="100%">
